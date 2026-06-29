@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition, useEffect } from "react";
 import { AppShell, Badge, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
@@ -27,12 +27,25 @@ function StudentsListPage() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  
+  // UX for Massive Datasets (Millions of records)
+  const [isPending, startTransition] = useTransition();
+  const [debouncedQ, setDebouncedQ] = useState(q);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      startTransition(() => {
+        setDebouncedQ(q);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [q]);
 
   const baseStudents = statusFilter === "trash" ? allDeletedStudents.filter(s => s.stage === stage) : activeStageStudents;
 
   const filtered = useMemo(() => {
     let result = baseStudents.filter((s) => {
-      if (q && !s.name.includes(q) && !s.id.includes(q)) return false;
+      if (debouncedQ && !s.name.includes(debouncedQ) && !s.id.includes(debouncedQ)) return false;
       if (statusFilter === "active" && s.status !== "نشط") return false;
       if (statusFilter === "inactive" && s.status === "نشط") return false;
       return true;
@@ -46,7 +59,7 @@ function StudentsListPage() {
     });
 
     return result;
-  }, [q, sortBy, statusFilter, baseStudents]);
+  }, [debouncedQ, sortBy, statusFilter, baseStudents]);
 
   const printTemplates: PrintTemplate[] = useMemo(() => [
     {
@@ -104,6 +117,52 @@ function StudentsListPage() {
               </p>
               
               <p className="mt-8">شاكرين ومقدرين حسن تعاونكم،،،</p>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      id: "official-letter",
+      name: "خطاب رسمي",
+      category: "المراسلات",
+      type: "document",
+      description: "طباعة خطاب رسمي مخصص",
+      renderDocument: (options, data) => {
+        const row = data[0];
+        return (
+          <div className="p-8 max-w-3xl mx-auto space-y-8 bg-white border-4 border-double border-primary/20 min-h-[600px]">
+            <h1 className="text-3xl font-black text-center text-primary mb-12">خطاب رسمي</h1>
+            <div className="text-lg space-y-6 leading-relaxed">
+              <p>التاريخ: {new Date().toLocaleDateString('ar-SA')}</p>
+              <p>الموضوع: خطاب رسمي بخصوص الطالب <span className="font-bold border-b-2 border-dashed border-primary px-4">{row.name}</span></p>
+              <p>إلى من يهمه الأمر،</p>
+              <p className="min-h-[150px]">
+                نأمل الإحاطة بأن الطالب المذكور أعلاه مقيد في صف (<span className="font-bold text-primary">{row.grade}</span>).
+                وهذا الخطاب بناء على طلب ولي الأمر دون أدنى مسؤولية على المدرسة.
+              </p>
+              <p className="mt-8">وتفضلوا بقبول فائق الاحترام والتقدير،،،</p>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      id: "student-certificate",
+      name: "إفادة انتظام طالب",
+      category: "الطلاب",
+      type: "document",
+      description: "إصدار إفادة بانتظام الطالب في المدرسة",
+      renderDocument: (options, data) => {
+        const row = data[0];
+        return (
+          <div className="p-8 max-w-3xl mx-auto space-y-8 bg-white border-4 border-double border-primary/20 min-h-[600px]">
+            <h1 className="text-3xl font-black text-center text-primary underline mb-12">إفادة انتظام دراسي</h1>
+            <div className="text-lg space-y-6 leading-relaxed text-center">
+              <p>تشهد إدارة المدرسة بأن الطالب / <span className="font-bold text-xl px-4">{row.name}</span></p>
+              <p>رقم السجل: <span className="font-bold px-2">{row.id}</span></p>
+              <p>منتظم بالدراسة للعام الدراسي الحالي في الصف (<span className="font-bold text-primary">{row.grade}</span>) - شعبة (<span className="font-bold text-primary">{row.sectionId || "غير محدد"}</span>).</p>
+              <p className="mt-12 text-sm text-muted-foreground text-right">أعطيت له هذه الإفادة بناءً على طلبه لتقديمها إلى الجهات المختصة.</p>
             </div>
           </div>
         );
@@ -286,8 +345,22 @@ function StudentsListPage() {
           </div>
         </div>
 
-        {viewMode === "list" ? (
+        {isPending ? (
           <PageCard className="p-0 overflow-hidden shadow-sm border-border/50">
+            <div className="p-6 space-y-4">
+              <div className="h-10 bg-muted/50 rounded-lg animate-pulse"></div>
+              <div className="space-y-3">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className="flex gap-4">
+                    <div className="h-12 w-12 bg-muted/50 rounded-full animate-pulse shrink-0"></div>
+                    <div className="h-12 w-full bg-muted/50 rounded-lg animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </PageCard>
+        ) : viewMode === "list" ? (
+          <PageCard className="p-0 overflow-hidden shadow-sm border-border/50 animate-in fade-in duration-300">
             <DataTable
               rows={filtered}
               columns={[

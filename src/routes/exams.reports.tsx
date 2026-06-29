@@ -3,518 +3,598 @@ import { useState, useMemo } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
-import { Printer, GraduationCap, LayoutGrid, Users, Award, BookOpen } from "lucide-react";
+import { getGradesForStage, isItemAllowedForGrade } from "@/lib/school-structure";
+import { Search, Printer, FileText, BarChart3, Users, Award, CheckCircle } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-
 export const Route = createFileRoute("/exams/reports")({
-  head: () => ({ meta: [{ title: "التقارير والشهادات" }] }),
-  component: () => (
-    <ErrorBoundary>
-      <ExamsReportsPage />
-    </ErrorBoundary>
-  ),
+  component: ExamsReportsPage,
+  head: () => ({ meta: [{ title: "التقارير والشهادات" }] })
 });
 
 function ExamsReportsPage() {
-  const { stage, getStageLabel } = useStage();
-  const { 
-    activeStageSections, 
-    activeStageSubjects, 
-    activeStageExams, 
-    activeStageStudents,
-    activeStageExamMarks,
-    activeStageExamTypes,
-    examGradingMode,
-  } = useGlobalStore();
-
-  const [activeTab, setActiveTab] = useState<"master" | "individual">("master");
-  
-  const uniqueGrades = useMemo(() => Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean), [activeStageSections]);
-
-  // State for Master Sheet
-  const [masterGrade, setMasterGrade] = useState("");
-  const [masterSectionId, setMasterSectionId] = useState("");
-  
-  // State for Individual Report
-  const [indivGrade, setIndivGrade] = useState("");
-  const [indivSectionId, setIndivSectionId] = useState("");
-  const [studentId, setStudentId] = useState("");
-  const selectedStudent = useMemo(() => activeStageStudents.find(s => s.id === studentId), [activeStageStudents, studentId]);
-
-  const [isPrintOpen, setIsPrintOpen] = useState(false);
-
-  const gradingSymbol = examGradingMode === "percentage" ? "%" : "درجة";
-
-  // Compute Master Sheet Data
-  const masterSheetData = useMemo(() => {
-    // If no grade selected, return empty
-    if (!masterGrade) return [];
-    
-    // Students in this grade/section
-    let students = activeStageStudents.filter((s) => s.grade === masterGrade);
-    if (masterSectionId) {
-      students = students.filter(s => s.sectionId === masterSectionId);
-    }
-    
-    // Filter subjects for this grade
-    const gradeSubjects = activeStageSubjects.filter(sub => !sub.grades || sub.grades.length === 0 || sub.grades.includes(masterGrade));
-
-    return students.map(student => {
-      const row: any = {
-        id: student.id,
-        name: student.name,
-        nationalId: student.nationalId,
-        sectionName: activeStageSections.find(s => s.id === student.sectionId)?.name || ""
-      };
-
-      let totalStudentMarks = 0;
-      let totalPossibleMarks = 0;
-
-      // Calculate totals per subject
-      gradeSubjects.forEach(subject => {
-        // Find exams for this subject
-        const subjectExams = activeStageExams.filter(e => e.subjectId === subject.id && (e.grade === masterGrade || !e.grade));
-        let subjStudentMarks = 0;
-        let subjPossibleMarks = 0;
-        
-        subjectExams.forEach(exam => {
-          subjPossibleMarks += exam.totalMarks;
-          const markEntry = activeStageExamMarks.find(m => m.examId === exam.id && m.studentId === student.id);
-          if (markEntry && markEntry.mark !== undefined) {
-            subjStudentMarks += markEntry.mark;
-          }
-        });
-
-        // Add to row dynamic key using subject ID
-        if (subjPossibleMarks > 0) {
-          const finalSubjVal = examGradingMode === "percentage" 
-            ? Math.round((subjStudentMarks / subjPossibleMarks) * 100)
-            : subjStudentMarks;
-          row[subject.id] = `${finalSubjVal} ${gradingSymbol}`;
-        } else {
-          row[subject.id] = "-";
-        }
-
-        totalStudentMarks += subjStudentMarks;
-        totalPossibleMarks += subjPossibleMarks;
-      });
-
-      // Total OverAll
-      if (totalPossibleMarks > 0) {
-        row.total = examGradingMode === "percentage" 
-          ? `${Math.round((totalStudentMarks / totalPossibleMarks) * 100)} %`
-          : `${totalStudentMarks} من ${totalPossibleMarks}`;
-      } else {
-        row.total = "-";
-      }
-
-      return row;
-    });
-  }, [selectedSection, activeStageStudents, activeStageSubjects, activeStageExams, activeStageExamMarks, examGradingMode, gradingSymbol]);
-
-  // Dynamic Columns for Print Engine based on Subjects
-  const masterPrintColumns = useMemo(() => {
-    const gradeSubjects = masterGrade 
-      ? activeStageSubjects.filter(sub => !sub.grades || sub.grades.length === 0 || sub.grades.includes(masterGrade))
-      : activeStageSubjects;
-
-    return [
-      { key: "nationalId", label: "الرقم" },
-      { key: "name", label: "اسم الطالب" },
-      ...(!masterSectionId ? [{ key: "sectionName", label: "الشعبة" }] : []),
-      ...gradeSubjects.map(s => ({
-        key: s.id,
-        label: s.name
-      })),
-      { key: "total", label: "المجموع الكلي" }
-    ];
-  }, [activeStageSubjects, masterGrade, masterSectionId]);
-
-  const masterPrintTemplates: PrintTemplate[] = [
-    {
-      id: "master-sheet",
-      name: "الكشف المجمع (Master Sheet)",
-      category: "التقارير الأكاديمية",
-      type: "table",
-      columns: masterPrintColumns
-    }
-  ];
-
-  // Report Card Data
-  const reportCardData = useMemo(() => {
-    if (!selectedStudent) return [];
-    
-    // Filter subjects for this student's grade
-    const studentSubjects = activeStageSubjects.filter(sub => !sub.grades || sub.grades.length === 0 || sub.grades.includes(selectedStudent.grade));
-
-    // We want to pass a structured row that the document template can consume.
-    const subjectsData = studentSubjects.map(subject => {
-      const subjectExams = activeStageExams.filter(e => e.subjectId === subject.id && (!e.grade || e.grade === selectedStudent.grade));
-      let subjStudentMarks = 0;
-      let subjPossibleMarks = 0;
-      let breakdown: any[] = [];
-      
-      subjectExams.forEach(exam => {
-        subjPossibleMarks += exam.totalMarks;
-        const markEntry = activeStageExamMarks.find(m => m.examId === exam.id && m.studentId === selectedStudent.id);
-        const examType = activeStageExamTypes.find(t => t.id === exam.typeId);
-        const mark = markEntry?.mark !== undefined ? markEntry.mark : null;
-        
-        if (mark !== null) subjStudentMarks += mark;
-        
-        breakdown.push({
-          examName: examType?.name || "اختبار",
-          term: exam.term,
-          mark: mark,
-          max: exam.totalMarks
-        });
-      });
-
-      return {
-        subjectName: subject.name,
-        studentMark: subjStudentMarks,
-        possibleMark: subjPossibleMarks,
-        breakdown,
-        finalStr: subjPossibleMarks > 0 
-          ? (examGradingMode === "percentage" ? `${Math.round((subjStudentMarks / subjPossibleMarks) * 100)}%` : `${subjStudentMarks}`)
-          : "-"
-      };
-    });
-
-    return [{
-      id: selectedStudent.id,
-      name: selectedStudent.name,
-      grade: selectedStudent.grade,
-      subjects: subjectsData,
-    }];
-  }, [selectedStudent, activeStageSubjects, activeStageExams, activeStageExamMarks, activeStageExamTypes, examGradingMode]);
-
-  const renderReportCard = (student: any) => (
-    <div className="p-8 border-4 border-double border-primary/20 bg-white min-h-[800px] flex flex-col relative" dir="rtl">
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-      
-      <div className="text-center mb-12 relative z-10">
-        <Award className="h-16 w-16 mx-auto text-primary mb-4" />
-        <h1 className="text-3xl font-black text-foreground mb-2">إشعار نتيجة طالب</h1>
-        <p className="text-lg text-muted-foreground">{getStageLabel(stage)}</p>
-      </div>
-
-      <div className="flex justify-between items-center mb-8 border-y-2 border-border/50 py-4 relative z-10">
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">اسم الطالب</p>
-          <p className="text-xl font-bold">{student.name}</p>
-        </div>
-        <div className="text-left">
-          <p className="text-sm text-muted-foreground mb-1">الصف</p>
-          <p className="text-xl font-bold">{student.grade}</p>
-        </div>
-      </div>
-
-      <table className="w-full text-right border-collapse relative z-10 mb-12">
-        <thead>
-          <tr className="bg-primary/5">
-            <th className="border-b-2 border-primary/20 p-4 font-bold text-lg">المادة الدراسية</th>
-            <th className="border-b-2 border-primary/20 p-4 font-bold text-lg text-center">التفاصيل</th>
-            <th className="border-b-2 border-primary/20 p-4 font-bold text-lg text-center">النتيجة النهائية</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/50">
-          {student.subjects.map((subj: any, i: number) => (
-            <tr key={i} className="hover:bg-accent/20 transition-colors">
-              <td className="p-4 font-bold text-base">{subj.subjectName}</td>
-              <td className="p-4 text-xs text-center text-muted-foreground">
-                {subj.breakdown.length === 0 ? "لا يوجد بيانات" : 
-                  subj.breakdown.map((b: any, j: number) => (
-                    <span key={j} className="inline-block bg-accent px-2 py-1 rounded mx-1 mb-1">
-                      {b.examName}: {b.mark !== null ? b.mark : '-'}/{b.max}
-                    </span>
-                  ))
-                }
-              </td>
-              <td className="p-4 text-center text-xl font-black text-primary">{subj.finalStr}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="mt-auto grid grid-cols-2 gap-8 text-center pt-16 relative z-10">
-        <div>
-          <p className="font-bold text-lg mb-8">اعتماد مربي الفصل</p>
-          <div className="w-48 border-b-2 border-dashed border-border/50 mx-auto"></div>
-        </div>
-        <div>
-          <p className="font-bold text-lg mb-8">اعتماد مدير المدرسة</p>
-          <div className="w-48 border-b-2 border-dashed border-border/50 mx-auto"></div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const reportCardTemplates: PrintTemplate[] = [
-    {
-      id: "report-card",
-      name: "شهادة الطالب المجمعة",
-      category: "الشهادات",
-      type: "document",
-      renderDocument: (opts, data) => {
-        const student = data[0];
-        if (!student) return null;
-        return renderReportCard(student);
-      }
-    }
-  ];
+  const [activeTab, setActiveTab] = useState<"master" | "report-card" | "analytics">("master");
 
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الاختبارات", to: "/exams" }, { label: "التقارير والشهادات" }]}>
-      <div className="flex flex-col gap-6">
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto w-full">
-          
-          {/* Navigation Tabs */}
-          <div className="flex p-1 bg-muted rounded-2xl w-fit">
-            <button
-              onClick={() => setActiveTab("master")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === "master" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <LayoutGrid className="h-5 w-5" /> الكشف المجمع (Master Sheet)
-            </button>
-            <button
-              onClick={() => setActiveTab("individual")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === "individual" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <Award className="h-5 w-5" /> الشهادات الفردية (Report Cards)
-            </button>
-          </div>
-
-          {activeTab === "master" && (
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_3fr] gap-6">
-              {/* Sidebar: Filters */}
-              <div className="space-y-6">
-                <PageCard title="إعدادات الكشف">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-muted-foreground">الصف <span className="text-danger">*</span></label>
-                      <select 
-                        value={masterGrade} 
-                        onChange={(e) => {
-                          setMasterGrade(e.target.value);
-                          setMasterSectionId("");
-                        }}
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold shadow-sm cursor-pointer"
-                      >
-                        <option value="">-- يرجى تحديد الصف --</option>
-                        {uniqueGrades.map((g) => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/50">
-                      <label className="mb-2 block text-sm font-bold text-muted-foreground">الشعبة (اختياري)</label>
-                      <select 
-                        value={masterSectionId} 
-                        onChange={(e) => setMasterSectionId(e.target.value)}
-                        disabled={!masterGrade}
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold shadow-sm cursor-pointer disabled:opacity-50"
-                      >
-                        <option value="">كل الشعب</option>
-                        {activeStageSections.filter(s => s.grade === masterGrade).map((s) => (
-                          <option key={s.id} value={s.id}>شعبة {s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </PageCard>
-              </div>
-
-              {/* Main Content: Results Table preview */}
-              <div className="md:col-span-3">
-                <PageCard 
-                  title="معاينة الكشف المجمع" 
-                  actions={
-                    <button 
-                      onClick={() => setIsPrintOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
-                    >
-                      <Printer className="h-4 w-4" /> طباعة الكشف
-                    </button>
-                  }
-                >
-                  <div className="overflow-x-auto rounded-2xl border border-border/50 shadow-sm">
-                    <table className="w-full text-right text-sm">
-                      <thead>
-                        <tr className="bg-primary/5 border-b border-primary/20">
-                          {masterPrintColumns.map((col, idx) => (
-                            <th key={col.key} className={`p-4 font-bold text-primary ${idx === 0 ? "rounded-tr-2xl" : ""} ${idx === masterPrintColumns.length - 1 ? "rounded-tl-2xl" : ""}`}>
-                              {col.label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/50">
-                        {masterSheetData.length > 0 ? masterSheetData.slice(0, 10).map((row: any, i: number) => (
-                          <tr key={i} className="hover:bg-accent/20 transition-colors">
-                            {masterPrintColumns.map(col => (
-                              <td key={col.key} className="p-4">{row[col.key] || '-'}</td>
-                            ))}
-                          </tr>
-                        )) : (
-                          <tr>
-                            <td colSpan={masterPrintColumns.length} className="p-12 text-center text-muted-foreground font-medium">
-                              {masterGrade ? "لا يوجد بيانات للعرض. تأكد من تحديد الشعبة إن وجدت، أو قم برصد الدرجات." : "يرجى تحديد الصف لعرض النتائج."}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                    {masterSheetData.length > 10 && (
-                      <div className="p-4 text-center bg-accent/30 text-muted-foreground text-xs font-bold border-t border-border/50">
-                        يعرض أول 10 طلاب فقط للمعاينة. (إجمالي: {masterSheetData.length} طالب)
-                      </div>
-                    )}
-                  </div>
-                </PageCard>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "individual" && (
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_3fr] gap-6 h-[calc(100vh-16rem)] min-h-[600px]">
-              {/* Sidebar: Student Selector */}
-              <div className="space-y-6">
-                <PageCard title="البحث عن طالب">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-muted-foreground">تصفية بالصف (اختياري)</label>
-                      <select 
-                        value={indivGrade} 
-                        onChange={(e) => {
-                          setIndivGrade(e.target.value);
-                          setIndivSectionId("");
-                          setStudentId("");
-                        }}
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold shadow-sm cursor-pointer"
-                      >
-                        <option value="">الكل</option>
-                        {uniqueGrades.map((g) => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/50">
-                      <label className="mb-2 block text-sm font-bold text-muted-foreground">تصفية بالشعبة (اختياري)</label>
-                      <select 
-                        value={indivSectionId} 
-                        onChange={(e) => {
-                          setIndivSectionId(e.target.value);
-                          setStudentId("");
-                        }}
-                        disabled={!indivGrade}
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold shadow-sm cursor-pointer disabled:opacity-50"
-                      >
-                        <option value="">كل الشعب</option>
-                        {activeStageSections.filter(s => s.grade === indivGrade).map((s) => (
-                          <option key={s.id} value={s.id}>شعبة {s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/50">
-                      <label className="mb-2 block text-sm font-bold text-muted-foreground">اختر الطالب <span className="text-danger">*</span></label>
-                      <select 
-                        value={studentId} 
-                        onChange={(e) => setStudentId(e.target.value)}
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold shadow-sm cursor-pointer"
-                      >
-                        <option value="">-- يرجى تحديد الطالب --</option>
-                        {activeStageStudents
-                          .filter(s => !indivGrade || s.grade === indivGrade)
-                          .filter(s => !indivSectionId || s.sectionId === indivSectionId)
-                          .map((s) => <option key={s.id} value={s.id}>{s.name} - {s.nationalId}</option>)
-                        }
-                      </select>
-                    </div>
-                  </div>
-                </PageCard>
-              </div>
-
-              <div className="md:col-span-3">
-                {selectedStudent ? (
-                  <PageCard 
-                    title={`نتيجة الطالب: ${selectedStudent.name}`} 
-                    actions={
-                      <button 
-                        onClick={() => setIsPrintOpen(true)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
-                      >
-                        <Printer className="h-4 w-4" /> طباعة الشهادة
-                      </button>
-                    }
-                  >
-                    <div className="space-y-6">
-                      <div className="flex flex-wrap gap-4 mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                        <div className="flex items-center gap-2 text-primary font-bold">
-                          <BookOpen className="h-5 w-5" /> الصف: {selectedStudent.grade}
-                        </div>
-                        <div className="w-px h-6 bg-primary/20 mx-2 hidden sm:block"></div>
-                        <div className="flex items-center gap-2 text-primary font-bold">
-                          <Users className="h-5 w-5" /> الرقم الوطني: {selectedStudent.nationalId}
-                        </div>
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {reportCardData[0]?.subjects.map((subj: any, i: number) => (
-                          <div key={i} className="p-5 rounded-2xl border border-border/50 bg-card shadow-sm hover:shadow-md transition-all">
-                            <h4 className="font-bold text-lg mb-2">{subj.subjectName}</h4>
-                            <div className="text-3xl font-black text-primary mb-4">{subj.finalStr}</div>
-                            
-                            <div className="space-y-2">
-                              {subj.breakdown.map((b: any, j: number) => (
-                                <div key={j} className="flex justify-between items-center text-xs text-muted-foreground p-2 rounded-lg bg-accent/50">
-                                  <span>{b.examName}</span>
-                                  <span className="font-bold text-foreground">{b.mark !== null ? b.mark : '-'}/{b.max}</span>
-                                </div>
-                              ))}
-                              {subj.breakdown.length === 0 && (
-                                <div className="text-xs text-muted-foreground text-center p-2">لم يتم تقييمه بعد</div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </PageCard>
-                ) : (
-                  <div className="py-24 text-center bg-card rounded-3xl border border-border/50 shadow-sm h-full flex flex-col justify-center items-center">
-                    <GraduationCap className="h-20 w-20 text-muted-foreground/30 mb-4" />
-                    <h3 className="text-2xl font-bold mb-2">اختر طالباً</h3>
-                    <p className="text-muted-foreground max-w-sm">يرجى البحث عن طالب وتحديده من القائمة الجانبية لعرض الشهادة التفصيلية الخاصة به.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+      <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
+        <div className="flex gap-4 border-b border-border/50 pb-2 overflow-x-auto">
+          <button 
+            onClick={() => setActiveTab("master")}
+            className={`whitespace-nowrap flex items-center gap-2 pb-2 px-4 font-bold text-base transition-all border-b-2 ${activeTab === "master" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            <Users className="w-5 h-5"/> الكشف المجمع (Master Sheet)
+          </button>
+          <button 
+            onClick={() => setActiveTab("report-card")}
+            className={`whitespace-nowrap flex items-center gap-2 pb-2 px-4 font-bold text-base transition-all border-b-2 ${activeTab === "report-card" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            <FileText className="w-5 h-5"/> الشهادة الفردية (Report Card)
+          </button>
+          <button 
+            onClick={() => setActiveTab("analytics")}
+            className={`whitespace-nowrap flex items-center gap-2 pb-2 px-4 font-bold text-base transition-all border-b-2 ${activeTab === "analytics" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            <BarChart3 className="w-5 h-5"/> تحليلات الأداء
+          </button>
         </div>
-      
-        <div>
-        {activeTab === "master" ? (
-          <AdvancedPrintEngine
-            isOpen={isPrintOpen}
-            onClose={() => setIsPrintOpen(false)}
-            title="كشف النتائج المجمع"
-            subtitle={`العام الدراسي الحالي - ${getStageLabel(stage)}`}
-            data={masterSheetData}
-            templates={masterPrintTemplates}
-          />
-        ) : (
-          <AdvancedPrintEngine
-            isOpen={isPrintOpen}
-            onClose={() => setIsPrintOpen(false)}
-            title={`إشعار نتيجة`}
-            data={reportCardData}
-            templates={reportCardTemplates}
-          />
-        )}
-        </div>
+
+        {activeTab === "master" && <MasterSheetTab />}
+        {activeTab === "report-card" && <ReportCardTab />}
+        {activeTab === "analytics" && <AnalyticsTab />}
       </div>
     </AppShell>
+  );
+}
+
+// ==========================================
+// 1. Master Sheet Tab
+// ==========================================
+function MasterSheetTab() {
+  const { stage, setStage, stages } = useStage();
+  const { activeStageSections, activeStageStudents, activeStageSubjects, activeStageScheduledExams, activeStageExamGrades } = useGlobalStore();
+
+  const [filterGrade, setFilterGrade] = useState("");
+  const [filterSection, setFilterSection] = useState("");
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
+
+  const uniqueGrades = useMemo(() => getGradesForStage(stage), [stage]);
+  const sectionsForGrade = useMemo(() => (
+    filterGrade ? activeStageSections.filter(section => section.stage === stage && section.grade === filterGrade) : []
+  ), [activeStageSections, stage, filterGrade]);
+  
+  const selectedSection = activeStageSections.find(s => s.id === filterSection);
+  const reportSections = useMemo(() => {
+    if (selectedSection) return [selectedSection];
+    if (filterGrade) return activeStageSections.filter(section => section.stage === stage && section.grade === filterGrade);
+    return activeStageSections.filter(section => section.stage === stage);
+  }, [activeStageSections, filterGrade, selectedSection, stage]);
+
+  const reportSectionIds = useMemo(() => new Set(reportSections.map(section => section.id)), [reportSections]);
+
+  const applicableSubjects = useMemo(() => {
+    if (filterGrade) return activeStageSubjects.filter(subject => isItemAllowedForGrade(subject, stage, filterGrade));
+    return activeStageSubjects.filter(subject => subject.stage === "all" || subject.stage === stage);
+  }, [activeStageSubjects, filterGrade, stage]);
+
+  const students = useMemo(() => activeStageStudents.filter(student => {
+    if (student.stage !== stage) return false;
+    if (filterGrade && student.grade !== filterGrade) return false;
+    if (reportSectionIds.size > 0) return Boolean(student.sectionId && reportSectionIds.has(student.sectionId));
+    return true;
+  }), [activeStageStudents, filterGrade, reportSectionIds, stage]);
+
+  const masterData = useMemo(() => {
+    const exams = activeStageScheduledExams.filter(e => (
+      e.stage === stage &&
+      (!filterGrade || e.grade === filterGrade) &&
+      (!filterSection || e.sectionId === filterSection)
+    ));
+    
+    return students.map(student => {
+      let totalMarks = 0;
+      let totalMaxMarks = 0;
+      const subjectsMap: Record<string, number> = {};
+
+      applicableSubjects.forEach(subject => {
+        const subjectExams = exams.filter(e => e.subjectId === subject.id && (!student.sectionId || e.sectionId === student.sectionId));
+        let subjectTotal = 0;
+        let subjectMax = 0;
+        
+        subjectExams.forEach(ex => {
+          subjectMax += ex.totalMarks;
+          const grade = activeStageExamGrades.find(g => g.examId === ex.id && g.studentId === student.id);
+          subjectTotal += grade?.mark || 0;
+        });
+
+        subjectsMap[subject.id] = subjectTotal;
+        totalMarks += subjectTotal;
+        totalMaxMarks += subjectMax;
+      });
+
+      const percentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
+      let rank = "ناجح";
+      if (percentage >= 90) rank = "ممتاز";
+      else if (percentage >= 80) rank = "جيد جداً";
+      else if (percentage >= 70) rank = "جيد";
+      else if (percentage >= 50) rank = "مقبول";
+      else rank = "راسب";
+
+      return { student, subjectsMap, totalMarks, totalMaxMarks, percentage, rank };
+    }).sort((a,b) => b.totalMarks - a.totalMarks);
+  }, [filterGrade, filterSection, students, applicableSubjects, activeStageScheduledExams, activeStageExamGrades, stage]);
+
+  const printTemplate: PrintTemplate = {
+    id: "master-sheet",
+    name: `الكشف المجمع - ${selectedSection ? `${selectedSection.grade} شعبة ${selectedSection.name}` : filterGrade || "المرحلة كاملة"}`,
+    category: "تقارير",
+    type: "table",
+    columns: [
+      { key: 'index', label: 'م' },
+      { key: 'name', label: 'اسم الطالب' },
+      ...applicableSubjects.map(s => ({ key: s.id, label: s.name })),
+      { key: 'totalMarks', label: 'المجموع' },
+      { key: 'percentage', label: 'النسبة' },
+      { key: 'rank', label: 'التقدير' },
+    ]
+  };
+
+  const printData = masterData.map((d, i) => ({
+    id: d.student.id,
+    index: i + 1,
+    name: d.student.name,
+    totalMarks: d.totalMarks,
+    percentage: d.percentage.toFixed(1) + '%',
+    rank: d.rank,
+    ...d.subjectsMap
+  }));
+
+  return (
+    <div className="space-y-6">
+      <PageCard title="خيارات الكشف">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="mb-2 block text-sm font-bold text-muted-foreground">المرحلة</label>
+            <select value={stage} onChange={e => { setStage(e.target.value as any); setFilterGrade(""); setFilterSection(""); }} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary">
+              {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-muted-foreground">الفصل</label>
+            <select value={filterGrade} onChange={e => { setFilterGrade(e.target.value); setFilterSection(""); }} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary">
+              <option value="">كل الفصول</option>
+              {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-muted-foreground">الشعبة</label>
+            <select disabled={!filterGrade} value={filterSection} onChange={e => setFilterSection(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary disabled:opacity-50">
+              <option value="">كل الشعب</option>
+              {sectionsForGrade.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button 
+              disabled={masterData.length === 0}
+              onClick={() => setIsPrintOpen(true)}
+              className="w-full h-11 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              <Printer className="w-5 h-5"/> طباعة الكشف
+            </button>
+          </div>
+        </div>
+      </PageCard>
+
+      {masterData.length > 0 && (
+        <div className="bg-card rounded-3xl shadow-sm border border-border/50 overflow-hidden slide-in-from-bottom-4 animate-in">
+          <div className="overflow-x-auto">
+            <table className="w-full text-right">
+              <thead>
+                <tr className="border-b border-border/50 bg-muted/30">
+                  <th className="py-3 px-4 font-bold text-muted-foreground w-12 text-center">#</th>
+                  <th className="py-3 px-4 font-bold text-muted-foreground whitespace-nowrap sticky right-0 bg-muted/30 z-10 shadow-[-4px_0_10px_rgba(0,0,0,0.05)]">اسم الطالب</th>
+                  {applicableSubjects.map(s => (
+                    <th key={s.id} className="py-3 px-4 font-bold text-muted-foreground text-center whitespace-nowrap min-w-[100px]">{s.name}</th>
+                  ))}
+                  <th className="py-3 px-4 font-bold text-primary text-center whitespace-nowrap">المجموع</th>
+                  <th className="py-3 px-4 font-bold text-primary text-center whitespace-nowrap">النسبة</th>
+                  <th className="py-3 px-4 font-bold text-primary text-center whitespace-nowrap">التقدير</th>
+                </tr>
+              </thead>
+              <tbody>
+                {masterData.map((d, idx) => (
+                  <tr key={d.student.id} className="border-b border-border/50 last:border-0 hover:bg-accent/10 transition-colors">
+                    <td className="py-3 px-4 text-center text-muted-foreground font-bold">{idx + 1}</td>
+                    <td className="py-3 px-4 font-bold sticky right-0 bg-card z-10 shadow-[-4px_0_10px_rgba(0,0,0,0.02)]">{d.student.name}</td>
+                    {applicableSubjects.map(s => (
+                      <td key={s.id} className="py-3 px-4 text-center font-bold">{d.subjectsMap[s.id] || "-"}</td>
+                    ))}
+                    <td className="py-3 px-4 text-center font-black text-primary bg-primary/5">{d.totalMarks}</td>
+                    <td className="py-3 px-4 text-center font-black" dir="ltr">{d.percentage.toFixed(1)}%</td>
+                    <td className="py-3 px-4 text-center font-bold">
+                      <span className={`px-2 py-1 rounded-md text-xs ${
+                        d.rank === 'ممتاز' ? 'bg-success/20 text-success' : 
+                        d.rank === 'راسب' ? 'bg-danger/20 text-danger' : 
+                        'bg-warning/20 text-warning-foreground'
+                      }`}>
+                        {d.rank}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {masterData.length === 0 && (
+                  <tr><td colSpan={applicableSubjects.length + 5} className="py-12 text-center text-muted-foreground font-bold">لا يوجد بيانات لعرضها.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {isPrintOpen && (
+        <AdvancedPrintEngine
+          isOpen={isPrintOpen}
+          data={printData}
+          templates={[printTemplate]}
+          onClose={() => setIsPrintOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// 2. Report Card Tab
+// ==========================================
+function ReportCardTab() {
+  const { stage, setStage, stages } = useStage();
+  const { activeStageStudents, activeStageSections, activeStageSubjects, activeStageScheduledExams, activeStageExamGrades, activeStageExamCategories } = useGlobalStore();
+  
+  const [searchQ, setSearchQ] = useState("");
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [filterGrade, setFilterGrade] = useState("");
+  const [filterSection, setFilterSection] = useState("");
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
+
+  const uniqueGrades = useMemo(() => getGradesForStage(stage), [stage]);
+  const sectionsForGrade = useMemo(() => (
+    filterGrade ? activeStageSections.filter(section => section.stage === stage && section.grade === filterGrade) : []
+  ), [activeStageSections, stage, filterGrade]);
+
+  const student = activeStageStudents.find(s => s.id === selectedStudentId);
+  const section = activeStageSections.find(s => s.id === student?.sectionId);
+
+  const filteredStudents = useMemo(() => {
+    if (!searchQ) return [];
+    return activeStageStudents.filter(s => (
+      s.stage === stage &&
+      (!filterGrade || s.grade === filterGrade) &&
+      (!filterSection || s.sectionId === filterSection) &&
+      (s.name.includes(searchQ) || s.nationalId.includes(searchQ))
+    )).slice(0, 8);
+  }, [activeStageStudents, filterGrade, filterSection, searchQ, stage]);
+
+  const reportData = useMemo(() => {
+    if (!student || !section) return null;
+    
+    const applicableSubjects = activeStageSubjects.filter(s => isItemAllowedForGrade(s, stage, section.grade));
+    const sectionExams = activeStageScheduledExams.filter(e => e.stage === stage && e.sectionId === section.id);
+
+    let grandTotal = 0;
+    let grandMax = 0;
+
+    const subjectsData = applicableSubjects.map(subject => {
+      const subjectExams = sectionExams.filter(e => e.subjectId === subject.id);
+      let subjectTotal = 0;
+      let subjectMax = 0;
+      const examsData: any[] = [];
+      let isDescriptive = false;
+      let descGrade = "";
+
+      subjectExams.forEach(exam => {
+        if (exam.gradingSystem === 'descriptive') {
+          isDescriptive = true;
+        }
+        const grade = activeStageExamGrades.find(g => g.examId === exam.id && g.studentId === student.id);
+        const category = activeStageExamCategories.find(c => c.id === exam.categoryId);
+        examsData.push({
+          id: exam.id,
+          name: exam.name,
+          template: category?.name,
+          mark: grade?.mark || 0,
+          max: exam.totalMarks,
+          desc: grade?.descriptiveGrade || ""
+        });
+        subjectTotal += grade?.mark || 0;
+        subjectMax += exam.totalMarks;
+        if (grade?.descriptiveGrade) descGrade = grade.descriptiveGrade;
+      });
+
+      grandTotal += subjectTotal;
+      grandMax += subjectMax;
+
+      return { subject, examsData, subjectTotal, subjectMax, isDescriptive, descGrade };
+    });
+
+    return { subjectsData, grandTotal, grandMax };
+  }, [student, section, activeStageSubjects, activeStageScheduledExams, activeStageExamCategories, activeStageExamGrades, stage]);
+
+  const printTemplate: PrintTemplate | null = reportData && student ? {
+    id: "report-card",
+    name: `شهادة درجات ${student.name}`,
+    category: "شهادات",
+    type: "document",
+    renderDocument: () => (
+      <div className="p-8 font-sans">
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <h2>اسم الطالب: {student.name}</h2>
+          <h3>الصف: {section?.grade} - الشعبة: {section?.name}</h3>
+        </div>
+        <table className="w-full text-right border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-300 p-2">المادة</th>
+              <th className="border border-gray-300 p-2 text-center">الامتحانات</th>
+              <th className="border border-gray-300 p-2 text-center">المجموع</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reportData.subjectsData.map(row => (
+              <tr key={row.subject.id}>
+                <td className="border border-gray-300 p-2">{row.subject.name}</td>
+                <td className="border border-gray-300 p-2 text-center">
+                  {row.examsData.length > 0 ? row.examsData.map((exam: any) => `${exam.name}: ${row.isDescriptive ? exam.desc || "-" : `${exam.mark}/${exam.max}`}`).join(" | ") : "-"}
+                </td>
+                <td className="border border-gray-300 p-2 text-center font-bold">
+                  {row.isDescriptive ? row.descGrade || '-' : `${row.subjectTotal} / ${row.subjectMax}`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{ marginTop: '30px', textAlign: 'left', direction: 'ltr' }}>
+          <h3>Total: {reportData.grandTotal} / {reportData.grandMax} ({reportData.grandMax > 0 ? ((reportData.grandTotal/reportData.grandMax)*100).toFixed(1) : 0}%)</h3>
+        </div>
+      </div>
+    )
+  } : null;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="lg:col-span-1 space-y-4">
+        <PageCard title="البحث عن طالب">
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">المرحلة</label>
+              <select value={stage} onChange={e => { setStage(e.target.value as any); setFilterGrade(""); setFilterSection(""); setSelectedStudentId(""); setSearchQ(""); }} className="h-11 w-full rounded-xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary">
+                {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">الفصل</label>
+              <select value={filterGrade} onChange={e => { setFilterGrade(e.target.value); setFilterSection(""); setSelectedStudentId(""); setSearchQ(""); }} className="h-11 w-full rounded-xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary">
+                <option value="">كل الفصول</option>
+                {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">الشعبة</label>
+              <select disabled={!filterGrade} value={filterSection} onChange={e => { setFilterSection(e.target.value); setSelectedStudentId(""); setSearchQ(""); }} className="h-11 w-full rounded-xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary disabled:opacity-50">
+                <option value="">كل الشعب</option>
+                {sectionsForGrade.map(section => <option key={section.id} value={section.id}>شعبة {section.name}</option>)}
+              </select>
+            </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                placeholder="اسم الطالب..."
+                className="h-11 w-full rounded-xl border border-border/50 bg-background pr-10 pl-4 text-sm font-bold shadow-sm focus:border-primary"
+              />
+            </div>
+            
+            {searchQ && filteredStudents.length > 0 && (
+              <div className="bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm">
+                {filteredStudents.map(s => (
+                  <button 
+                    key={s.id} 
+                    onClick={() => { setSelectedStudentId(s.id); setSearchQ(""); }}
+                    className="w-full text-right px-4 py-3 border-b border-border/50 last:border-0 hover:bg-accent transition-colors font-bold text-sm"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {student && (
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center mt-6">
+                <div className="w-16 h-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="font-black text-2xl">{student.name.charAt(0)}</span>
+                </div>
+                <h3 className="font-black text-lg text-primary">{student.name}</h3>
+                <p className="text-muted-foreground text-sm font-bold mt-1">{section?.grade} - {section?.name}</p>
+              </div>
+            )}
+          </div>
+        </PageCard>
+      </div>
+
+      <div className="lg:col-span-3">
+        {reportData && student ? (
+          <div className="bg-card rounded-3xl shadow-lg border border-border/50 p-8 slide-in-from-bottom-4 animate-in relative overflow-hidden">
+            {/* Watermark / Decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-bl-full -z-10"></div>
+            <Award className="absolute top-8 left-8 w-32 h-32 text-primary/5 -z-10" />
+
+            <div className="flex justify-between items-start mb-8 border-b border-border/50 pb-6">
+              <div>
+                <h2 className="text-3xl font-black text-primary mb-2">شهادة إشعار درجات</h2>
+                <p className="text-muted-foreground font-bold text-lg">{section?.grade} / شعبة {section?.name}</p>
+              </div>
+              <button 
+                onClick={() => setIsPrintOpen(true)}
+                className="bg-accent hover:bg-accent/80 text-foreground font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
+              >
+                <Printer className="w-5 h-5"/> طباعة
+              </button>
+            </div>
+
+            <div className="overflow-x-auto mb-8">
+              <table className="w-full text-right">
+                <thead>
+                  <tr className="border-b-2 border-primary/20 bg-primary/5">
+                    <th className="py-3 px-4 font-black text-primary w-1/3">المادة</th>
+                    <th className="py-3 px-4 font-bold text-muted-foreground text-center">الامتحانات</th>
+                    <th className="py-3 px-4 font-black text-primary text-center">المجموع</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.subjectsData.map(row => (
+                    <tr key={row.subject.id} className="border-b border-border/50 hover:bg-accent/5">
+                      <td className="py-3 px-4 font-bold">{row.subject.name}</td>
+                      <td className="py-3 px-4">
+                        {row.examsData.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {row.examsData.map((exam: any) => (
+                              <span key={exam.id} className="rounded-lg bg-accent px-2.5 py-1 text-xs font-bold">
+                                {exam.name}: {row.isDescriptive ? exam.desc || "-" : `${exam.mark}/${exam.max}`}
+                              </span>
+                            ))}
+                          </div>
+                        ) : <span className="block text-center text-muted-foreground">-</span>}
+                      </td>
+                      <td className="py-3 px-4 text-center font-black bg-primary/5">
+                        {row.isDescriptive ? (
+                          <span className="text-sm">{row.descGrade || '-'}</span>
+                        ) : (
+                          <span>{row.subjectTotal} <span className="text-xs font-normal text-muted-foreground">/ {row.subjectMax}</span></span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end">
+              <div className="bg-primary text-primary-foreground rounded-2xl p-6 text-left min-w-[300px]">
+                <p className="text-primary-foreground/80 font-bold mb-1" dir="ltr">Total Score</p>
+                <p className="text-4xl font-black mb-2" dir="ltr">{reportData.grandTotal} <span className="text-xl text-primary-foreground/70">/ {reportData.grandMax}</span></p>
+                <div className="w-full bg-primary-foreground/20 rounded-full h-2 mb-2">
+                  <div className="bg-white h-2 rounded-full" style={{width: `${reportData.grandMax > 0 ? (reportData.grandTotal/reportData.grandMax)*100 : 0}%`}}></div>
+                </div>
+                <p className="text-right font-bold">{reportData.grandMax > 0 ? ((reportData.grandTotal/reportData.grandMax)*100).toFixed(1) : 0}% نسبة الأداء</p>
+              </div>
+            </div>
+
+            {isPrintOpen && printTemplate && (
+              <AdvancedPrintEngine
+                isOpen={isPrintOpen}
+                data={[]}
+                templates={[printTemplate]}
+                onClose={() => setIsPrintOpen(false)}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="bg-card rounded-3xl border border-border/50 p-12 text-center text-muted-foreground flex flex-col items-center justify-center min-h-[400px]">
+            <FileText className="w-16 h-16 mb-4 opacity-20" />
+            <p className="font-bold text-lg">الرجاء البحث عن طالب واختياره لعرض الشهادة.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 3. Analytics Tab
+// ==========================================
+function AnalyticsTab() {
+  const { activeStageSections, activeStageScheduledExams, activeStageExamGrades } = useGlobalStore();
+
+  const stats = useMemo(() => {
+    const totalExams = activeStageScheduledExams.length;
+    const completedExams = activeStageScheduledExams.filter(e => e.status === 'completed').length;
+    
+    // Calculate school average based on completed numeric exams
+    let sumPercentages = 0;
+    let countPercentages = 0;
+
+    activeStageScheduledExams.filter(e => e.status === 'completed' && e.gradingSystem !== 'descriptive').forEach(exam => {
+      const grades = activeStageExamGrades.filter(g => g.examId === exam.id);
+      if (grades.length > 0 && exam.totalMarks > 0) {
+        const sum = grades.reduce((a,b) => a + (b.mark||0), 0);
+        const avg = sum / grades.length;
+        const perc = (avg / exam.totalMarks) * 100;
+        sumPercentages += perc;
+        countPercentages++;
+      }
+    });
+
+    const schoolAvg = countPercentages > 0 ? (sumPercentages / countPercentages) : 0;
+
+    return { totalExams, completedExams, schoolAvg };
+  }, [activeStageScheduledExams, activeStageExamGrades]);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+            <BarChart3 className="w-6 h-6" />
+          </div>
+          <h3 className="text-muted-foreground font-bold mb-1">متوسط الأداء العام</h3>
+          <p className="text-4xl font-black">{stats.schoolAvg.toFixed(1)}%</p>
+        </div>
+        
+        <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-success/10 text-success flex items-center justify-center mb-4">
+            <CheckCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-muted-foreground font-bold mb-1">الاختبارات المكتملة</h3>
+          <p className="text-4xl font-black">{stats.completedExams} <span className="text-lg text-muted-foreground font-normal">/ {stats.totalExams}</span></p>
+        </div>
+
+        <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-warning/10 text-warning flex items-center justify-center mb-4">
+            <Users className="w-6 h-6" />
+          </div>
+          <h3 className="text-muted-foreground font-bold mb-1">إجمالي التقييمات المرصودة</h3>
+          <p className="text-4xl font-black">{activeStageExamGrades.length}</p>
+        </div>
+      </div>
+
+      <PageCard title="أداء الشعب" description="مقارنة سريعة لمتوسط الدرجات بين الشعب">
+        <div className="space-y-4 mt-6">
+          {activeStageSections.map(section => {
+            // Calc avg for this section
+            const secExams = activeStageScheduledExams.filter(e => e.sectionId === section.id && e.status === 'completed' && e.gradingSystem !== 'descriptive');
+            let sSum = 0; let sCount = 0;
+            secExams.forEach(exam => {
+              const grades = activeStageExamGrades.filter(g => g.examId === exam.id);
+              if(grades.length > 0 && exam.totalMarks > 0) {
+                 const sum = grades.reduce((a,b)=>a+(b.mark||0), 0);
+                 sSum += (sum/grades.length)/exam.totalMarks * 100;
+                 sCount++;
+              }
+            });
+            const avg = sCount > 0 ? (sSum/sCount) : 0;
+
+            return (
+              <div key={section.id} className="flex items-center gap-4">
+                <div className="w-32 font-bold text-sm text-muted-foreground">{section.grade} - {section.name}</div>
+                <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{width: `${avg}%`}}></div>
+                </div>
+                <div className="w-12 font-black text-right text-sm">{avg.toFixed(0)}%</div>
+              </div>
+            );
+          })}
+        </div>
+      </PageCard>
+    </div>
   );
 }

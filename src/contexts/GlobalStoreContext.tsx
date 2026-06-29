@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from "react";
 import { EducationalStage, useStage } from "./StageContext";
 
 export interface Guardian {
@@ -9,6 +9,14 @@ export interface Guardian {
   address?: string;
   isDeleted?: boolean;
   deletedAt?: string;
+}
+
+export interface EnrollmentRecord {
+  id: string;
+  academicYearId: string;
+  grade: string;
+  status: "ناجح" | "راسب" | "منقول" | "خريج";
+  date: string;
 }
 
 export interface Student {
@@ -29,7 +37,9 @@ export interface Student {
   bloodType?: string;
   medicalNotes?: string;
   enrollmentDate?: string;
-  status?: "نشط" | "موقوف" | "منقول";
+  academicYearId?: string;
+  status?: "نشط" | "موقوف" | "منقول" | "خريج" | "راسب";
+  enrollmentHistory?: EnrollmentRecord[];
   major?: "science" | "literature";
   pickupPersons?: string;
   specialCare?: boolean;
@@ -101,6 +111,11 @@ export interface Discount {
   type: "percentage" | "fixed";
   value: number;
   description?: string;
+  isActive?: boolean;
+  stage?: EducationalStage | "all";
+  grades?: string[];
+  sections?: string[];
+  studentIds?: string[];
 }
 
 export interface Payment {
@@ -264,6 +279,42 @@ export interface ExamMark {
   stage: EducationalStage;
 }
 
+export interface ExamCategory {
+  id: string;
+  name: string;
+  weight: number;
+  grades?: string[];
+  gradingSystem: string;
+  maxMark: number;
+  color: string;
+  stage: EducationalStage | "all";
+}
+
+export interface ScheduledExam {
+  id: string;
+  name: string;
+  grade: string;
+  sectionId: string;
+  categoryId?: string;
+  subjectId: string;
+  term: string;
+  date: string;
+  totalMarks: number;
+  gradingSystem: string;
+  status: string;
+  classId: string;
+  stage: string;
+}
+
+export interface ExamGrade {
+  id: string;
+  examId: string;
+  studentId: string;
+  mark: number;
+  notes?: string;
+  descriptiveGrade?: string;
+}
+
 export interface Subject {
   id: string;
   name: string;
@@ -333,6 +384,31 @@ export interface StaffLeave {
   endDate: string;
   days: number;
   status: "pending" | "approved" | "rejected";
+  notes?: string;
+}
+
+export interface StaffAttendanceRecord {
+  id?: string;
+  staffId: string;
+  date: string;
+  status: "present" | "late" | "absent" | "excused";
+  checkIn?: string;
+  checkOut?: string;
+  minutesLate?: number;
+  deductionAmount?: number;
+  notes?: string;
+}
+
+export interface StaffAdvance {
+  id: string;
+  staffId: string;
+  staffName: string;
+  amount: number;
+  date: string;
+  status: "pending" | "approved" | "rejected" | "paid";
+  notes?: string;
+  deductFromPayrollDate?: string;
+  deductionMonth?: string;
 }
 
 export interface ActivityLog {
@@ -345,6 +421,214 @@ export interface ActivityLog {
   ip?: string;
 }
 
+export interface Textbook {
+  id: string;
+  title: string;
+  subject: string;
+  gradeId: string;
+  term?: string;
+  copies: number;
+  stage: string;
+}
+
+export interface TextbookDistribution {
+  id: string;
+  textbookId: string;
+  studentId: string;
+  date: string;
+  status: string;
+  stage: string;
+}
+
+export interface TransportRoute {
+  id: string;
+  name: string;
+  destination: string;
+  driverName: string;
+  driverPhone: string;
+  supervisorName: string;
+  vehiclePlate: string;
+  capacity: number;
+  stops: number;
+  feeAmount: number;
+  feeMode: "annual" | "term" | "monthly";
+}
+
+export interface TransportSubscription {
+  id: string;
+  studentId: string;
+  routeId: string;
+  direction: string;
+  status: string;
+  fee?: number;
+}
+
+export interface TimetableSettings {
+  maxPeriodsPerDay: number;
+  breakDuration: number;
+  periodDuration: number;
+  stage: string;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "success" | "warning" | "danger";
+  timestamp: string;
+  read: boolean;
+  actionUrl?: string;
+}
+
+export interface SystemSettings {
+  schoolName: string;
+  licenseNumber: string;
+  phone: string;
+  email: string;
+  address: string;
+  principalName: string;
+  vision: string;
+  roomCategories: string;
+  assetCategories: string;
+  roomNumbering: string;
+  maintenanceAlert: string;
+  inventoryAlertLimit: number;
+  inventoryMethod: string;
+  winterTime: string;
+  summerTime: string;
+  lateAsPartialAbsence: boolean;
+  deductBehaviorOnAbsence: boolean;
+  taxNumber: string;
+  vatRate: number;
+  refundPolicy: string;
+  autoTransferPayroll: boolean;
+  autoMaintenanceExpense: boolean;
+  autoLibraryFee: boolean;
+  annualLeaveDays: number;
+  lateDeductionRate: number;
+  gracePeriod: boolean;
+  fingerprintSync: boolean;
+  admissionStatus: string;
+  maxClassSize: number;
+  reqBirthCert: boolean;
+  reqVaccine: boolean;
+  reqPrevCert: boolean;
+  reqFamilyCard: boolean;
+  whatsappApiToken?: string;
+  smsProvider?: string;
+  googleWorkspace?: boolean;
+  microsoftTeams?: boolean;
+  moodleIntegration?: boolean;
+  zoomIntegration?: boolean;
+  paymentGateway?: string;
+  stripePubKey?: string;
+  stripeSecretKey?: string;
+  paytabsProfileId?: string;
+  paytabsServerKey?: string;
+  footerText: string;
+  defaultTemplate: string;
+  rowsPerBatch: string;
+  qrCodeUsage: string;
+  headerEntity: string;
+  headerDepartment: string;
+  qrVerifyUrl: string;
+  qrExpiry: string;
+  qrIncludeId: boolean;
+  themeMode: "light" | "dark" | "system";
+  primaryColor: string;
+  language: "ar" | "en";
+  dateFormat: string;
+  defaultChannels: { email: boolean; sms: boolean; push: boolean };
+  mobileLoginPolicy: string;
+  notifSync: string;
+  parentViewLimit: boolean;
+  teacherViewLimit: boolean;
+  hideFinancial: boolean;
+  logMobileActivity: boolean;
+  apiKey: string;
+  webhookUrl: string;
+  whStudentCreated: boolean;
+  whInvoicePaid: boolean;
+  whExamUpdated: boolean;
+  whTransportChanged: boolean;
+  apiRateLimit: number;
+  apiAccessScope: string;
+  apiAllowedIps: string;
+  passwordPolicy: string;
+  sessionTimeout: string;
+  force2FA: boolean;
+  lockAfter5Fails: boolean;
+}
+
+export const defaultSettings: SystemSettings = {
+  schoolName: "مدرسة النموذج الأهلية",
+  licenseNumber: "LIC-2024-001",
+  phone: "0112345678",
+  email: "info@school.edu",
+  address: "الرياض - حي الواحة",
+  principalName: "خالد القحطاني",
+  vision: "الريادة في التعليم وصناعة جيل واعٍ مبتكر",
+  roomCategories: "فصل دراسي,معمل,مكتبة,صالة رياضية,مسرح,قاعة اجتماعات",
+  assetCategories: "أثاث مدرسي,أجهزة إلكترونية,معدات رياضية,كتب ومراجع,أخرى",
+  roomNumbering: "ترقيم تلقائي (RM-XXXX)",
+  maintenanceAlert: "مفعل (قبل 7 أيام)",
+  inventoryAlertLimit: 10,
+  inventoryMethod: "FIFO (ما يدخل أولاً يخرج أولاً)",
+  winterTime: "07:30",
+  summerTime: "06:45",
+  lateAsPartialAbsence: true,
+  deductBehaviorOnAbsence: true,
+  taxNumber: "300012345600003",
+  vatRate: 15,
+  refundPolicy: "خلال 14 يوم من التسجيل",
+  autoTransferPayroll: true,
+  autoMaintenanceExpense: true,
+  autoLibraryFee: true,
+  annualLeaveDays: 30,
+  lateDeductionRate: 2,
+  gracePeriod: true,
+  fingerprintSync: true,
+  admissionStatus: "مفتوح للتسجيل الإلكتروني",
+  maxClassSize: 25,
+  reqBirthCert: true,
+  reqVaccine: true,
+  reqPrevCert: true,
+  reqFamilyCard: true,
+  footerText: "هذه الوثيقة معتمدة ومستخرجة من نظام مدارس الإلكتروني",
+  defaultTemplate: "جدول مضغوط مع تكرار الترويسة",
+  rowsPerBatch: "60 صف",
+  qrCodeUsage: "مفعل لكل الشهادات والفواتير",
+  headerEntity: "وزارة التربية والتعليم",
+  headerDepartment: "الإدارة التعليمية",
+  qrVerifyUrl: "https://school.example.sd/verify",
+  qrExpiry: "سنة كاملة",
+  qrIncludeId: true,
+  themeMode: "system",
+  primaryColor: "#0ea5e9",
+  language: "ar",
+  dateFormat: "DD/MM/YYYY",
+  defaultChannels: { email: true, sms: false, push: true },
+  mobileLoginPolicy: "رمز OTP عبر SMS أو WhatsApp",
+  notifSync: "لحظي للغياب والفواتير والدرجات",
+  parentViewLimit: true,
+  teacherViewLimit: true,
+  hideFinancial: true,
+  logMobileActivity: true,
+  apiKey: "sk_live_school_1A2B3C4D",
+  webhookUrl: "https://example.com/school-webhook",
+  whStudentCreated: true,
+  whInvoicePaid: true,
+  whExamUpdated: true,
+  whTransportChanged: true,
+  apiRateLimit: 120,
+  apiAccessScope: "قراءة وكتابة حسب الصلاحيات",
+  apiAllowedIps: "",
+  passwordPolicy: "معقدة (حروف، أرقام، رموز)",
+  sessionTimeout: "بعد 30 دقيقة من الخمول",
+  force2FA: true,
+  lockAfter5Fails: true,
+  paymentGateway: "none",
+};
 // --- Initial Mock Data ---
 const initialStudents: Student[] = [
   { id: "STU-1001", name: "أحمد محمد محمود", dob: "2015-05-12", nationalId: "1029384756", guardianName: "محمد محمود", stage: "primary", grade: "الصف الأول الابتدائي", sectionId: "SEC-1001", gender: "ذكر", status: "نشط", bloodType: "O+", guardianPhone: "0501234567" },
@@ -490,6 +774,23 @@ const initialActivityLogs: ActivityLog[] = [
   { id: "AL-1001", user: "أحمد العتيبي", action: "تسجيل دخول", entity: "النظام", details: "نجاح تسجيل الدخول", date: "2023-10-20T08:00:00Z" }
 ];
 
+export interface UserAccount {
+  id: string;
+  username: string;
+  fullName: string;
+  role: string;
+  status: "active" | "disabled";
+  lastLogin: string;
+}
+
+const initialUsers: UserAccount[] = [
+  { id: "U-1001", username: "admin", fullName: "أحمد العتيبي", role: "مدير عام", status: "active", lastLogin: "2026-06-13 09:42" },
+  { id: "U-1002", username: "principal01", fullName: "خالد القحطاني", role: "مدير مدرسة", status: "active", lastLogin: "2026-06-13 08:01" },
+  { id: "U-1003", username: "registrar01", fullName: "نوال الزهراني", role: "أمين تسجيل", status: "active", lastLogin: "2026-06-12 14:22" },
+  { id: "U-1004", username: "t.mona", fullName: "منى الزهراني", role: "معلم", status: "active", lastLogin: "2026-06-13 07:11" },
+  { id: "U-1005", username: "g.saad", fullName: "سعد الحربي", role: "ولي أمر", status: "disabled", lastLogin: "2026-05-30 20:30" },
+];
+
 // --- Context ---
 interface GlobalStoreContextType {
   // All Data
@@ -516,13 +817,19 @@ interface GlobalStoreContextType {
   allScheduleSlots: ScheduleSlot[];
   allAcademicYears: AcademicYear[];
   allTeachingAssignments: TeachingAssignment[];
+  allScheduledExams: ScheduledExam[];
+  allExamCategories: ExamCategory[];
+  allExamGrades: ExamGrade[];
   
   allMaintenanceRequests: MaintenanceRequest[];
   allRooms: Room[];
   allStaffEvaluations: StaffEvaluation[];
   allStaffContracts: StaffContract[];
   allStaffLeaves: StaffLeave[];
+  allStaffAttendance: StaffAttendanceRecord[];
+  allStaffAdvances: StaffAdvance[];
   allActivityLogs: ActivityLog[];
+  allUsers: UserAccount[];
   
   // Filtered by Active Stage
   activeStageStudents: Student[];
@@ -531,6 +838,7 @@ interface GlobalStoreContextType {
   activeStageBooks: Book[];
   activeStageLibraryIssues: LibraryIssue[];
   activeStageStaff: Staff[];
+  activeStageStaffAttendance: StaffAttendanceRecord[];
   activeStageClinicVisits: ClinicVisit[];
   activeStageDisciplineIncidents: DisciplineIncident[];
   activeStageSections: Section[];
@@ -540,6 +848,9 @@ interface GlobalStoreContextType {
   activeStageSubjects: Subject[];
   activeStageScheduleSlots: ScheduleSlot[];
   activeStageTeachingAssignments: TeachingAssignment[];
+  activeStageScheduledExams: ScheduledExam[];
+  activeStageExamCategories: ExamCategory[];
+  activeStageExamGrades: ExamGrade[];
 
   // Actions
   addStudent: (student: Omit<Student, "id">) => void;
@@ -574,10 +885,14 @@ interface GlobalStoreContextType {
   issueBook: (bookId: string, studentId: string) => void;
   returnBook: (issueId: string) => void;
   addInventoryItem: (item: Omit<InventoryItem, "id" | "status">) => void;
+  updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
+  deleteInventoryItem: (id: string) => void;
   processInventoryTransaction: (transaction: Omit<InventoryTransaction, "id" | "date" | "itemName">) => void;
   addStaff: (staff: Omit<Staff, "id">) => void;
   updateStaff: (id: string, updates: Partial<Staff>) => void;
   deleteStaff: (id: string) => void;
+  upsertStaffAttendance: (record: StaffAttendanceRecord) => void;
+  addStaffAdvance: (record: Omit<StaffAdvance, "id">) => void;
   addClinicVisit: (visit: Omit<ClinicVisit, "id" | "studentName" | "stage">) => void;
   addDisciplineIncident: (incident: Omit<DisciplineIncident, "id" | "studentName" | "stage">) => void;
   addSection: (section: Omit<Section, "id">) => void;
@@ -596,6 +911,15 @@ interface GlobalStoreContextType {
   addExam: (exam: Omit<Exam, "id">) => void;
   deleteExam: (id: string) => void;
   saveExamMarks: (marks: Omit<ExamMark, "id">[]) => void;
+  saveExamGrades: (grades: Omit<ExamGrade, "id">[]) => void;
+  
+  addScheduledExam: (exam: Omit<ScheduledExam, "id" | "createdAt">) => void;
+  updateScheduledExam: (id: string, updates: Partial<ScheduledExam>) => void;
+  deleteScheduledExam: (id: string) => void;
+
+  addExamCategory: (cat: Omit<ExamCategory, "id">) => void;
+  deleteExamCategory: (id: string) => void;
+
   addSubject: (subject: Omit<Subject, "id">) => void;
   deleteSubject: (id: string) => void;
   updateScheduleSlot: (slot: Omit<ScheduleSlot, "id">) => void;
@@ -604,11 +928,13 @@ interface GlobalStoreContextType {
   updateAcademicYear: (id: string, updates: Partial<AcademicYear>) => void;
   addTeachingAssignment: (assignment: Omit<TeachingAssignment, "id">) => void;
   deleteTeachingAssignment: (id: string) => void;
-  assignStudentToSection: (studentId: string, sectionId: string | undefined) => void;
+  assignStudentToSection: (studentId: string, sectionId?: string) => void;
+  promoteStudents: (promotions: { studentId: string; nextGrade: string; nextAcademicYearId: string; status: "ناجح" | "راسب" | "منقول" | "خريج" }[]) => void;
   generateBulkData: (count: number) => void;
 
   addMaintenanceRequest: (req: Omit<MaintenanceRequest, "id">) => void;
   updateMaintenanceRequest: (id: string, updates: Partial<MaintenanceRequest>) => void;
+  undoMaintenanceRequest: (id: string) => void;
   deleteMaintenanceRequest: (id: string) => void;
 
   addRoom: (room: Omit<Room, "id">) => void;
@@ -621,6 +947,48 @@ interface GlobalStoreContextType {
   updateStaffLeave: (id: string, updates: Partial<StaffLeave>) => void;
 
   addActivityLog: (logData: Omit<ActivityLog, "id" | "date">) => void;
+
+  // User Account Management
+  addUser: (userData: Omit<UserAccount, "id">) => void;
+  updateUser: (id: string, updates: Partial<UserAccount>) => void;
+  deleteUser: (id: string) => void;
+
+  allGuardians: Guardian[];
+
+  // Library Distribution
+  allTextbooks: Textbook[];
+  allTextbookDistributions: TextbookDistribution[];
+  activeStageTextbooks: Textbook[];
+  activeStageDistributions: TextbookDistribution[];
+  addTextbook: (tb: Omit<Textbook, "id">) => void;
+  updateTextbook: (id: string, updates: Partial<Textbook>) => void;
+  deleteTextbook: (id: string) => void;
+  distributeTextbook: (distribution: Omit<TextbookDistribution, "id" | "date" | "status">) => void;
+  removeDistribution: (id: string) => void;
+
+  // Transport
+  transportRoutes: TransportRoute[];
+  transportSubscriptions: TransportSubscription[];
+  addTransportRoute: (r: Omit<TransportRoute, "id">) => void;
+  updateTransportRoute: (id: string, updates: Partial<TransportRoute>) => void;
+  deleteTransportRoute: (id: string) => void;
+  addTransportSubscription: (s: Omit<TransportSubscription, "id">) => void;
+  updateTransportSubscription: (id: string, updates: Partial<TransportSubscription>) => void;
+  deleteTransportSubscription: (id: string) => void;
+
+  // Timetable
+  activeStageTimetableSettings: TimetableSettings;
+  updateTimetableSettings: (updates: Partial<TimetableSettings>) => void;
+
+  systemSettings: SystemSettings;
+  updateSettings: (updates: Partial<SystemSettings>) => void;
+
+  // Notifications
+  notifications: AppNotification[];
+  unreadNotificationsCount: number;
+  markAllNotificationsAsRead: () => void;
+  deleteNotification: (id: string) => void;
+  addNotification: (n: Omit<AppNotification, "id" | "timestamp" | "read">) => void;
 }
 
 const GlobalStoreContext = createContext<GlobalStoreContextType | undefined>(undefined);
@@ -648,7 +1016,14 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [examMarks, setExamMarks] = useState<ExamMark[]>(initialExamMarks);
   const [examTypes, setExamTypes] = useState<ExamType[]>(initialExamTypes);
   const [examGradingMode, setExamGradingMode] = useState<"marks" | "percentage">("marks");
-  const [currency, setCurrency] = useState("ج.س");
+  const [currency, setCurrency] = useState(() => {
+    try {
+      const saved = localStorage.getItem("darasi_currency");
+      return saved || "ج.س";
+    } catch {
+      return "ج.س";
+    }
+  });
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>(initialScheduleSlots);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>(initialAcademicYears);
@@ -659,7 +1034,83 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [staffEvaluations, setStaffEvaluations] = useState<StaffEvaluation[]>(initialStaffEvaluations);
   const [staffContracts, setStaffContracts] = useState<StaffContract[]>(initialStaffContracts);
   const [staffLeaves, setStaffLeaves] = useState<StaffLeave[]>(initialStaffLeaves);
+  const [staffAttendance, setStaffAttendance] = useState<StaffAttendanceRecord[]>([]);
+  const [staffAdvances, setStaffAdvances] = useState<StaffAdvance[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(initialActivityLogs);
+  const [users, setUsers] = useState<UserAccount[]>(initialUsers);
+
+  // Notifications
+  const [notifications, setNotifications] = useState<AppNotification[]>([
+    {
+      id: "notif-1",
+      title: "تنبيه: ميزانية تجاوزت الحد",
+      message: "الرجاء مراجعة قسم المالية فوراً.",
+      type: "danger",
+      timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
+      read: false
+    },
+    {
+      id: "notif-2",
+      title: "تم تسجيل ١٠ طلاب جدد",
+      message: "في مرحلة رياض الأطفال.",
+      type: "success",
+      timestamp: new Date(Date.now() - 60 * 60000).toISOString(),
+      read: false
+    }
+  ]);
+
+  const unreadNotificationsCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+  const markAllNotificationsAsRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const deleteNotification = (id: string) => setNotifications(prev => prev.filter(n => n.id !== id));
+  const addNotification = (n: Omit<AppNotification, "id" | "timestamp" | "read">) => {
+    setNotifications(prev => [{
+      ...n,
+      id: `notif-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      read: false
+    }, ...prev]);
+  };
+
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>(() => {
+    try {
+      const saved = localStorage.getItem("darasi_system_settings");
+      if (saved) {
+        return { ...defaultSettings, ...JSON.parse(saved) };
+      }
+    } catch (e) {
+      console.error("Error loading settings:", e);
+    }
+    return defaultSettings;
+  });
+  
+  useEffect(() => {
+    localStorage.setItem("darasi_system_settings", JSON.stringify(systemSettings));
+  }, [systemSettings]);
+
+  useEffect(() => {
+    localStorage.setItem("darasi_currency", currency);
+  }, [currency]);
+  
+  const updateSettings = (updates: Partial<SystemSettings>) => {
+    setSystemSettings(prev => ({ ...prev, ...updates }));
+  };
+
+  const [textbooks, setTextbooks] = useState<Textbook[]>([]);
+  const [textbookDistributions, setTextbookDistributions] = useState<TextbookDistribution[]>([]);
+
+  const [transportRoutes, setTransportRoutes] = useState<TransportRoute[]>([]);
+  const [transportSubscriptions, setTransportSubscriptions] = useState<TransportSubscription[]>([]);
+
+  const [scheduledExams, setScheduledExams] = useState<ScheduledExam[]>([]);
+  const [examCategories, setExamCategories] = useState<ExamCategory[]>([]);
+  const [examGrades, setExamGrades] = useState<ExamGrade[]>([]);
+
+  const [timetableSettings, setTimetableSettings] = useState<TimetableSettings>({
+    maxPeriodsPerDay: 7,
+    breakDuration: 45,
+    periodDuration: 45,
+    stage: "all"
+  });
 
   // Derived state filtered by the global active stage
   const activeStageStudents = useMemo(() => students.filter(s => s.stage === activeStage), [students, activeStage]);
@@ -669,6 +1120,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const activeStageBooks = useMemo(() => books.filter(b => b.stage === activeStage), [books, activeStage]);
   const activeStageLibraryIssues = useMemo(() => libraryIssues.filter(li => li.stage === activeStage), [libraryIssues, activeStage]);
   const activeStageStaff = useMemo(() => staff.filter(st => st.stage === activeStage || st.stage === "all"), [staff, activeStage]);
+  const activeStageStaffAttendance = useMemo(() => staffAttendance.filter(sa => activeStageStaff.some(s => s.id === sa.staffId)), [staffAttendance, activeStageStaff]);
   const activeStageClinicVisits = useMemo(() => clinicVisits.filter(cv => cv.stage === activeStage), [clinicVisits, activeStage]);
   const activeStageDisciplineIncidents = useMemo(() => disciplineIncidents.filter(di => di.stage === activeStage), [disciplineIncidents, activeStage]);
   const activeStageSections = useMemo(() => sections.filter(sec => sec.stage === activeStage), [sections, activeStage]);
@@ -678,6 +1130,17 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const activeStageSubjects = useMemo(() => subjects.filter(sub => sub.stage === activeStage || sub.stage === "all"), [subjects, activeStage]);
   const activeStageScheduleSlots = useMemo(() => scheduleSlots.filter(s => s.stage === activeStage), [scheduleSlots, activeStage]);
   const activeStageTeachingAssignments = useMemo(() => teachingAssignments.filter(ta => ta.stage === activeStage), [teachingAssignments, activeStage]);
+
+  const activeStageScheduledExams = useMemo(() => scheduledExams.filter(e => e.stage === activeStage), [scheduledExams, activeStage]);
+  const activeStageExamCategories = useMemo(() => examCategories.filter(c => c.stage === activeStage), [examCategories, activeStage]);
+  const activeStageExamGrades = useMemo(() => examGrades.filter(g => {
+    const ex = scheduledExams.find(e => e.id === g.examId);
+    return ex?.stage === activeStage;
+  }), [examGrades, scheduledExams, activeStage]);
+
+  const activeStageTextbooks = useMemo(() => textbooks.filter(t => t.stage === activeStage), [textbooks, activeStage]);
+  const activeStageDistributions = useMemo(() => textbookDistributions.filter(d => d.stage === activeStage), [textbookDistributions, activeStage]);
+  const activeStageTimetableSettings = useMemo(() => timetableSettings.stage === activeStage || timetableSettings.stage === "all" ? timetableSettings : timetableSettings, [timetableSettings, activeStage]);
 
   // --- Actions ---
   const addStudent = (studentData: Omit<Student, "id">) => {
@@ -750,8 +1213,40 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setGuardians(prev => prev.filter(g => g.id !== id));
   };
 
-  const assignStudentToSection = (studentId: string, sectionId: string | undefined) => {
+  const assignStudentToSection = (studentId: string, sectionId?: string) => {
     setStudents(prev => prev.map(s => s.id === studentId ? { ...s, sectionId } : s));
+  };
+
+  const promoteStudents = (promotions: { studentId: string; nextGrade: string; nextAcademicYearId: string; status: "ناجح" | "راسب" | "منقول" | "خريج" }[]) => {
+    setStudents(prev => {
+      const updated = [...prev];
+      promotions.forEach(promo => {
+        const idx = updated.findIndex(s => s.id === promo.studentId);
+        if (idx > -1) {
+          const student = updated[idx];
+          const newHistory = [...(student.enrollmentHistory || [])];
+          
+          if (student.academicYearId && student.grade) {
+            newHistory.push({
+              id: `enr-${Math.random().toString(36).substr(2, 9)}`,
+              academicYearId: student.academicYearId,
+              grade: student.grade,
+              status: promo.status,
+              date: new Date().toISOString()
+            });
+          }
+
+          updated[idx] = {
+            ...student,
+            grade: promo.nextGrade,
+            academicYearId: promo.nextAcademicYearId,
+            status: promo.status === "خريج" ? "خريج" : "نشط",
+            enrollmentHistory: newHistory
+          };
+        }
+      });
+      return updated;
+    });
   };
 
   // --- Finance Methods ---
@@ -868,6 +1363,14 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setInventoryItems(prev => [newItem, ...prev]);
   };
 
+  const updateInventoryItem = (id: string, updates: Partial<InventoryItem>) => {
+    setInventoryItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+  };
+
+  const deleteInventoryItem = (id: string) => {
+    setInventoryItems(prev => prev.filter(item => item.id !== id));
+  };
+
   const processInventoryTransaction = (txn: Omit<InventoryTransaction, "id" | "date" | "itemName">) => {
     const item = inventoryItems.find(i => i.id === txn.itemId);
     if (!item) return;
@@ -891,6 +1394,22 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   const addStaff = (staffData: Omit<Staff, "id">) => {
     setStaff(prev => [{ ...staffData, id: `EMP-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  };
+
+  const upsertStaffAttendance = (record: StaffAttendanceRecord) => {
+    setStaffAttendance(prev => {
+      const existing = prev.findIndex(r => r.staffId === record.staffId && r.date === record.date);
+      if (existing >= 0) {
+        const next = [...prev];
+        next[existing] = record;
+        return next;
+      }
+      return [...prev, record];
+    });
+  };
+
+  const addStaffAdvance = (advanceData: Omit<StaffAdvance, "id">) => {
+    setStaffAdvances(prev => [{ ...advanceData, id: `ADV-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
   };
 
   const updateStaff = (id: string, updates: Partial<Staff>) => {
@@ -983,7 +1502,6 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setExamMarks(prev => {
       let updated = [...prev];
       for (const m of newMarks) {
-        // If a mark already exists for this exam+student, update it
         const existingIdx = updated.findIndex(exm => exm.examId === m.examId && exm.studentId === m.studentId);
         if (existingIdx >= 0) {
           updated[existingIdx] = { ...updated[existingIdx], mark: m.mark, notes: m.notes };
@@ -994,6 +1512,28 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       return updated;
     });
   };
+
+  const saveExamGrades = (newGrades: Omit<ExamGrade, "id">[]) => {
+    setExamGrades(prev => {
+      let updated = [...prev];
+      for (const g of newGrades) {
+        const existingIdx = updated.findIndex(exg => exg.examId === g.examId && exg.studentId === g.studentId);
+        if (existingIdx >= 0) {
+          updated[existingIdx] = { ...updated[existingIdx], mark: g.mark, descriptiveGrade: g.descriptiveGrade, notes: g.notes };
+        } else {
+          updated.push({ ...g, id: `EG-${Math.floor(1000 + Math.random() * 9000)}` });
+        }
+      }
+      return updated;
+    });
+  };
+
+  const addScheduledExam = (examData: Omit<ScheduledExam, "id" | "createdAt">) => setScheduledExams(p => [{ ...examData as any, id: `SE-${Math.floor(1000 + Math.random() * 9000)}` }, ...p]);
+  const updateScheduledExam = (id: string, updates: Partial<ScheduledExam>) => setScheduledExams(p => p.map(e => e.id === id ? { ...e, ...updates } : e));
+  const deleteScheduledExam = (id: string) => setScheduledExams(p => p.filter(e => e.id !== id));
+
+  const addExamCategory = (cat: Omit<ExamCategory, "id">) => setExamCategories(p => [{ ...cat, id: `EC-${Math.floor(1000 + Math.random() * 9000)}` }, ...p]);
+  const deleteExamCategory = (id: string) => setExamCategories(p => p.filter(c => c.id !== id));
 
   const addSubject = (subjectData: Omit<Subject, "id">) => {
     setSubjects(prev => [{ ...subjectData, id: `SUB-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
@@ -1037,7 +1577,8 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       if (updates.isCurrent) {
         newState = newState.map(y => ({ ...y, isCurrent: false }));
       }
-      return newState.map(y => y.id === id ? { ...y, ...updates } : y);
+      newState.map(y => y.id === id ? { ...y, ...updates } : y);
+      return newState;
     });
   };
 
@@ -1072,7 +1613,10 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       return r;
     }));
   };
-  const deleteMaintenanceRequest = (id: string) => setMaintenanceRequests(prev => prev.filter(r => r.id !== id));
+  const undoMaintenanceRequest = (id: string) => setMaintenanceRequests(prev => prev.map(r => r.id === id ? { ...r, status: "new" } : r));
+  const deleteMaintenanceRequest = (id: string) => {
+    setMaintenanceRequests(prev => prev.filter(r => r.id !== id));
+  };
 
   const addRoom = (room: Omit<Room, "id">) => setRooms(prev => [{ ...room, id: `RM-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
   const updateRoom = (id: string, updates: Partial<Room>) => setRooms(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
@@ -1086,6 +1630,24 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   const addActivityLog = (logData: Omit<ActivityLog, "id" | "date">) => {
     setActivityLogs(prev => [{ ...logData, id: `AL-${Math.floor(1000 + Math.random() * 9000)}`, date: new Date().toISOString() }, ...prev]);
+  };
+
+  const addUser = (userData: Omit<UserAccount, "id">) => {
+    const newUser: UserAccount = { ...userData, id: `U-${Math.floor(1000 + Math.random() * 9000)}` };
+    setUsers(prev => [newUser, ...prev]);
+    addActivityLog({ user: "مدير النظام", action: "إضافة مستخدم", entity: "المستخدمون", details: `تم إنشاء حساب: ${userData.fullName} (${userData.username})` });
+  };
+
+  const updateUser = (id: string, updates: Partial<UserAccount>) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    const user = users.find(u => u.id === id);
+    addActivityLog({ user: "مدير النظام", action: "تعديل مستخدم", entity: "المستخدمون", details: `تم تعديل حساب: ${user?.fullName || id}` });
+  };
+
+  const deleteUser = (id: string) => {
+    const user = users.find(u => u.id === id);
+    setUsers(prev => prev.filter(u => u.id !== id));
+    addActivityLog({ user: "مدير النظام", action: "حذف مستخدم", entity: "المستخدمون", details: `تم حذف حساب: ${user?.fullName || id}` });
   };
 
   const generateBulkData = (count: number) => {
@@ -1180,6 +1742,30 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setDisciplineIncidents(prev => [...newDisciplineIncidents, ...prev]);
     setLibraryIssues(prev => [...newLibraryIssues, ...prev]);
   };
+
+  const addTextbook = (tb: Omit<Textbook, "id">) => setTextbooks(prev => [{ ...tb, id: `TB-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  const updateTextbook = (id: string, updates: Partial<Textbook>) => setTextbooks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  const deleteTextbook = (id: string) => setTextbooks(prev => prev.filter(t => t.id !== id));
+  const distributeTextbook = (distribution: Omit<TextbookDistribution, "id" | "date" | "status">) => {
+    setTextbookDistributions(prev => [{
+      id: `TBD-${Math.floor(1000 + Math.random() * 9000)}`,
+      ...distribution,
+      date: new Date().toISOString().split('T')[0],
+      status: "distributed",
+    }, ...prev]);
+  };
+  const removeDistribution = (id: string) => setTextbookDistributions(prev => prev.filter(d => d.id !== id));
+
+  const addTransportRoute = (r: Omit<TransportRoute, "id">) => setTransportRoutes(prev => [{ ...r, id: `RT-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  const updateTransportRoute = (id: string, updates: Partial<TransportRoute>) => setTransportRoutes(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  const deleteTransportRoute = (id: string) => setTransportRoutes(prev => prev.filter(r => r.id !== id));
+
+  const addTransportSubscription = (s: Omit<TransportSubscription, "id">) => setTransportSubscriptions(prev => [{ ...s, id: `SUB-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  const updateTransportSubscription = (id: string, updates: Partial<TransportSubscription>) => setTransportSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  const deleteTransportSubscription = (id: string) => setTransportSubscriptions(prev => prev.filter(s => s.id !== id));
+
+  const updateTimetableSettings = (updates: Partial<TimetableSettings>) => setTimetableSettings(prev => ({ ...prev, ...updates }));
+
   return (
     <GlobalStoreContext.Provider value={{
       allStudents: students,
@@ -1189,16 +1775,42 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       allStaff: staff, allClinicVisits: clinicVisits, allDisciplineIncidents: disciplineIncidents,
       allSections: sections, allExams: exams, allExamMarks: examMarks, allExamTypes: examTypes, allSubjects: subjects,
       allScheduleSlots: scheduleSlots, allAcademicYears: academicYears, allTeachingAssignments: teachingAssignments,
+      allScheduledExams: scheduledExams, allExamCategories: examCategories, allExamGrades: examGrades,
       
       allMaintenanceRequests: maintenanceRequests, allRooms: rooms,
       allStaffEvaluations: staffEvaluations, allStaffContracts: staffContracts, allStaffLeaves: staffLeaves,
+      allStaffAttendance: staffAttendance, allStaffAdvances: staffAdvances,
       allActivityLogs: activityLogs,
+      allUsers: users,
 
       activeStageStudents, activeStageInvoices, activeStageFeeStructures, activeStageBooks, activeStageLibraryIssues,
-      activeStageStaff, activeStageClinicVisits, activeStageDisciplineIncidents, activeStageSections,
+      activeStageStaff, activeStageStaffAttendance, activeStageClinicVisits, activeStageDisciplineIncidents, activeStageSections,
       activeStageExams, activeStageExamMarks, activeStageExamTypes, activeStageSubjects,
       activeStageScheduleSlots, activeStageTeachingAssignments,
+      activeStageScheduledExams, activeStageExamCategories, activeStageExamGrades,
       allGuardians: guardians,
+      
+      allTextbooks: textbooks,
+      allTextbookDistributions: textbookDistributions,
+      activeStageTextbooks,
+      activeStageDistributions,
+      addTextbook,
+      updateTextbook,
+      deleteTextbook,
+      distributeTextbook,
+      removeDistribution,
+      transportRoutes,
+      transportSubscriptions,
+      addTransportRoute,
+      updateTransportRoute,
+      deleteTransportRoute,
+      addTransportSubscription,
+      updateTransportSubscription,
+      deleteTransportSubscription,
+      activeStageTimetableSettings,
+      updateTimetableSettings,
+      systemSettings,
+      updateSettings,
       
       addStudent,
       updateStudent,
@@ -1208,24 +1820,33 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       addGuardian, updateGuardian, softDeleteGuardian, restoreGuardian, hardDeleteGuardian,
       restoreItem, hardDeleteItem,
       addPayment, addInvoice, updateInvoice, deleteInvoice, addFeeStructure, updateFeeStructure, deleteFeeStructure, addDiscount, updateDiscount, deleteDiscount, addExpense, updateExpense, deleteExpense,
-      addBook, issueBook, returnBook, addInventoryItem,
-      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, addClinicVisit, addDisciplineIncident,
+      addBook, issueBook, returnBook, addInventoryItem, updateInventoryItem, deleteInventoryItem,
+      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, addStaffAdvance, addClinicVisit, addDisciplineIncident,
       addSection, updateSection, deleteSection, 
       examGradingMode,
       setExamGradingMode,
       currency,
       setCurrency,
       addExamType, updateExamType, deleteExamType,
-      addExam, deleteExam, saveExamMarks, addSubject, deleteSubject,
+      addExam, deleteExam, saveExamMarks, saveExamGrades, addSubject, deleteSubject,
+      addScheduledExam, updateScheduledExam, deleteScheduledExam, addExamCategory, deleteExamCategory,
       updateScheduleSlot, clearScheduleSlot, addAcademicYear, updateAcademicYear, addTeachingAssignment, deleteTeachingAssignment,
       assignStudentToSection,
+      promoteStudents,
       
-      addMaintenanceRequest, updateMaintenanceRequest, deleteMaintenanceRequest,
+      addMaintenanceRequest, updateMaintenanceRequest, undoMaintenanceRequest, deleteMaintenanceRequest,
       addRoom, updateRoom, deleteRoom,
       addStaffEvaluation, addStaffContract, addStaffLeave, updateStaffLeave,
       addActivityLog,
+      addUser, updateUser, deleteUser,
 
-      generateBulkData
+      generateBulkData,
+
+      notifications,
+      unreadNotificationsCount,
+      markAllNotificationsAsRead,
+      deleteNotification,
+      addNotification
     }}>
       {children}
     </GlobalStoreContext.Provider>

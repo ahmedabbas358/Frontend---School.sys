@@ -14,6 +14,7 @@ import { Route as TeachersRouteImport } from './routes/teachers'
 import { Route as StudentsRouteImport } from './routes/students'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScheduleRouteImport } from './routes/schedule'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as HrRouteImport } from './routes/hr'
@@ -31,12 +32,14 @@ import { Route as TeachersIndexRouteImport } from './routes/teachers.index'
 import { Route as StudentsIndexRouteImport } from './routes/students.index'
 import { Route as GuardiansIndexRouteImport } from './routes/guardians.index'
 import { Route as ExamsIndexRouteImport } from './routes/exams.index'
+import { Route as TransportStudentsRouteImport } from './routes/transport.students'
 import { Route as TransportRoutesRouteImport } from './routes/transport.routes'
 import { Route as TeachersIdRouteImport } from './routes/teachers.$id'
 import { Route as StudentsNewRouteImport } from './routes/students.new'
 import { Route as StudentsIdRouteImport } from './routes/students.$id'
 import { Route as SettingsTrashRouteImport } from './routes/settings.trash'
-import { Route as LibraryBooksRouteImport } from './routes/library.books'
+import { Route as LibraryTextbooksRouteImport } from './routes/library.textbooks'
+import { Route as LibraryDistributionRouteImport } from './routes/library.distribution'
 import { Route as InventoryItemsRouteImport } from './routes/inventory.items'
 import { Route as HrReportsRouteImport } from './routes/hr.reports'
 import { Route as HrPayrollRouteImport } from './routes/hr.payroll'
@@ -52,11 +55,12 @@ import { Route as FinanceInvoicesRouteImport } from './routes/finance.invoices'
 import { Route as FinanceFeesRouteImport } from './routes/finance.fees'
 import { Route as FinanceExpensesRouteImport } from './routes/finance.expenses'
 import { Route as FinanceDiscountsRouteImport } from './routes/finance.discounts'
+import { Route as FinanceDashboardRouteImport } from './routes/finance.dashboard'
 import { Route as FacilitiesRoomsRouteImport } from './routes/facilities.rooms'
 import { Route as FacilitiesMaintenanceRouteImport } from './routes/facilities.maintenance'
 import { Route as FacilitiesDashboardRouteImport } from './routes/facilities.dashboard'
-import { Route as ExamsTypesRouteImport } from './routes/exams.types'
 import { Route as ExamsReportsRouteImport } from './routes/exams.reports'
+import { Route as ExamsGradesRouteImport } from './routes/exams.grades'
 import { Route as DisciplineMeritsRouteImport } from './routes/discipline.merits'
 import { Route as DisciplineIncidentsRouteImport } from './routes/discipline.incidents'
 import { Route as ClinicVisitsRouteImport } from './routes/clinic.visits'
@@ -72,7 +76,7 @@ import { Route as AdminBackupRouteImport } from './routes/admin.backup'
 import { Route as AdminActivityLogRouteImport } from './routes/admin.activity-log'
 import { Route as AcademicYearsRouteImport } from './routes/academic.years'
 import { Route as AcademicSubjectsRouteImport } from './routes/academic.subjects'
-import { Route as AcademicGradesRouteImport } from './routes/academic.grades'
+import { Route as AcademicPromotionRouteImport } from './routes/academic.promotion'
 import { Route as AcademicClassesRouteImport } from './routes/academic.classes'
 import { Route as AcademicAssignmentsRouteImport } from './routes/academic.assignments'
 import { Route as HrStaffIndexRouteImport } from './routes/hr.staff.index'
@@ -101,6 +105,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryRoute = LibraryRouteImport.update({
@@ -188,6 +197,11 @@ const ExamsIndexRoute = ExamsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ExamsRoute,
 } as any)
+const TransportStudentsRoute = TransportStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => TransportRoute,
+} as any)
 const TransportRoutesRoute = TransportRoutesRouteImport.update({
   id: '/routes',
   path: '/routes',
@@ -213,9 +227,14 @@ const SettingsTrashRoute = SettingsTrashRouteImport.update({
   path: '/trash',
   getParentRoute: () => SettingsRoute,
 } as any)
-const LibraryBooksRoute = LibraryBooksRouteImport.update({
-  id: '/books',
-  path: '/books',
+const LibraryTextbooksRoute = LibraryTextbooksRouteImport.update({
+  id: '/textbooks',
+  path: '/textbooks',
+  getParentRoute: () => LibraryRoute,
+} as any)
+const LibraryDistributionRoute = LibraryDistributionRouteImport.update({
+  id: '/distribution',
+  path: '/distribution',
   getParentRoute: () => LibraryRoute,
 } as any)
 const InventoryItemsRoute = InventoryItemsRouteImport.update({
@@ -293,6 +312,11 @@ const FinanceDiscountsRoute = FinanceDiscountsRouteImport.update({
   path: '/discounts',
   getParentRoute: () => FinanceRoute,
 } as any)
+const FinanceDashboardRoute = FinanceDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const FacilitiesRoomsRoute = FacilitiesRoomsRouteImport.update({
   id: '/rooms',
   path: '/rooms',
@@ -308,14 +332,14 @@ const FacilitiesDashboardRoute = FacilitiesDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => FacilitiesRoute,
 } as any)
-const ExamsTypesRoute = ExamsTypesRouteImport.update({
-  id: '/types',
-  path: '/types',
-  getParentRoute: () => ExamsRoute,
-} as any)
 const ExamsReportsRoute = ExamsReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => ExamsRoute,
+} as any)
+const ExamsGradesRoute = ExamsGradesRouteImport.update({
+  id: '/grades',
+  path: '/grades',
   getParentRoute: () => ExamsRoute,
 } as any)
 const DisciplineMeritsRoute = DisciplineMeritsRouteImport.update({
@@ -344,9 +368,9 @@ const AttendanceReportsRoute = AttendanceReportsRouteImport.update({
   getParentRoute: () => AttendanceRoute,
 } as any)
 const AdmissionsIdRoute = AdmissionsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AdmissionsRoute,
+  id: '/admissions/$id',
+  path: '/admissions/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
@@ -393,9 +417,9 @@ const AcademicSubjectsRoute = AcademicSubjectsRouteImport.update({
   path: '/subjects',
   getParentRoute: () => AcademicRoute,
 } as any)
-const AcademicGradesRoute = AcademicGradesRouteImport.update({
-  id: '/grades',
-  path: '/grades',
+const AcademicPromotionRoute = AcademicPromotionRouteImport.update({
+  id: '/promotion',
+  path: '/promotion',
   getParentRoute: () => AcademicRoute,
 } as any)
 const AcademicClassesRoute = AcademicClassesRouteImport.update({
@@ -433,6 +457,7 @@ export interface FileRoutesByFullPath {
   '/hr': typeof HrRouteWithChildren
   '/inventory': typeof InventoryRouteWithChildren
   '/library': typeof LibraryRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRouteWithChildren
   '/students': typeof StudentsRouteWithChildren
@@ -440,7 +465,7 @@ export interface FileRoutesByFullPath {
   '/transport': typeof TransportRouteWithChildren
   '/academic/assignments': typeof AcademicAssignmentsRoute
   '/academic/classes': typeof AcademicClassesRoute
-  '/academic/grades': typeof AcademicGradesRoute
+  '/academic/promotion': typeof AcademicPromotionRoute
   '/academic/subjects': typeof AcademicSubjectsRoute
   '/academic/years': typeof AcademicYearsRoute
   '/admin/activity-log': typeof AdminActivityLogRoute
@@ -456,11 +481,12 @@ export interface FileRoutesByFullPath {
   '/clinic/visits': typeof ClinicVisitsRoute
   '/discipline/incidents': typeof DisciplineIncidentsRoute
   '/discipline/merits': typeof DisciplineMeritsRoute
+  '/exams/grades': typeof ExamsGradesRoute
   '/exams/reports': typeof ExamsReportsRoute
-  '/exams/types': typeof ExamsTypesRoute
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
+  '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
@@ -476,12 +502,14 @@ export interface FileRoutesByFullPath {
   '/hr/payroll': typeof HrPayrollRoute
   '/hr/reports': typeof HrReportsRoute
   '/inventory/items': typeof InventoryItemsRoute
-  '/library/books': typeof LibraryBooksRoute
+  '/library/distribution': typeof LibraryDistributionRoute
+  '/library/textbooks': typeof LibraryTextbooksRoute
   '/settings/trash': typeof SettingsTrashRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
+  '/transport/students': typeof TransportStudentsRoute
   '/exams/': typeof ExamsIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
   '/students/': typeof StudentsIndexRoute
@@ -501,12 +529,13 @@ export interface FileRoutesByTo {
   '/hr': typeof HrRouteWithChildren
   '/inventory': typeof InventoryRouteWithChildren
   '/library': typeof LibraryRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRouteWithChildren
   '/transport': typeof TransportRouteWithChildren
   '/academic/assignments': typeof AcademicAssignmentsRoute
   '/academic/classes': typeof AcademicClassesRoute
-  '/academic/grades': typeof AcademicGradesRoute
+  '/academic/promotion': typeof AcademicPromotionRoute
   '/academic/subjects': typeof AcademicSubjectsRoute
   '/academic/years': typeof AcademicYearsRoute
   '/admin/activity-log': typeof AdminActivityLogRoute
@@ -522,11 +551,12 @@ export interface FileRoutesByTo {
   '/clinic/visits': typeof ClinicVisitsRoute
   '/discipline/incidents': typeof DisciplineIncidentsRoute
   '/discipline/merits': typeof DisciplineMeritsRoute
+  '/exams/grades': typeof ExamsGradesRoute
   '/exams/reports': typeof ExamsReportsRoute
-  '/exams/types': typeof ExamsTypesRoute
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
+  '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
@@ -542,12 +572,14 @@ export interface FileRoutesByTo {
   '/hr/payroll': typeof HrPayrollRoute
   '/hr/reports': typeof HrReportsRoute
   '/inventory/items': typeof InventoryItemsRoute
-  '/library/books': typeof LibraryBooksRoute
+  '/library/distribution': typeof LibraryDistributionRoute
+  '/library/textbooks': typeof LibraryTextbooksRoute
   '/settings/trash': typeof SettingsTrashRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
+  '/transport/students': typeof TransportStudentsRoute
   '/exams': typeof ExamsIndexRoute
   '/guardians': typeof GuardiansIndexRoute
   '/students': typeof StudentsIndexRoute
@@ -570,6 +602,7 @@ export interface FileRoutesById {
   '/hr': typeof HrRouteWithChildren
   '/inventory': typeof InventoryRouteWithChildren
   '/library': typeof LibraryRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRouteWithChildren
   '/students': typeof StudentsRouteWithChildren
@@ -577,7 +610,7 @@ export interface FileRoutesById {
   '/transport': typeof TransportRouteWithChildren
   '/academic/assignments': typeof AcademicAssignmentsRoute
   '/academic/classes': typeof AcademicClassesRoute
-  '/academic/grades': typeof AcademicGradesRoute
+  '/academic/promotion': typeof AcademicPromotionRoute
   '/academic/subjects': typeof AcademicSubjectsRoute
   '/academic/years': typeof AcademicYearsRoute
   '/admin/activity-log': typeof AdminActivityLogRoute
@@ -593,11 +626,12 @@ export interface FileRoutesById {
   '/clinic/visits': typeof ClinicVisitsRoute
   '/discipline/incidents': typeof DisciplineIncidentsRoute
   '/discipline/merits': typeof DisciplineMeritsRoute
+  '/exams/grades': typeof ExamsGradesRoute
   '/exams/reports': typeof ExamsReportsRoute
-  '/exams/types': typeof ExamsTypesRoute
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
+  '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
@@ -613,12 +647,14 @@ export interface FileRoutesById {
   '/hr/payroll': typeof HrPayrollRoute
   '/hr/reports': typeof HrReportsRoute
   '/inventory/items': typeof InventoryItemsRoute
-  '/library/books': typeof LibraryBooksRoute
+  '/library/distribution': typeof LibraryDistributionRoute
+  '/library/textbooks': typeof LibraryTextbooksRoute
   '/settings/trash': typeof SettingsTrashRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
+  '/transport/students': typeof TransportStudentsRoute
   '/exams/': typeof ExamsIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
   '/students/': typeof StudentsIndexRoute
@@ -642,6 +678,7 @@ export interface FileRouteTypes {
     | '/hr'
     | '/inventory'
     | '/library'
+    | '/profile'
     | '/schedule'
     | '/settings'
     | '/students'
@@ -649,7 +686,7 @@ export interface FileRouteTypes {
     | '/transport'
     | '/academic/assignments'
     | '/academic/classes'
-    | '/academic/grades'
+    | '/academic/promotion'
     | '/academic/subjects'
     | '/academic/years'
     | '/admin/activity-log'
@@ -665,11 +702,12 @@ export interface FileRouteTypes {
     | '/clinic/visits'
     | '/discipline/incidents'
     | '/discipline/merits'
+    | '/exams/grades'
     | '/exams/reports'
-    | '/exams/types'
     | '/facilities/dashboard'
     | '/facilities/maintenance'
     | '/facilities/rooms'
+    | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
@@ -685,12 +723,14 @@ export interface FileRouteTypes {
     | '/hr/payroll'
     | '/hr/reports'
     | '/inventory/items'
-    | '/library/books'
+    | '/library/distribution'
+    | '/library/textbooks'
     | '/settings/trash'
     | '/students/$id'
     | '/students/new'
     | '/teachers/$id'
     | '/transport/routes'
+    | '/transport/students'
     | '/exams/'
     | '/guardians/'
     | '/students/'
@@ -710,12 +750,13 @@ export interface FileRouteTypes {
     | '/hr'
     | '/inventory'
     | '/library'
+    | '/profile'
     | '/schedule'
     | '/settings'
     | '/transport'
     | '/academic/assignments'
     | '/academic/classes'
-    | '/academic/grades'
+    | '/academic/promotion'
     | '/academic/subjects'
     | '/academic/years'
     | '/admin/activity-log'
@@ -731,11 +772,12 @@ export interface FileRouteTypes {
     | '/clinic/visits'
     | '/discipline/incidents'
     | '/discipline/merits'
+    | '/exams/grades'
     | '/exams/reports'
-    | '/exams/types'
     | '/facilities/dashboard'
     | '/facilities/maintenance'
     | '/facilities/rooms'
+    | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
@@ -751,12 +793,14 @@ export interface FileRouteTypes {
     | '/hr/payroll'
     | '/hr/reports'
     | '/inventory/items'
-    | '/library/books'
+    | '/library/distribution'
+    | '/library/textbooks'
     | '/settings/trash'
     | '/students/$id'
     | '/students/new'
     | '/teachers/$id'
     | '/transport/routes'
+    | '/transport/students'
     | '/exams'
     | '/guardians'
     | '/students'
@@ -778,6 +822,7 @@ export interface FileRouteTypes {
     | '/hr'
     | '/inventory'
     | '/library'
+    | '/profile'
     | '/schedule'
     | '/settings'
     | '/students'
@@ -785,7 +830,7 @@ export interface FileRouteTypes {
     | '/transport'
     | '/academic/assignments'
     | '/academic/classes'
-    | '/academic/grades'
+    | '/academic/promotion'
     | '/academic/subjects'
     | '/academic/years'
     | '/admin/activity-log'
@@ -801,11 +846,12 @@ export interface FileRouteTypes {
     | '/clinic/visits'
     | '/discipline/incidents'
     | '/discipline/merits'
+    | '/exams/grades'
     | '/exams/reports'
-    | '/exams/types'
     | '/facilities/dashboard'
     | '/facilities/maintenance'
     | '/facilities/rooms'
+    | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
@@ -821,12 +867,14 @@ export interface FileRouteTypes {
     | '/hr/payroll'
     | '/hr/reports'
     | '/inventory/items'
-    | '/library/books'
+    | '/library/distribution'
+    | '/library/textbooks'
     | '/settings/trash'
     | '/students/$id'
     | '/students/new'
     | '/teachers/$id'
     | '/transport/routes'
+    | '/transport/students'
     | '/exams/'
     | '/guardians/'
     | '/students/'
@@ -849,11 +897,13 @@ export interface RootRouteChildren {
   HrRoute: typeof HrRouteWithChildren
   InventoryRoute: typeof InventoryRouteWithChildren
   LibraryRoute: typeof LibraryRouteWithChildren
+  ProfileRoute: typeof ProfileRoute
   ScheduleRoute: typeof ScheduleRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   StudentsRoute: typeof StudentsRouteWithChildren
   TeachersRoute: typeof TeachersRouteWithChildren
   TransportRoute: typeof TransportRouteWithChildren
+  AdmissionsIdRoute: typeof AdmissionsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -891,6 +941,13 @@ declare module '@tanstack/react-router' {
       path: '/schedule'
       fullPath: '/schedule'
       preLoaderRoute: typeof ScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library': {
@@ -1012,6 +1069,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamsIndexRouteImport
       parentRoute: typeof ExamsRoute
     }
+    '/transport/students': {
+      id: '/transport/students'
+      path: '/students'
+      fullPath: '/transport/students'
+      preLoaderRoute: typeof TransportStudentsRouteImport
+      parentRoute: typeof TransportRoute
+    }
     '/transport/routes': {
       id: '/transport/routes'
       path: '/routes'
@@ -1047,11 +1111,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTrashRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/library/books': {
-      id: '/library/books'
-      path: '/books'
-      fullPath: '/library/books'
-      preLoaderRoute: typeof LibraryBooksRouteImport
+    '/library/textbooks': {
+      id: '/library/textbooks'
+      path: '/textbooks'
+      fullPath: '/library/textbooks'
+      preLoaderRoute: typeof LibraryTextbooksRouteImport
+      parentRoute: typeof LibraryRoute
+    }
+    '/library/distribution': {
+      id: '/library/distribution'
+      path: '/distribution'
+      fullPath: '/library/distribution'
+      preLoaderRoute: typeof LibraryDistributionRouteImport
       parentRoute: typeof LibraryRoute
     }
     '/inventory/items': {
@@ -1159,6 +1230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceDiscountsRouteImport
       parentRoute: typeof FinanceRoute
     }
+    '/finance/dashboard': {
+      id: '/finance/dashboard'
+      path: '/dashboard'
+      fullPath: '/finance/dashboard'
+      preLoaderRoute: typeof FinanceDashboardRouteImport
+      parentRoute: typeof FinanceRoute
+    }
     '/facilities/rooms': {
       id: '/facilities/rooms'
       path: '/rooms'
@@ -1180,18 +1258,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FacilitiesDashboardRouteImport
       parentRoute: typeof FacilitiesRoute
     }
-    '/exams/types': {
-      id: '/exams/types'
-      path: '/types'
-      fullPath: '/exams/types'
-      preLoaderRoute: typeof ExamsTypesRouteImport
-      parentRoute: typeof ExamsRoute
-    }
     '/exams/reports': {
       id: '/exams/reports'
       path: '/reports'
       fullPath: '/exams/reports'
       preLoaderRoute: typeof ExamsReportsRouteImport
+      parentRoute: typeof ExamsRoute
+    }
+    '/exams/grades': {
+      id: '/exams/grades'
+      path: '/grades'
+      fullPath: '/exams/grades'
+      preLoaderRoute: typeof ExamsGradesRouteImport
       parentRoute: typeof ExamsRoute
     }
     '/discipline/merits': {
@@ -1231,10 +1309,10 @@ declare module '@tanstack/react-router' {
     }
     '/admissions/$id': {
       id: '/admissions/$id'
-      path: '/$id'
+      path: '/admissions/$id'
       fullPath: '/admissions/$id'
       preLoaderRoute: typeof AdmissionsIdRouteImport
-      parentRoute: typeof AdmissionsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
       id: '/admin/users'
@@ -1299,11 +1377,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcademicSubjectsRouteImport
       parentRoute: typeof AcademicRoute
     }
-    '/academic/grades': {
-      id: '/academic/grades'
-      path: '/grades'
-      fullPath: '/academic/grades'
-      preLoaderRoute: typeof AcademicGradesRouteImport
+    '/academic/promotion': {
+      id: '/academic/promotion'
+      path: '/promotion'
+      fullPath: '/academic/promotion'
+      preLoaderRoute: typeof AcademicPromotionRouteImport
       parentRoute: typeof AcademicRoute
     }
     '/academic/classes': {
@@ -1340,7 +1418,7 @@ declare module '@tanstack/react-router' {
 interface AcademicRouteChildren {
   AcademicAssignmentsRoute: typeof AcademicAssignmentsRoute
   AcademicClassesRoute: typeof AcademicClassesRoute
-  AcademicGradesRoute: typeof AcademicGradesRoute
+  AcademicPromotionRoute: typeof AcademicPromotionRoute
   AcademicSubjectsRoute: typeof AcademicSubjectsRoute
   AcademicYearsRoute: typeof AcademicYearsRoute
 }
@@ -1348,7 +1426,7 @@ interface AcademicRouteChildren {
 const AcademicRouteChildren: AcademicRouteChildren = {
   AcademicAssignmentsRoute: AcademicAssignmentsRoute,
   AcademicClassesRoute: AcademicClassesRoute,
-  AcademicGradesRoute: AcademicGradesRoute,
+  AcademicPromotionRoute: AcademicPromotionRoute,
   AcademicSubjectsRoute: AcademicSubjectsRoute,
   AcademicYearsRoute: AcademicYearsRoute,
 }
@@ -1419,14 +1497,14 @@ const DisciplineRouteWithChildren = DisciplineRoute._addFileChildren(
 )
 
 interface ExamsRouteChildren {
+  ExamsGradesRoute: typeof ExamsGradesRoute
   ExamsReportsRoute: typeof ExamsReportsRoute
-  ExamsTypesRoute: typeof ExamsTypesRoute
   ExamsIndexRoute: typeof ExamsIndexRoute
 }
 
 const ExamsRouteChildren: ExamsRouteChildren = {
+  ExamsGradesRoute: ExamsGradesRoute,
   ExamsReportsRoute: ExamsReportsRoute,
-  ExamsTypesRoute: ExamsTypesRoute,
   ExamsIndexRoute: ExamsIndexRoute,
 }
 
@@ -1449,6 +1527,7 @@ const FacilitiesRouteWithChildren = FacilitiesRoute._addFileChildren(
 )
 
 interface FinanceRouteChildren {
+  FinanceDashboardRoute: typeof FinanceDashboardRoute
   FinanceDiscountsRoute: typeof FinanceDiscountsRoute
   FinanceExpensesRoute: typeof FinanceExpensesRoute
   FinanceFeesRoute: typeof FinanceFeesRoute
@@ -1457,6 +1536,7 @@ interface FinanceRouteChildren {
 }
 
 const FinanceRouteChildren: FinanceRouteChildren = {
+  FinanceDashboardRoute: FinanceDashboardRoute,
   FinanceDiscountsRoute: FinanceDiscountsRoute,
   FinanceExpensesRoute: FinanceExpensesRoute,
   FinanceFeesRoute: FinanceFeesRoute,
@@ -1522,11 +1602,13 @@ const InventoryRouteWithChildren = InventoryRoute._addFileChildren(
 )
 
 interface LibraryRouteChildren {
-  LibraryBooksRoute: typeof LibraryBooksRoute
+  LibraryDistributionRoute: typeof LibraryDistributionRoute
+  LibraryTextbooksRoute: typeof LibraryTextbooksRoute
 }
 
 const LibraryRouteChildren: LibraryRouteChildren = {
-  LibraryBooksRoute: LibraryBooksRoute,
+  LibraryDistributionRoute: LibraryDistributionRoute,
+  LibraryTextbooksRoute: LibraryTextbooksRoute,
 }
 
 const LibraryRouteWithChildren =
@@ -1576,10 +1658,12 @@ const TeachersRouteWithChildren = TeachersRoute._addFileChildren(
 
 interface TransportRouteChildren {
   TransportRoutesRoute: typeof TransportRoutesRoute
+  TransportStudentsRoute: typeof TransportStudentsRoute
 }
 
 const TransportRouteChildren: TransportRouteChildren = {
   TransportRoutesRoute: TransportRoutesRoute,
+  TransportStudentsRoute: TransportStudentsRoute,
 }
 
 const TransportRouteWithChildren = TransportRoute._addFileChildren(
@@ -1600,11 +1684,13 @@ const rootRouteChildren: RootRouteChildren = {
   HrRoute: HrRouteWithChildren,
   InventoryRoute: InventoryRouteWithChildren,
   LibraryRoute: LibraryRouteWithChildren,
+  ProfileRoute: ProfileRoute,
   ScheduleRoute: ScheduleRoute,
   SettingsRoute: SettingsRouteWithChildren,
   StudentsRoute: StudentsRouteWithChildren,
   TeachersRoute: TeachersRouteWithChildren,
   TransportRoute: TransportRouteWithChildren,
+  AdmissionsIdRoute: AdmissionsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
+import { useStage } from "@/contexts/StageContext";
 import {
   Users,
   Briefcase,
@@ -41,23 +42,35 @@ function StatCard({ icon: Icon, label, value, desc, tone = "primary" }: any) {
 }
 
 function HRDashboard() {
-  const { allStaff, allStaffContracts, allStaffLeaves, allStaffEvaluations } = useGlobalStore();
+  const { stage, getStageLabel } = useStage();
+  const { currency, activeStageStaff, activeStageStaffAttendance, activeStageTeachingAssignments, allStaffContracts, allStaffLeaves, allStaffEvaluations } = useGlobalStore();
 
-  const totalStaff = allStaff.filter(s => !s.isDeleted).length;
-  const activeStaff = allStaff.filter(s => !s.isDeleted && s.status === "active").length;
-  const totalPayroll = allStaff.filter(s => !s.isDeleted && s.status === "active").reduce((acc, curr) => acc + (curr.basicSalary || 0) + (curr.allowance || 0) - (curr.deduction || 0), 0);
+  const scopedStaff = activeStageStaff.filter(s => !s.isDeleted);
+  const scopedStaffIds = new Set(scopedStaff.map(item => item.id));
+  const totalStaff = scopedStaff.length;
+  const activeStaff = scopedStaff.filter(s => s.status === "active").length;
+  const totalPayroll = scopedStaff.filter(s => s.status === "active").reduce((acc, curr) => acc + (curr.basicSalary || 0) + (curr.allowance || 0) - (curr.deduction || 0), 0);
   
-  const pendingLeaves = allStaffLeaves.filter(l => l.status === "pending").length;
-  const activeContracts = allStaffContracts.filter(c => c.status === "active").length;
+  const pendingLeaves = allStaffLeaves.filter(l => scopedStaffIds.has(l.staffId) && l.status === "pending").length;
+  const activeContracts = allStaffContracts.filter(c => scopedStaffIds.has(c.staffId) && c.status === "active").length;
+  const latestAttendanceDate = activeStageStaffAttendance[0]?.date || new Date().toISOString().slice(0, 10);
+  const month = latestAttendanceDate.slice(0, 7);
+  const attendanceDeductions = activeStageStaffAttendance
+    .filter(record => record.date.startsWith(month))
+    .reduce((sum, record) => sum + (record.deductionAmount || 0), 0);
 
   const departmentDist = Array.from(
-    allStaff.filter(s => !s.isDeleted).reduce((acc, s) => {
+    scopedStaff.reduce((acc, s) => {
       acc.set(s.department, (acc.get(s.department) ?? 0) + 1);
       return acc;
     }, new Map<string, number>()),
   ).map(([name, value], i) => ({ name, value, fill: PALETTE[i % PALETTE.length] }));
 
-  const recentEvaluations = allStaffEvaluations.slice(0, 4);
+  const teachersCount = scopedStaff.filter(item => item.role.includes("معلم") || item.role.includes("مربي")).length;
+  const assignedTeachersCount = new Set(activeStageTeachingAssignments.map(item => item.teacherId)).size;
+  const assignmentCoverage = teachersCount > 0 ? Math.round((assignedTeachersCount / teachersCount) * 100) : 0;
+
+  const recentEvaluations = allStaffEvaluations.filter(item => scopedStaffIds.has(item.staffId)).slice(0, 4);
 
   return (
     <AppShell
@@ -74,18 +87,18 @@ function HRDashboard() {
             <Users className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-black">الموارد البشرية (HR)</h1>
-            <p className="text-sm font-bold text-muted-foreground mt-1">نظرة شاملة على الكادر التعليمي والإداري والمالية المتعلقة بهم</p>
+            <h1 className="text-2xl font-black">الموارد البشرية ({getStageLabel(stage)})</h1>
+            <p className="text-sm font-bold text-muted-foreground mt-1">نظرة تشغيلية على الكادر، الرواتب، العقود، الإجازات، والإسناد التدريسي للمرحلة النشطة.</p>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <StatCard icon={Users} label="إجمالي الموظفين" value={totalStaff} desc={`${activeStaff} على رأس العمل`} tone="primary" />
-          <StatCard icon={Banknote} label="مسير الرواتب الشهري" value={`${totalPayroll.toLocaleString("ar-EG")} ر.س`} desc="الأساسي + البدلات - الحسميات" tone="success" />
-          <StatCard icon={TrendingUp} label="متوسط الحضور" value="96%" desc="هذا الأسبوع" tone="success" />
+          <StatCard icon={Banknote} label="مسير الرواتب الشهري" value={`${totalPayroll.toLocaleString("ar-EG")} ${currency}`} desc="الأساسي + البدلات - الحسميات" tone="success" />
+          <StatCard icon={TrendingUp} label="تغطية الإسناد" value={`${assignmentCoverage}%`} desc={`${activeStageTeachingAssignments.length} إسناد نشط`} tone="success" />
           <StatCard icon={CalendarDays} label="إجازات معلقة" value={pendingLeaves} tone={pendingLeaves > 0 ? "warning" : "success"} />
           <StatCard icon={FileBadge} label="عقود سارية" value={activeContracts} tone="primary" />
-          <StatCard icon={Briefcase} label="عمليات التوظيف" value={0} desc="مرشحين جدد" tone="primary" />
+          <StatCard icon={Briefcase} label="خصومات حضور" value={`${attendanceDeductions.toLocaleString("ar-EG")} ${currency}`} desc={`الشهر ${month}`} tone={attendanceDeductions > 0 ? "warning" : "success"} />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
@@ -110,9 +123,9 @@ function HRDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={[
-                        { name: "دوام كامل", value: allStaffContracts.filter(c => c.type === "full_time").length || 1 },
-                        { name: "دوام جزئي", value: allStaffContracts.filter(c => c.type === "part_time").length || 0 },
-                        { name: "عقد مقاولة", value: allStaffContracts.filter(c => c.type === "contractor").length || 0 },
+                        { name: "دوام كامل", value: allStaffContracts.filter(c => scopedStaffIds.has(c.staffId) && c.type === "full_time").length || 1 },
+                        { name: "دوام جزئي", value: allStaffContracts.filter(c => scopedStaffIds.has(c.staffId) && c.type === "part_time").length || 0 },
+                        { name: "عقد مقاولة", value: allStaffContracts.filter(c => scopedStaffIds.has(c.staffId) && c.type === "contractor").length || 0 },
                       ]} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} label>
                         <Cell fill="#2563EB" />
                         <Cell fill="#F59E0B" />

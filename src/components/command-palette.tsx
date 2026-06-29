@@ -20,8 +20,16 @@ export function CommandPalette() {
         setIsOpen(false);
       }
     };
+    
+    const onCustomOpen = () => setIsOpen(true);
+
     document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
+    document.addEventListener('open-command-palette', onCustomOpen);
+    
+    return () => {
+      document.removeEventListener('keydown', down);
+      document.removeEventListener('open-command-palette', onCustomOpen);
+    };
   }, []);
 
   useEffect(() => {
@@ -80,7 +88,7 @@ export function CommandPalette() {
   return (
     <div className="fixed inset-0 z-[999] flex items-start justify-center pt-[15vh] sm:pt-[20vh] bg-black/50 backdrop-blur-sm" onClick={() => setIsOpen(false)} dir="rtl">
       <div 
-        className="w-full max-w-xl bg-background rounded-xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-xl bg-background/80 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_-10px_rgba(0,0,0,0.3)] border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center px-4 border-b border-border">
@@ -106,9 +114,9 @@ export function CommandPalette() {
                   <button
                     key={cmd.id}
                     onClick={() => handleSelect(cmd.to)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-right hover:bg-primary/10 hover:text-primary transition-colors focus:bg-primary/10 focus:outline-none"
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-right hover:bg-primary hover:text-primary-foreground transition-all duration-200 focus:bg-primary focus:text-primary-foreground focus:outline-none group"
                   >
-                    <div className="bg-muted p-1.5 rounded-md"><Icon className="w-4 h-4 opacity-70" /></div>
+                    <div className="bg-muted group-hover:bg-primary-foreground/20 p-2 rounded-lg transition-colors"><Icon className="w-4 h-4 opacity-70 group-hover:opacity-100" /></div>
                     {cmd.title}
                   </button>
                 );

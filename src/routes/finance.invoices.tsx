@@ -4,8 +4,9 @@ import { DataTable } from "@/components/data-table";
 import { FileText, Search, Filter, Printer, Eye, X, Plus, DollarSign, Users, AlertTriangle, CheckCircle2, GraduationCap, Building } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
-import { useGlobalStore, Invoice } from "@/contexts/GlobalStoreContext";
+import { useGlobalStore, Discount, Invoice } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
+import { getGradesForStage } from "@/lib/school-structure";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/finance/invoices")({
@@ -36,13 +37,13 @@ function FinanceInvoices() {
 
   // Available grades from sections
   const uniqueGrades = useMemo(() => {
-    return Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean).sort();
-  }, [activeStageSections]);
+    return getGradesForStage(stage);
+  }, [stage]);
 
   // Available sections for selected grade
   const availableSections = useMemo(() => {
-    if (!gradeFilter) return activeStageSections;
-    return activeStageSections.filter(s => s.grade === gradeFilter);
+    let sections = gradeFilter ? activeStageSections.filter(s => s.grade === gradeFilter) : activeStageSections;
+    return [...sections].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   }, [activeStageSections, gradeFilter]);
 
   // Build a map of studentId -> student for quick lookup
@@ -51,6 +52,15 @@ function FinanceInvoices() {
     activeStageStudents.forEach(s => map.set(s.id, s));
     return map;
   }, [activeStageStudents]);
+
+  const matchesDiscount = (discount: Discount, student: typeof activeStageStudents[0]) => {
+    if (discount.isActive === false) return false;
+    if (discount.stage && discount.stage !== "all" && discount.stage !== student.stage) return false;
+    if (discount.grades?.length && !discount.grades.includes(student.grade)) return false;
+    if (discount.sections?.length && (!student.sectionId || !discount.sections.includes(student.sectionId))) return false;
+    if (discount.studentIds?.length && !discount.studentIds.includes(student.id)) return false;
+    return true;
+  };
 
   const filtered = useMemo(() => {
     return activeStageInvoices.filter(inv => {
@@ -136,7 +146,7 @@ function FinanceInvoices() {
     if (invoiceTargetType === "student") {
       targetStudents = activeStageStudents.filter(s => invoiceTargetIds.includes(s.id));
     } else if (invoiceTargetType === "section") {
-      targetStudents = activeStageStudents.filter(s => invoiceTargetIds.includes(s.sectionId));
+      targetStudents = activeStageStudents.filter(s => s.sectionId && invoiceTargetIds.includes(s.sectionId));
     } else if (invoiceTargetType === "grade") {
       targetStudents = activeStageStudents.filter(s => invoiceTargetIds.includes(s.grade));
     }
@@ -146,34 +156,38 @@ function FinanceInvoices() {
       return;
     }
 
-    let discountAmount = 0;
     if (newInvoiceData.discountId) {
       const discount = allDiscounts.find(d => d.id === newInvoiceData.discountId);
-      if (discount) {
-        if (discount.type === "percentage") {
-          discountAmount = (newInvoiceData.amount * discount.value) / 100;
-        } else {
-          discountAmount = discount.value;
-        }
+      if (!discount) {
+        toast.error("الخصم المحدد غير موجود");
+        return;
+      }
+      const invalidStudents = targetStudents.filter(student => !matchesDiscount(discount, student));
+      if (invalidStudents.length > 0) {
+        toast.error(`الخصم لا يطابق ${invalidStudents.length} طالب من المستهدفين. عدل نطاق الخصم أو اختر طلاباً مطابقين.`);
+        return;
       }
     }
 
     let count = 0;
-    targetStudents.forEach(student => {
-      addInvoice({
-        studentId: student.id,
-        studentName: student.name,
-        title: newInvoiceData.title,
-        amount: newInvoiceData.amount,
-        discountId: newInvoiceData.discountId || undefined,
-        discountAmount,
-        netAmount: Math.max(0, newInvoiceData.amount - discountAmount),
-        dueDate: newInvoiceData.dueDate,
-        issueDate: new Date().toISOString().split('T')[0],
-        stage: student.stage
+    try {
+      targetStudents.forEach(student => {
+        addInvoice({
+          studentId: student.id,
+          studentName: student.name,
+          title: newInvoiceData.title,
+          amount: newInvoiceData.amount,
+          discountId: newInvoiceData.discountId || undefined,
+          dueDate: newInvoiceData.dueDate,
+          issueDate: new Date().toISOString().split('T')[0],
+          stage: student.stage
+        });
+        count++;
       });
-      count++;
-    });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر إصدار الفواتير");
+      return;
+    }
     
     toast.success(`تم إصدار ${count} فاتورة بنجاح وتخصيصها لملفات الطلاب`);
     setIsNewInvoiceOpen(false);
@@ -197,6 +211,14 @@ function FinanceInvoices() {
     if (!student?.sectionId) return "-";
     const section = activeStageSections.find(s => s.id === student.sectionId);
     return section ? `${section.grade} / ${section.name}` : "-";
+  };
+
+  const getStudentMeta = (studentId: string) => {
+    const student = studentMap.get(studentId);
+    return {
+      guardian: student?.guardianName || "-",
+      phone: student?.guardianPhone || "",
+    };
   };
 
   return (
@@ -296,7 +318,7 @@ function FinanceInvoices() {
               value={gradeFilter}
               onChange={e => { setGradeFilter(e.target.value); setSectionFilter(""); }}
             >
-              <option value="">الصف (الكل)</option>
+              <option value="">الفصل (الكل)</option>
               {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
             <select 
@@ -339,10 +361,12 @@ function FinanceInvoices() {
                 <div>
                   <span className="font-medium text-primary block">{r.studentName}</span>
                   <span className="text-xs text-muted-foreground">{getSectionName(r.studentId)}</span>
+                  <span className="text-xs text-muted-foreground block">ولي الأمر: {getStudentMeta(r.studentId).guardian}</span>
                 </div>
               )},
               { key: "title", header: "البيان", cell: (r) => <span className="text-sm font-medium">{r.title}</span> },
               { key: "amount", header: "إجمالي الفاتورة", cell: (r) => <span className="font-bold">{(r.netAmount ?? r.amount).toLocaleString()} {currency}</span> },
+              { key: "discount", header: "الخصم", cell: (r) => r.discountAmount ? <span className="font-bold text-danger">-{r.discountAmount.toLocaleString()} {currency}</span> : <span className="text-muted-foreground">-</span> },
               { key: "paid", header: "المدفوع", cell: (r) => <span className="text-success font-bold">{r.paid.toLocaleString()} {currency}</span> },
               { key: "due", header: "المتبقي", cell: (r) => {
                 const due = (r.netAmount ?? r.amount) - r.paid;
@@ -433,7 +457,7 @@ function FinanceInvoices() {
                     onClick={() => { setInvoiceTargetType("grade"); setInvoiceTargetIds([]); }}
                     className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${invoiceTargetType === "grade" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-accent text-muted-foreground"}`}
                   >
-                    <GraduationCap className="h-4 w-4" /> صف دراسي
+                    <GraduationCap className="h-4 w-4" /> فصل
                   </button>
                 </div>
 
@@ -459,6 +483,7 @@ function FinanceInvoices() {
                         <div>
                           <p className="font-bold text-sm">{s.name}</p>
                           <p className="text-xs text-muted-foreground">{s.grade} - {getSectionName(s.id)}</p>
+                          <p className="text-xs text-muted-foreground">ولي الأمر: {s.guardianName}</p>
                         </div>
                       </label>
                     ))}
@@ -482,7 +507,7 @@ function FinanceInvoices() {
                         <input type="checkbox" checked={invoiceTargetIds.includes(g)} onChange={() => toggleTarget(g)} className="h-4 w-4 rounded border-border text-primary focus:ring-primary" />
                         <div>
                           <p className="font-bold text-sm">{g}</p>
-                          <p className="text-xs text-muted-foreground">سيتم تطبيق الرسوم على جميع شعب هذا الصف</p>
+                          <p className="text-xs text-muted-foreground">سيتم تطبيق الرسوم على جميع شعب هذا الفصل</p>
                         </div>
                       </label>
                     ))}
@@ -520,7 +545,7 @@ function FinanceInvoices() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">المبلغ (ر.س) <span className="text-danger">*</span></label>
+                    <label className="mb-2 block text-sm font-bold text-muted-foreground">المبلغ ({currency}) <span className="text-danger">*</span></label>
                     <input
                       required
                       type="number"
@@ -540,7 +565,7 @@ function FinanceInvoices() {
                     >
                       <option value="">بدون خصم</option>
                       {allDiscounts.map(d => (
-                        <option key={d.id} value={d.id}>{d.name} ({d.type === 'percentage' ? d.value + '%' : d.value + ' {currency}'})</option>
+                        <option key={d.id} value={d.id}>{d.name} ({d.type === 'percentage' ? d.value + '%' : `${d.value} ${currency}`})</option>
                       ))}
                     </select>
                   </div>
@@ -600,7 +625,11 @@ function FinanceInvoices() {
                 <span className="font-bold">{selectedInvoice.studentName}</span>
               </div>
               <div className="flex justify-between items-center pb-4 border-b border-border/50">
-                <span className="text-muted-foreground">الصف / الشعبة</span>
+                <span className="text-muted-foreground">ولي الأمر</span>
+                <span className="font-bold">{getStudentMeta(selectedInvoice.studentId).guardian}</span>
+              </div>
+              <div className="flex justify-between items-center pb-4 border-b border-border/50">
+                <span className="text-muted-foreground">الفصل / الشعبة</span>
                 <span className="font-bold text-sm">{getSectionName(selectedInvoice.studentId)}</span>
               </div>
               <div className="flex justify-between items-center pb-4 border-b border-border/50">

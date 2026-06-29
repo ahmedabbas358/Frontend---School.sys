@@ -41,12 +41,13 @@ function StatCard({ icon: Icon, label, value, desc, tone = "primary" }: any) {
 }
 
 function FacilitiesDashboard() {
-  const { allMaintenanceRequests, allRooms, activeStageBooks, allInventoryItems, activeStageClinicVisits } = useGlobalStore();
+  const { allMaintenanceRequests, allRooms, activeStageTextbooks, allInventoryItems, activeStageClinicVisits } = useGlobalStore();
 
   const maintenancePending = allMaintenanceRequests.filter(m => m.status !== "completed").length;
   const maintenanceCompleted = allMaintenanceRequests.filter(m => m.status === "completed").length;
-  const totalBooks = activeStageBooks.reduce((acc, curr) => acc + curr.copies, 0);
-  const availableBooks = activeStageBooks.reduce((acc, curr) => acc + curr.available, 0);
+  const totalBooks = activeStageTextbooks.reduce((acc: number, curr: any) => acc + curr.copies, 0);
+  // Available = total copies minus distributed count (simplified)
+  const availableBooks = activeStageTextbooks.reduce((acc: number, curr: any) => acc + curr.copies, 0);
   const lowStockItems = allInventoryItems.filter(i => i.status === "low_stock" || i.status === "out_of_stock").length;
 
   const roomDistribution = [

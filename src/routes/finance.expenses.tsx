@@ -12,9 +12,10 @@ export const Route = createFileRoute("/finance/expenses")({
 });
 
 function FinanceExpenses() {
-  const { currency, allExpenses, allExpenseCategories, addExpense, deleteExpense  } = useGlobalStore();
+  const { currency, allExpenses, allExpenseCategories, allStaff, addExpense, deleteExpense  } = useGlobalStore();
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [beneficiaryType, setBeneficiaryType] = useState<"manual" | "staff">("manual");
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPrintSingleOpen, setIsPrintSingleOpen] = useState(false);
@@ -82,8 +83,8 @@ function FinanceExpenses() {
         { label: "المبلغ", key: "amountStr" },
       ],
       customControls: [
-        { key: "beneficiary", label: "صرفنا للمكرم", type: "text" },
-        { key: "title", label: "وذلك عبارة عن", type: "text" }
+        { key: "beneficiary", label: "صرفنا للمكرم", type: "text", defaultValue: "" },
+        { key: "title", label: "وذلك عبارة عن", type: "text", defaultValue: "" }
       ]
     }
   ];
@@ -209,18 +210,18 @@ function FinanceExpenses() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl rounded-3xl bg-card shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-3xl rounded-3xl bg-card shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-danger/5 p-6 flex items-center justify-between border-b border-border/50">
               <h2 className="text-2xl font-black flex items-center gap-2 text-danger">
                 <TrendingDown className="h-6 w-6" /> سند صرف جديد
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
             
-            <form onSubmit={handleAddExpense} className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleAddExpense} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="mb-2 block text-sm font-bold text-muted-foreground">بيان المصروف <span className="text-danger">*</span></label>
                   <input
@@ -249,7 +250,7 @@ function FinanceExpenses() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">المبلغ (ر.س) <span className="text-danger">*</span></label>
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">المبلغ ({currency}) <span className="text-danger">*</span></label>
                   <input
                     required
                     type="number"
@@ -261,15 +262,41 @@ function FinanceExpenses() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الجهة المستفيدة <span className="text-danger">*</span></label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="اسم الشركة أو المورد أو الموظف"
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-danger focus:outline-none focus:ring-1 focus:ring-danger transition-colors"
-                    value={newExpense.beneficiary}
-                    onChange={e => setNewExpense({...newExpense, beneficiary: e.target.value})}
-                  />
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">نوع المستفيد <span className="text-danger">*</span></label>
+                  <select
+                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-danger focus:outline-none focus:ring-1 focus:ring-danger transition-colors mb-2"
+                    value={beneficiaryType}
+                    onChange={e => {
+                      setBeneficiaryType(e.target.value as any);
+                      setNewExpense({...newExpense, beneficiary: ""});
+                    }}
+                  >
+                    <option value="manual">جهة خارجية / أخرى</option>
+                    <option value="staff">موظف (مورد بشري)</option>
+                  </select>
+
+                  {beneficiaryType === "manual" ? (
+                    <input
+                      required
+                      type="text"
+                      placeholder="اسم الشركة أو المورد"
+                      className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-danger focus:outline-none focus:ring-1 focus:ring-danger transition-colors"
+                      value={newExpense.beneficiary}
+                      onChange={e => setNewExpense({...newExpense, beneficiary: e.target.value})}
+                    />
+                  ) : (
+                    <select
+                      required
+                      className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-danger focus:outline-none focus:ring-1 focus:ring-danger transition-colors"
+                      value={newExpense.beneficiary}
+                      onChange={e => setNewExpense({...newExpense, beneficiary: e.target.value})}
+                    >
+                      <option value="">-- اختر الموظف --</option>
+                      {allStaff.map(s => (
+                        <option key={s.id} value={s.name}>{s.name} - {s.role}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>

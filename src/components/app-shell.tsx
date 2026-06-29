@@ -1,5 +1,6 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { CommandPalette } from "./command-palette";
 import {
   LayoutDashboard,
@@ -67,6 +68,7 @@ const NAV: Item[] = [
         { to: "/academic/classes", label: "الصفوف" },
         { to: "/academic/subjects", label: "المواد" },
         { to: "/academic/assignments", label: "الإسناد التدريسي" },
+        { to: "/academic/promotion", label: "النقل الذكي (ترحيل)" },
         { to: "/schedule", label: "الجدول الأسبوعي" },
       ],
     },
@@ -211,14 +213,28 @@ export function AppShell({
   
   const [role, setRole] = useState<(typeof ROLES)[number]>(ROLES[0]);
   const { stage, setStage, getStageLabel } = useStage();
+  const { 
+    systemSettings, 
+    updateSettings,
+    notifications,
+    unreadNotificationsCount,
+    markAllNotificationsAsRead,
+    deleteNotification
+  } = useGlobalStore();
 
   // Dark Mode Theme Toggle Logic
-  const [isDark, setIsDark] = useState(() => {
+  const [systemIsDark, setSystemIsDark] = useState(false);
+  useEffect(() => {
     if (typeof window !== "undefined") {
-      return document.documentElement.classList.contains("dark");
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      setSystemIsDark(media.matches);
+      const listener = (e: MediaQueryListEvent) => setSystemIsDark(e.matches);
+      media.addEventListener("change", listener);
+      return () => media.removeEventListener("change", listener);
     }
-    return false;
-  });
+  }, []);
+
+  const isDark = systemSettings.themeMode === "system" ? systemIsDark : systemSettings.themeMode === "dark";
 
   useEffect(() => {
     if (isDark) {
@@ -228,6 +244,19 @@ export function AppShell({
     }
   }, [isDark]);
 
+  useEffect(() => {
+    if (systemSettings.primaryColor) {
+      document.documentElement.style.setProperty("--primary", systemSettings.primaryColor);
+    } else {
+      document.documentElement.style.removeProperty("--primary");
+    }
+  }, [systemSettings.primaryColor]);
+
+  useEffect(() => {
+    document.documentElement.dir = systemSettings.language === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = systemSettings.language;
+  }, [systemSettings.language]);
+
   const currentLabel =
     title ??
     NAV.flatMap((n) => (n.kind === "leaf" ? [n] : n.group.items.map((i) => ({ to: i.to, label: i.label }))))
@@ -235,7 +264,7 @@ export function AppShell({
     "لوحة التحكم";
 
   return (
-    <div className="min-h-dvh bg-slate-50 text-slate-900 transition-colors duration-300" dir="rtl">
+    <div className="min-h-dvh bg-background text-foreground transition-colors duration-300" dir="rtl">
       {/* ============ Sidebar ============ */}
       <Sidebar
         pathname={pathname}
@@ -255,7 +284,7 @@ export function AppShell({
       {/* ============ Main column ============ */}
       <div className="lg:mr-72 transition-all duration-300">
         {/* Top Navbar */}
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-sm">
+        <header className="sticky top-0 z-20 border-b border-border bg-card/80 backdrop-blur-md shadow-sm">
           <div className="grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6">
             {/* mobile toggle */}
             <button
@@ -269,7 +298,7 @@ export function AppShell({
             {/* Search */}
             <div className="relative hidden sm:block w-72">
               <button
-                onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+                onClick={() => document.dispatchEvent(new CustomEvent('open-command-palette'))}
                 className="flex items-center justify-between h-10 w-full rounded-xl border border-input/50 bg-background/50 px-3 text-sm text-muted-foreground hover:bg-accent/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <div className="flex items-center gap-2">
@@ -284,7 +313,7 @@ export function AppShell({
               
               {/* Theme Toggle */}
               <button
-                onClick={() => setIsDark(!isDark)}
+                onClick={() => updateSettings({ themeMode: isDark ? "light" : "dark" })}
                 className="relative grid h-10 w-10 place-items-center rounded-xl border border-border/50 bg-card/50 hover:bg-accent/50 transition-colors"
                 aria-label="تبديل المظهر"
               >
@@ -344,24 +373,37 @@ export function AppShell({
                 >
                   <Bell className="h-5 w-5" />
                   <span className="absolute -top-1 -left-1 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-danger-foreground animate-pulse">
-                    ٣
+                    {unreadNotificationsCount}
                   </span>
                 </button>
                 {notifOpen && (
                   <div className="absolute left-0 mt-2 w-80 overflow-hidden rounded-2xl border border-border/50 glass text-popover-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between border-b border-border/50 px-3 py-2 text-xs font-bold">
-                      <span>الإشعارات</span>
-                      <button className="text-primary hover:underline">تعليم الكل كمقروء</button>
+                      <span>الإشعارات ({unreadNotificationsCount})</span>
+                      <button 
+                        onClick={markAllNotificationsAsRead}
+                        className="text-primary hover:underline"
+                      >
+                        تعليم الكل كمقروء
+                      </button>
                     </div>
                     <ul className="max-h-80 divide-y divide-border/50 overflow-y-auto">
-                      <li className="p-3 text-sm hover:bg-accent/20 transition-colors cursor-pointer">
-                        <div className="font-semibold text-danger">تنبيه: ميزانية تجاوزت الحد</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">منذ ٥ دقائق</div>
-                      </li>
-                      <li className="p-3 text-sm hover:bg-accent/20 transition-colors cursor-pointer">
-                        <div className="font-semibold text-success">تم تسجيل ١٠ طلاب جدد</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">رياض الأطفال — منذ ساعة</div>
-                      </li>
+                      {notifications.length === 0 ? (
+                        <li className="p-4 text-center text-sm text-muted-foreground">لا توجد إشعارات</li>
+                      ) : (
+                        notifications.map(n => (
+                          <li 
+                            key={n.id} 
+                            onClick={() => deleteNotification(n.id)}
+                            className={`relative p-3 text-sm hover:bg-accent/20 transition-colors cursor-pointer ${!n.read ? 'bg-primary/5' : ''}`}
+                          >
+                            <div className={`font-semibold text-${n.type}`}>{n.title}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{n.message}</div>
+                            <div className="text-[10px] text-muted-foreground/60 mt-1">{new Date(n.timestamp).toLocaleTimeString("ar-EG")}</div>
+                            {!n.read && <div className="absolute left-3 top-3 h-2 w-2 rounded-full bg-primary" />}
+                          </li>
+                        ))
+                      )}
                     </ul>
                   </div>
                 )}
@@ -393,16 +435,31 @@ export function AppShell({
                       <div className="text-sm font-bold">أحمد العتيبي</div>
                       <div className="text-xs text-muted-foreground">ahmed@school.edu</div>
                     </div>
-                    <button className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent/50 transition-colors">
+                    <Link 
+                      to="/profile" 
+                      onClick={() => setProfileOpen(false)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent/50 transition-colors"
+                    >
                       <UserCircle2 className="h-4 w-4" /> الملف الشخصي
-                    </button>
-                    <button className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent/50 transition-colors">
+                    </Link>
+                    <Link 
+                      to="/settings" 
+                      onClick={() => setProfileOpen(false)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent/50 transition-colors"
+                    >
                       <Settings className="h-4 w-4" /> الإعدادات
-                    </button>
+                    </Link>
                     <div className="border-t border-border/50" />
-                    <button className="flex w-full items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger/10 transition-colors">
+                    <Link 
+                      to="/"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        alert("تم تسجيل الخروج بنجاح!");
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger/10 transition-colors"
+                    >
                       تسجيل الخروج
-                    </button>
+                    </Link>
                   </div>
                 )}
               </div>
@@ -410,7 +467,7 @@ export function AppShell({
           </div>
 
           {/* Sub header: title + breadcrumb + actions */}
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-slate-100 px-4 py-3 sm:px-6">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-border/50 px-4 py-3 sm:px-6">
             <div className="min-w-0">
               {breadcrumb && breadcrumb.length > 0 && (
                 <nav className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -641,9 +698,9 @@ export function PageCard({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`}>
+    <section className={`rounded-xl border border-border/50 bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`}>
       {(title || actions) && (
-        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-slate-100 px-6 py-5 bg-transparent rounded-t-xl">
+        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border/50 px-6 py-5 bg-transparent rounded-t-xl">
           <div className="min-w-0">
             {title && <h2 className="truncate font-bold text-lg tracking-tight">{title}</h2>}
             {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}

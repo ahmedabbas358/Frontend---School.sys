@@ -3,8 +3,9 @@ import { AppShell, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
-import { Plus, Trash2, X, BookOpen, Hash, Clock } from "lucide-react";
-import { useState } from "react";
+import { getGradesForStage, isItemAllowedForGrade } from "@/lib/school-structure";
+import { Plus, Trash2, X, BookOpen, Hash, Search, Filter, Layers } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/academic/subjects")({
@@ -15,10 +16,25 @@ function AcademicSubjectsPage() {
   const { currency, activeStageSubjects, activeStageSections, addSubject, deleteSubject  } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newSubject, setNewSubject] = useState({ name: "", code: "", creditHours: 4, applyToAll: false, grades: [] as string[], fee: 0 });
+  const [search, setSearch] = useState("");
+  const [filterGrade, setFilterGrade] = useState("");
+  const [newSubject, setNewSubject] = useState({ name: "", code: "", applyToAll: false, grades: [] as string[], fee: 0 });
 
-  // Get unique grades from sections in the active stage
-  const availableGrades = Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean);
+  const availableGrades = useMemo(() => getGradesForStage(stage), [stage]);
+  const filteredSubjects = useMemo(() => {
+    return activeStageSubjects.filter((subject) => {
+      if (filterGrade && !isItemAllowedForGrade(subject, stage, filterGrade)) return false;
+      if (search) {
+        const q = search.trim().toLowerCase();
+        return subject.name.toLowerCase().includes(q) || subject.code.toLowerCase().includes(q);
+      }
+      return true;
+    });
+  }, [activeStageSubjects, filterGrade, search, stage]);
+
+  const sectionsCount = filterGrade
+    ? activeStageSections.filter(section => section.grade === filterGrade).length
+    : activeStageSections.length;
 
   const handleAddSubject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,18 +43,23 @@ function AcademicSubjectsPage() {
       return;
     }
     
-    addSubject({
-      name: newSubject.name,
-      code: newSubject.code,
-      creditHours: Number(newSubject.creditHours),
-      stage: newSubject.applyToAll ? "all" : stage,
-      grades: newSubject.applyToAll ? undefined : newSubject.grades,
-      fee: newSubject.fee > 0 ? newSubject.fee : undefined
-    });
+    try {
+      addSubject({
+        name: newSubject.name,
+        code: newSubject.code,
+        creditHours: 1,
+        stage: newSubject.applyToAll ? "all" : stage,
+        grades: newSubject.applyToAll ? undefined : newSubject.grades,
+        fee: newSubject.fee > 0 ? newSubject.fee : undefined
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر حفظ المادة");
+      return;
+    }
     
     toast.success("تمت إضافة المادة الدراسية بنجاح");
     setIsModalOpen(false);
-    setNewSubject({ name: "", code: "", creditHours: 4, applyToAll: false, grades: [], fee: 0 });
+    setNewSubject({ name: "", code: "", applyToAll: false, grades: [], fee: 0 });
   };
 
   return (
@@ -63,24 +84,12 @@ function AcademicSubjectsPage() {
                 <BookOpen className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">إجمالي المواد للمرحلة</p>
-                <p className="text-2xl font-bold">{activeStageSubjects.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">المواد المطابقة</p>
+                <p className="text-2xl font-bold">{filteredSubjects.length}</p>
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm glass">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-info/10 p-3 text-info">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">إجمالي الساعات المعتمدة</p>
-                <p className="text-2xl font-bold">
-                  {activeStageSubjects.reduce((acc, curr) => acc + curr.creditHours, 0)} ساعة
-                </p>
-              </div>
-            </div>
-          </div>
+
           <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm glass">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-warning/10 p-3 text-warning">
@@ -92,12 +101,49 @@ function AcademicSubjectsPage() {
               </div>
             </div>
           </div>
+
+          <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm glass">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-success/10 p-3 text-success">
+                <Layers className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">الشعب المرتبطة</p>
+                <p className="text-2xl font-bold">{sectionsCount}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <PageCard title="فرز المواد" description="المواد هنا متزامنة مع فصول المرحلة، وأي تخصيص يظهر فوراً في الاختبارات والإسناد التدريسي.">
+          <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+                placeholder="بحث باسم المادة أو الرمز..."
+                className="h-11 w-full rounded-xl border border-border/50 bg-background pr-10 pl-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <select
+                value={filterGrade}
+                onChange={event => setFilterGrade(event.target.value)}
+                className="h-11 w-full rounded-xl border border-border/50 bg-background pr-10 pl-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
+              >
+                <option value="">كل الفصول</option>
+                {availableGrades.map(grade => <option key={grade} value={grade}>{grade}</option>)}
+              </select>
+            </div>
+          </div>
+        </PageCard>
 
         <PageCard>
           <DataTable
-            rows={activeStageSubjects}
-            empty="لا توجد مواد دراسية مسجلة في هذه المرحلة بعد."
+            rows={filteredSubjects}
+            empty={filterGrade ? "لا توجد مواد مخصصة لهذا الفصل." : "لا توجد مواد دراسية مسجلة في هذه المرحلة بعد."}
             columns={[
               { 
                 key: "c", header: "رمز المادة", 
@@ -114,6 +160,7 @@ function AcademicSubjectsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-base">{s.name}</span>
                       {s.stage === "all" && <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground">مشترك لكل المراحل</span>}
+                      {s.stage !== "all" && (!s.grades || s.grades.length === 0) && <span className="text-[10px] bg-success/10 px-2 py-0.5 rounded-full text-success">كل فصول المرحلة</span>}
                     </div>
                     {s.grades && s.grades.length > 0 && s.stage !== "all" && (
                       <div className="flex flex-wrap gap-1 mt-1">
@@ -125,10 +172,7 @@ function AcademicSubjectsPage() {
                   </div>
                 ) 
               },
-              { 
-                key: "h", header: "الساعات المعتمدة", 
-                cell: (s) => <span className="tabular font-medium">{s.creditHours} ساعات/أسبوع</span> 
-              },
+
               { 
                 key: "f", header: "رسوم المادة", 
                 cell: (s) => s.fee ? <span className="tabular font-bold text-danger">{s.fee} {currency}</span> : <span className="text-muted-foreground text-xs">مجانًا</span>
@@ -180,7 +224,7 @@ function AcademicSubjectsPage() {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-muted-foreground">رمز المادة *</label>
                   <input 
@@ -192,17 +236,7 @@ function AcademicSubjectsPage() {
                     onChange={e => setNewSubject({...newSubject, code: e.target.value})}
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-muted-foreground">عدد الساعات / الحصص</label>
-                  <input 
-                    type="number" 
-                    min="1" max="10"
-                    required
-                    className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                    value={newSubject.creditHours}
-                    onChange={e => setNewSubject({...newSubject, creditHours: Number(e.target.value)})}
-                  />
-                </div>
+
               </div>
 
               <div>
@@ -235,7 +269,7 @@ function AcademicSubjectsPage() {
 
               {!newSubject.applyToAll && availableGrades.length > 0 && (
                 <div className="pt-2">
-                  <label className="mb-2 block text-sm font-medium text-muted-foreground">تخصيص للصفوف (اختياري)</label>
+                  <label className="mb-2 block text-sm font-medium text-muted-foreground">تخصيص للفصول (اختياري)</label>
                   <div className="grid grid-cols-2 gap-2">
                     {availableGrades.map((grade) => (
                       <label key={grade} className="flex items-center gap-2 rounded-lg border border-border/50 p-2 cursor-pointer hover:bg-accent/20 transition-colors">
@@ -255,7 +289,7 @@ function AcademicSubjectsPage() {
                       </label>
                     ))}
                   </div>
-                  <span className="block text-xs text-muted-foreground mt-1">إذا لم يتم تحديد أي صف، ستكون المادة متاحة لجميع صفوف هذه المرحلة.</span>
+                  <span className="block text-xs text-muted-foreground mt-1">إذا لم يتم تحديد أي فصل، ستكون المادة متاحة لجميع فصول هذه المرحلة.</span>
                 </div>
               )}
 

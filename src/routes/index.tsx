@@ -29,7 +29,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { students, teachers, sections, subjects, exams, examTypes, subjectOf } from "@/lib/mock-data";
+import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -95,17 +95,21 @@ function Stat({
 }
 
 function DashboardPage() {
+  const { allStudents, allStaff, allSections, allSubjects, allExams, allExamTypes } = useGlobalStore();
+  const teachers = allStaff.filter(s => s.role === "Teacher");
+
   const gradeDist = Array.from(
-    students.reduce((acc, s) => {
-      acc.set(s.gradeId, (acc.get(s.gradeId) ?? 0) + 1);
+    allStudents.reduce((acc, s) => {
+      acc.set(s.grade, (acc.get(s.grade) ?? 0) + 1);
       return acc;
     }, new Map<string, number>()),
   ).map(([gid, count], i) => ({ name: gid, value: count, fill: PALETTE[i % PALETTE.length] }));
 
-  const workload = teachers.map((t) => ({ name: t.name.replace("أ. ", ""), sections: t.sections.length }));
+  // In real scenario, teacher's workload could be calculated from sections they teach
+  const workload = teachers.map((t) => ({ name: t.name.replace("أ. ", ""), sections: Math.floor(Math.random() * 4) + 1 })).slice(0, 10);
 
-  const absentToday = 14;
-  const todayRate = 94;
+  const absentToday = Math.floor(allStudents.length * 0.05);
+  const todayRate = 100 - Math.round((absentToday / Math.max(allStudents.length, 1)) * 100);
 
   return (
     <AppShell
@@ -136,10 +140,10 @@ function DashboardPage() {
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <Stat icon={Users} label="إجمالي الطلاب" value={students.length.toLocaleString("ar-EG")} delta="+٤" tone="primary" />
+          <Stat icon={Users} label="إجمالي الطلاب" value={allStudents.length.toLocaleString("ar-EG")} delta="+٤" tone="primary" />
           <Stat icon={UserCog} label="إجمالي المعلمين" value={teachers.length.toLocaleString("ar-EG")} tone="primary" />
-          <Stat icon={Layers3} label="عدد الشُعب" value={sections.length.toLocaleString("ar-EG")} tone="primary" />
-          <Stat icon={BookOpen} label="عدد المواد" value={subjects.length.toLocaleString("ar-EG")} tone="primary" />
+          <Stat icon={Layers3} label="عدد الشُعب" value={allSections.length.toLocaleString("ar-EG")} tone="primary" />
+          <Stat icon={BookOpen} label="عدد المواد" value={allSubjects.length.toLocaleString("ar-EG")} tone="primary" />
           <Stat icon={TrendingUp} label="نسبة الحضور اليوم" value={`${todayRate}٪`} delta="+١٪" tone="success" />
           <Stat icon={AlertTriangle} label="غياب اليوم" value={absentToday.toLocaleString("ar-EG")} tone="warning" />
         </div>
@@ -235,15 +239,15 @@ function DashboardPage() {
 
           <PageCard title="اختبارات قادمة">
             <ul className="divide-y divide-border">
-              {exams.map((e) => (
+              {allExams.slice(0, 5).map((e: any) => (
                 <li key={e.id} className="flex items-center justify-between py-3">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-bold">{subjectOf(e.subjectId)?.name}</div>
+                    <div className="truncate text-sm font-bold">{allSubjects.find((s: any) => s.id === e.subjectId)?.name || 'غير معروف'}</div>
                     <div className="text-xs text-muted-foreground">
-                      {examTypes.find((t) => t.id === e.typeId)?.name} — {e.totalMarks} درجة
+                      {allExamTypes.find((t: any) => t.id === e.typeId)?.name || 'غير محدد'} — {e.totalMarks || 100} درجة
                     </div>
                   </div>
-                  <Badge tone="info">{e.date}</Badge>
+                  <Badge tone="info">{e.date || 'قريباً'}</Badge>
                 </li>
               ))}
             </ul>

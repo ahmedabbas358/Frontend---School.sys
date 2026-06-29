@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { EducationalStage, useStage } from "@/contexts/StageContext";
+import { EducationalStage, useStage, GRADE_OPTIONS } from "@/contexts/StageContext";
 import { Plus, Pencil, Trash2, X, Users, AlertCircle, Search, ChevronDown, Check, Printer, LayoutGrid, List, ArrowRight, UserPlus, UserMinus, FileText, Download, FileSpreadsheet, Eye, DollarSign } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -12,12 +12,6 @@ export const Route = createFileRoute("/academic/classes")({
   component: AcademicSectionsPage,
 });
 
-const GRADE_OPTIONS: Record<EducationalStage, string[]> = {
-  kindergarten: ["روضة 1", "روضة 2", "تمهيدي"],
-  primary: ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي", "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"],
-  middle: ["الصف الأول المتوسط", "الصف الثاني المتوسط", "الصف الثالث المتوسط"],
-  high: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
-};
 
 function TeacherSelect({ 
   value, 
@@ -204,34 +198,42 @@ function SectionDetailView({ sectionId, onBack }: { sectionId: string, onBack: (
       </div>
 
       {/* Financial Summary Card */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border/50 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-4 w-4 text-primary" />
-            <p className="text-xs font-bold text-muted-foreground">إجمالي المطالبات</p>
-          </div>
-          <p className="text-xl font-black text-primary tabular-nums">{financeStats.totalExpected.toLocaleString()} <span className="text-xs font-bold">{currency}</span></p>
+      <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm mb-6 relative overflow-hidden glass">
+        <div className="flex items-center gap-2 mb-6">
+          <DollarSign className="h-6 w-6 text-primary" />
+          <h3 className="text-lg font-bold">الملخص المالي للشعبة</h3>
         </div>
-        <div className="bg-card border border-border/50 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-4 w-4 text-success" />
-            <p className="text-xs font-bold text-muted-foreground">إجمالي المحصل</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
+          <div>
+            <p className="text-xs font-bold text-muted-foreground mb-1">إجمالي المطالبات</p>
+            <p className="text-2xl font-black text-primary tabular-nums">{financeStats.totalExpected.toLocaleString()} <span className="text-sm">{currency}</span></p>
           </div>
-          <p className="text-xl font-black text-success tabular-nums">{financeStats.totalPaid.toLocaleString()} <span className="text-xs font-bold">{currency}</span></p>
+          <div>
+            <p className="text-xs font-bold text-muted-foreground mb-1">إجمالي المحصل</p>
+            <p className="text-2xl font-black text-success tabular-nums">{financeStats.totalPaid.toLocaleString()} <span className="text-sm">{currency}</span></p>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-muted-foreground mb-1">المتبقي للتحصيل</p>
+            <p className="text-2xl font-black text-danger tabular-nums">{financeStats.totalDue.toLocaleString()} <span className="text-sm">{currency}</span></p>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-muted-foreground mb-1">فواتير متأخرة</p>
+            <p className="text-2xl font-black text-warning tabular-nums">{financeStats.overdueStudents}</p>
+          </div>
         </div>
-        <div className="bg-card border border-border/50 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-4 w-4 text-danger" />
-            <p className="text-xs font-bold text-muted-foreground">إجمالي المتبقي</p>
+        
+        {/* Collection Rate Progress */}
+        <div className="mt-6 pt-6 border-t border-border/50 relative z-10">
+          <div className="flex justify-between items-center text-sm font-bold mb-2">
+            <span>نسبة التحصيل:</span>
+            <span>{financeStats.totalExpected > 0 ? Math.round((financeStats.totalPaid / financeStats.totalExpected) * 100) : 0}%</span>
           </div>
-          <p className="text-xl font-black text-danger tabular-nums">{financeStats.totalDue.toLocaleString()} <span className="text-xs font-bold">{currency}</span></p>
-        </div>
-        <div className="bg-card border border-border/50 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="h-4 w-4 text-warning" />
-            <p className="text-xs font-bold text-muted-foreground">فواتير متأخرة</p>
+          <div className="h-3 rounded-full bg-muted overflow-hidden">
+            <div 
+              className="h-full bg-success transition-all duration-1000"
+              style={{ width: `${financeStats.totalExpected > 0 ? Math.min(100, (financeStats.totalPaid / financeStats.totalExpected) * 100) : 0}%` }}
+            ></div>
           </div>
-          <p className="text-xl font-black text-warning tabular-nums">{financeStats.overdueStudents}</p>
         </div>
       </div>
 
@@ -342,7 +344,7 @@ function SectionDetailView({ sectionId, onBack }: { sectionId: string, onBack: (
 
 // --- Main Page Component ---
 function AcademicSectionsPage() {
-  const { currency, activeStageSections, activeStageStudents, addSection, updateSection, deleteSection, activeStageStaff  } = useGlobalStore();
+  const { currency, activeStageSections, activeStageStudents, activeStageInvoices, addSection, updateSection, deleteSection, activeStageStaff  } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   
   const [viewMode, setViewMode] = useState<"grades" | "list">("grades");
@@ -370,7 +372,7 @@ function AcademicSectionsPage() {
   // Group sections by grade for Grid View
   const groupedByGrade = useMemo(() => {
     const groups: Record<string, typeof enrichedSections> = {};
-    GRADE_OPTIONS[stage].forEach(g => groups[g] = []);
+    (GRADE_OPTIONS[stage] || []).forEach(g => groups[g] = []);
     enrichedSections.forEach(sec => {
       if (groups[sec.grade]) groups[sec.grade].push(sec);
     });
@@ -398,7 +400,7 @@ function AcademicSectionsPage() {
 
   const openAddModal = () => {
     setEditingId(null);
-    setFormData({ name: "", grade: GRADE_OPTIONS[stage][0], capacity: 30, homeroomTeacher: "" });
+    setFormData({ name: "", grade: (GRADE_OPTIONS[stage] || [])[0] || "", capacity: 30, homeroomTeacher: "" });
     setIsModalOpen(true);
   };
 
@@ -689,7 +691,7 @@ function AcademicSectionsPage() {
                     onChange={e => setFormData({...formData, grade: e.target.value})}
                   >
                     <option value="" disabled>-- اختر الصف --</option>
-                    {GRADE_OPTIONS[stage].map(g => (
+                    {(GRADE_OPTIONS[stage] || []).map(g => (
                       <option key={g} value={g}>{g}</option>
                     ))}
                   </select>

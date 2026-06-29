@@ -2,7 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
-import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard } from "lucide-react";
+import { EducationalStage, STAGE_LIST } from "@/contexts/StageContext";
+import { getGradesForStage } from "@/lib/school-structure";
+import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 
@@ -12,8 +14,13 @@ export const Route = createFileRoute("/students/$id")({
 
 // --- Edit Profile Modal ---
 function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClose: () => void, student: Student }) {
-  const { currency, updateStudent  } = useGlobalStore();
+  const { allSections, updateStudent  } = useGlobalStore();
   const [formData, setFormData] = useState({ ...student });
+
+  const availableGrades = useMemo(() => getGradesForStage(formData.stage), [formData.stage]);
+  const availableSections = useMemo(() => (
+    formData.grade ? allSections.filter(section => section.stage === formData.stage && section.grade === formData.grade) : []
+  ), [allSections, formData.grade, formData.stage]);
 
   useEffect(() => {
     if (isOpen) {
@@ -25,7 +32,16 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateStudent(student.id, formData);
+    if (!formData.grade) {
+      toast.error("يجب اختيار الفصل قبل حفظ بيانات الطالب");
+      return;
+    }
+    try {
+      updateStudent(student.id, formData);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر تحديث بيانات الطالب");
+      return;
+    }
     toast.success("تم تحديث بيانات الطالب بنجاح!");
     onClose();
   };
@@ -128,6 +144,56 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
 
               <div className="md:col-span-2 border-b border-border pb-2 mb-2 mt-4"><h3 className="font-bold text-primary">الإدارة الأكاديمية</h3></div>
               <div>
+                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">المرحلة</label>
+                <select
+                  value={formData.stage}
+                  onChange={e => {
+                    const nextStage = e.target.value as EducationalStage;
+                    setFormData({
+                      ...formData,
+                      stage: nextStage,
+                      grade: getGradesForStage(nextStage)[0] || "",
+                      sectionId: undefined,
+                    });
+                  }}
+                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                >
+                  {STAGE_LIST.map(stage => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الفصل</label>
+                <select
+                  value={formData.grade}
+                  required
+                  onChange={e => setFormData({ ...formData, grade: e.target.value, sectionId: undefined })}
+                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                >
+                  <option value="">اختر الفصل</option>
+                  {availableGrades.map(grade => <option key={grade} value={grade}>{grade}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الشعبة</label>
+                <select
+                  value={formData.sectionId || ""}
+                  disabled={!formData.grade}
+                  onChange={e => {
+                    const section = allSections.find(item => item.id === e.target.value);
+                    setFormData({
+                      ...formData,
+                      sectionId: section?.id || undefined,
+                      stage: section?.stage || formData.stage,
+                      grade: section?.grade || formData.grade,
+                    });
+                  }}
+                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold disabled:opacity-50"
+                >
+                  <option value="">بدون شعبة</option>
+                  {availableSections.map(section => <option key={section.id} value={section.id}>شعبة {section.name}</option>)}
+                </select>
+              </div>
+              <div>
                 <label className="mb-1.5 block text-sm font-bold text-muted-foreground">تاريخ الالتحاق</label>
                 <input type="date" value={(formData as any).enrollmentDate || ""} onChange={e => setFormData({...formData, enrollmentDate: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums" />
               </div>
@@ -155,7 +221,7 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
 
 function StudentProfile() {
   const { id } = Route.useParams();
-  const { currency, allStudents, allInvoices, allClinicVisits, allDisciplineIncidents, allSections, activeStageFeeStructures, addInvoice, addPayment  } = useGlobalStore();
+  const { currency, allStudents, allInvoices, allClinicVisits, allDisciplineIncidents, allSections, activeStageFeeStructures, addInvoice, addPayment, allTextbooks, allTextbookDistributions, transportSubscriptions, transportRoutes  } = useGlobalStore();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
@@ -174,6 +240,23 @@ function StudentProfile() {
   });
 
   const student = useMemo(() => allStudents.find((s) => s.id === id), [id, allStudents]);
+
+  const studentSubscription = useMemo(() => student ? transportSubscriptions.find((s: any) => s.studentId === student.id) : null, [student, transportSubscriptions]);
+  const studentRoute = useMemo(() => studentSubscription ? transportRoutes.find((r: any) => r.id === studentSubscription.routeId) : null, [studentSubscription, transportRoutes]);
+
+  const studentTextbooks = useMemo(() => {
+    return student ? allTextbooks.filter(tb => tb.gradeId === student.grade) : [];
+  }, [allTextbooks, student]);
+  
+  const groupedTextbooks = useMemo(() => {
+    const groups: Record<string, typeof studentTextbooks> = {};
+    studentTextbooks.forEach(tb => {
+      const term = tb.term || "الفصل الأول";
+      if (!groups[term]) groups[term] = [];
+      groups[term].push(tb);
+    });
+    return groups;
+  }, [studentTextbooks]);
   
   if (!student) {
     return (
@@ -338,9 +421,12 @@ function StudentProfile() {
       {
         id: "financial_statement", name: "كشف حساب مالي", category: "مالي", type: "table",
         columns: [
-          { key: "amount", label: "المبلغ", render: (row: any) => `${row.amount} ريال` },
-          { key: "type", label: "النوع", render: (row: any) => row.type === 'tuition' ? 'رسوم دراسية' : 'رسوم نقل' },
-          { key: "status", label: "الحالة", render: (row: any) => row.status === 'paid' ? 'مدفوعة' : row.status === 'partial' ? 'مدفوع جزئيا' : 'غير متأخرة' },
+          { key: "id", label: "رقم الفاتورة", render: (row: any) => row.id },
+          { key: "title", label: "البيان", render: (row: any) => row.title || "الرسوم الدراسية" },
+          { key: "amount", label: "المبلغ", render: (row: any) => `${row.amount.toLocaleString()} ريال` },
+          { key: "paid", label: "المدفوع", render: (row: any) => `${row.paid.toLocaleString()} ريال` },
+          { key: "remaining", label: "المتبقي", render: (row: any) => `${(row.amount - row.paid).toLocaleString()} ريال` },
+          { key: "status", label: "الحالة", render: (row: any) => row.status === 'paid' ? 'مسددة' : row.status === 'partial' ? 'مسددة جزئياً' : 'غير مسددة' },
           { key: "dueDate", label: "تاريخ الاستحقاق", render: (row: any) => row.dueDate },
         ]
       }
@@ -373,6 +459,24 @@ function StudentProfile() {
     >
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto print:hidden">
         
+        {totalDue > 0 && (
+          <div className="bg-danger/10 border border-danger/30 text-danger p-4 rounded-xl flex items-center gap-3 shadow-sm">
+            <AlertCircle className="h-6 w-6 shrink-0" />
+            <div>
+              <p className="font-bold">تنبيه مالي: يوجد مديونية متأخرة</p>
+              <p className="text-sm mt-1">يوجد على الطالب مستحقات مالية متأخرة بقيمة {totalDue.toLocaleString()} {currency}. يرجى تسوية المديونية قبل إصدار الشهادات النهائية.</p>
+            </div>
+            <button 
+              onClick={() => {
+                document.getElementById('financial-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="mr-auto text-sm font-bold bg-background/50 hover:bg-background px-4 py-2 rounded-lg border border-danger/20 transition-colors"
+            >
+              عرض الفواتير
+            </button>
+          </div>
+        )}
+
         {/* Profile Header (Glassmorphism) */}
         <div className="relative rounded-3xl overflow-hidden bg-card border border-border/50 shadow-sm glass">
           <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent"></div>
@@ -470,6 +574,31 @@ function StudentProfile() {
                 </div>
               </PageCard>
             )}
+
+            {/* Transport Card */}
+            <PageCard title="النقل المدرسي" className="shadow-sm">
+              {studentSubscription && studentRoute ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center bg-primary/5 p-3 rounded-xl border border-primary/20">
+                    <span className="text-sm text-primary font-bold flex items-center gap-2"><Bus className="h-4 w-4" /> المسار:</span>
+                    <span className="font-bold">{studentRoute.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-background/50 p-3 rounded-xl border border-border/50">
+                    <span className="text-sm text-muted-foreground font-bold">نوع الاشتراك:</span>
+                    <span className="font-bold">{studentSubscription.direction === 'round-trip' ? 'ذهاب وعودة' : studentSubscription.direction === 'going' ? 'ذهاب فقط' : 'عودة فقط'}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-background/50 p-3 rounded-xl border border-border/50">
+                    <span className="text-sm text-muted-foreground font-bold">الرسوم السنوية:</span>
+                    <span className="font-bold">{studentSubscription.direction === 'round-trip' ? studentRoute.feeAmount : studentRoute.feeAmount * 0.6} {currency}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Bus className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                  <p className="text-sm font-bold">غير مشترك في النقل المدرسي</p>
+                </div>
+              )}
+            </PageCard>
           </div>
 
           {/* Right Column: Activity & Financial */}
@@ -494,10 +623,11 @@ function StudentProfile() {
             </div>
 
             {/* Sub-tabs/Sections */}
-            <PageCard 
-              title="السجل المالي (الفواتير)" 
-              className="shadow-sm"
-              action={
+            <div id="financial-section">
+              <PageCard 
+                title="السجل المالي (الفواتير)" 
+                className="shadow-sm"
+              actions={
                 <button 
                   onClick={() => setIsNewInvoiceOpen(true)}
                   className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
@@ -543,6 +673,7 @@ function StudentProfile() {
                 </div>
               )}
             </PageCard>
+            </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               <PageCard title="الزيارات الصحية" className="shadow-sm h-full">
@@ -584,6 +715,42 @@ function StudentProfile() {
                 )}
               </PageCard>
             </div>
+
+            {/* Books Section */}
+            <PageCard title="المقررات الدراسية المستلمة" className="shadow-sm">
+              {studentTextbooks.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد مقررات دراسية مسجلة لصف الطالب.</div>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(groupedTextbooks).sort(([a], [b]) => a.localeCompare(b)).map(([term, books]) => (
+                    <div key={term} className="space-y-3">
+                      <h4 className="font-bold text-primary border-b border-border/50 pb-2">{term}</h4>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {books.map(tb => {
+                          const isReceived = allTextbookDistributions.some(d => d.studentId === student.id && d.textbookId === tb.id);
+                          return (
+                            <div key={tb.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isReceived ? 'border-success/30 bg-success/5' : 'border-border/50 bg-background'} transition-colors`}>
+                              <div className={`p-2 rounded-lg ${isReceived ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
+                                {isReceived ? <ShieldCheck className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
+                              </div>
+                              <div>
+                                <p className="font-bold text-sm leading-tight">{tb.title}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{tb.subject}</p>
+                              </div>
+                              {isReceived ? (
+                                <span className="mr-auto text-xs font-bold text-success bg-success/10 px-2 py-1 rounded-full">مستلم</span>
+                              ) : (
+                                <span className="mr-auto text-xs font-bold text-muted-foreground bg-muted px-2 py-1 rounded-full">غير مستلم</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </PageCard>
 
           </div>
         </div>

@@ -1,416 +1,426 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell, Badge, PageCard } from "@/components/app-shell";
-import { useGlobalStore } from "@/contexts/GlobalStoreContext";
+import { useState, useMemo, useEffect } from "react";
+import { AppShell, PageCard } from "@/components/app-shell";
+import { useGlobalStore, ScheduledExam, ExamCategory } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
-import { CalendarDays, Plus, Trash2, X, Clock, FileText, Filter, Search } from "lucide-react";
-import { useState, useMemo } from "react";
+import { getGradesForStage, getSectionClassId, isItemAllowedForGrade } from "@/lib/school-structure";
+import { CalendarDays, Plus, Trash2, Search, Clock, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
-import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 
 export const Route = createFileRoute("/exams/")({
-  component: ExamsCalendar,
+  component: ExamsPlanningPage,
+  head: () => ({ meta: [{ title: "الجدولة والتخطيط" }] })
 });
 
-function ExamsCalendar() {
+function ExamsPlanningPage() {
+  const [activeTab, setActiveTab] = useState<"schedule" | "categories">("schedule");
+
+  return (
+    <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الاختبارات", to: "/exams" }, { label: "الجدولة والتخطيط" }]}>
+      <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
+        <div className="flex gap-4 border-b border-border/50 pb-2">
+          <button 
+            onClick={() => setActiveTab("schedule")}
+            className={`pb-2 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "schedule" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            جدول الاختبارات
+          </button>
+          <button 
+            onClick={() => setActiveTab("categories")}
+            className={`pb-2 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "categories" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            قوالب التقييم
+          </button>
+        </div>
+
+        {activeTab === "schedule" ? <ScheduledExamsView /> : <ExamCategoriesView />}
+      </div>
+    </AppShell>
+  );
+}
+
+// ==========================================
+// 1. Scheduled Exams View
+// ==========================================
+function ScheduledExamsView() {
+  const { stage, setStage, getStageLabel, stages } = useStage();
   const { 
-    activeStageExams, 
-    activeStageSubjects, 
-    activeStageExamTypes, 
-    activeStageSections, 
-    examGradingMode,
-    addExam, 
-    deleteExam 
+    activeStageScheduledExams, 
+    activeStageExamCategories,
+    activeStageSections,
+    activeStageSubjects,
+    addScheduledExam,
+    updateScheduledExam,
+    deleteScheduledExam
   } = useGlobalStore();
-  
-  const { stage, getStageLabel } = useStage();
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const [filterSubject, setFilterSubject] = useState("");
+  const [searchQ, setSearchQ] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [filterSection, setFilterSection] = useState("");
 
-  const uniqueGrades = useMemo(() => Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean), [activeStageSections]);
-
-  const [newExam, setNewExam] = useState({ 
-    subjectId: "", 
-    typeId: "", 
-    term: "الفصل الأول", 
-    date: "", 
-    totalMarks: 100,
+  const [formData, setFormData] = useState<Partial<ScheduledExam>>({
+    name: "",
     grade: "",
-    sectionId: "" 
+    sectionId: "",
+    categoryId: "",
+    subjectId: "",
+    term: "العام الدراسي",
+    date: new Date().toISOString().split('T')[0],
+    totalMarks: 100,
+    gradingSystem: "marks",
+    status: "scheduled"
   });
 
-  const handleAddExam = (e: React.FormEvent) => {
+  const stageGrades = useMemo(() => getGradesForStage(stage), [stage]);
+  const formSections = useMemo(() => (
+    formData.grade ? activeStageSections.filter(section => section.stage === stage && section.grade === formData.grade) : []
+  ), [activeStageSections, stage, formData.grade]);
+  const selectedSection = useMemo(() => formSections.find(s => s.id === formData.sectionId), [formSections, formData.sectionId]);
+
+  const applicableCategories = useMemo(() => {
+    if (!selectedSection) return [];
+    return activeStageExamCategories.filter(c => isItemAllowedForGrade(c, stage, selectedSection.grade));
+  }, [selectedSection, activeStageExamCategories, stage]);
+
+  const applicableSubjects = useMemo(() => {
+    if (!selectedSection) return [];
+    return activeStageSubjects.filter(s => isItemAllowedForGrade(s, stage, selectedSection.grade));
+  }, [selectedSection, activeStageSubjects, stage]);
+
+  const filterSections = useMemo(() => (
+    filterGrade ? activeStageSections.filter(section => section.stage === stage && section.grade === filterGrade) : activeStageSections
+  ), [activeStageSections, stage, filterGrade]);
+
+  // When category changes, auto-fill totalMarks and gradingSystem
+  useEffect(() => {
+    if (formData.categoryId) {
+      const cat = activeStageExamCategories.find(c => c.id === formData.categoryId);
+      if (cat) {
+        setFormData(prev => ({ ...prev, totalMarks: cat.maxMark || prev.totalMarks, gradingSystem: cat.gradingSystem || prev.gradingSystem }));
+      }
+    }
+  }, [formData.categoryId, activeStageExamCategories]);
+
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newExam.subjectId || !newExam.date || !newExam.typeId) {
-      toast.error("الرجاء تعبئة جميع الحقول المطلوبة (المادة، النوع، التاريخ)");
+    if (!formData.name?.trim() || !formData.grade || !formData.sectionId || !formData.subjectId || !formData.date) {
+      toast.error("الرجاء إكمال كافة الحقول المطلوبة");
       return;
     }
     
-    addExam({
-      ...newExam,
-      totalMarks: Number(newExam.totalMarks),
-      stage
-    });
-    
-    toast.success("تمت إضافة الاختبار بنجاح");
-    setIsModalOpen(false);
-    setNewExam({ subjectId: "", typeId: "", term: "الفصل الأول", date: "", totalMarks: 100, grade: "", sectionId: "" });
+    // Check for conflicts
+    const conflict = activeStageScheduledExams.find(ex => ex.sectionId === formData.sectionId && ex.date === formData.date);
+    if (conflict) {
+      toast.warning("يوجد اختبار آخر مجدول لنفس الشعبة في هذا اليوم. تأكد من عدم تعارض الأوقات.");
+    }
+
+    try {
+      addScheduledExam({
+        ...formData as Omit<ScheduledExam, "id" | "createdAt">,
+        classId: getSectionClassId(selectedSection!),
+        sectionId: selectedSection!.id,
+        grade: selectedSection!.grade,
+        stage
+      });
+      toast.success("تمت جدولة الاختبار بنجاح!");
+      setIsModalOpen(false);
+      setFormData(prev => ({ ...prev, name: "", grade: "", sectionId: "", subjectId: "", categoryId: "" }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر حفظ الاختبار بسبب عدم تطابق البيانات");
+    }
   };
 
-  const filteredExams = useMemo(() => {
-    return activeStageExams.filter(ex => {
+  const list = useMemo(() => {
+    return activeStageScheduledExams.filter(ex => {
       const subject = activeStageSubjects.find(s => s.id === ex.subjectId);
-      const type = activeStageExamTypes.find(t => t.id === ex.typeId);
-      
-      if (q && subject && !subject.name.includes(q)) return false;
-      if (filterSubject && ex.subjectId !== filterSubject) return false;
-      if (filterType && ex.typeId !== filterType) return false;
+      if (searchQ && subject && !subject.name.includes(searchQ)) return false;
       if (filterGrade && ex.grade !== filterGrade) return false;
-      
+      if (filterSection && ex.sectionId !== filterSection) return false;
       return true;
     }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [activeStageExams, activeStageSubjects, activeStageExamTypes, q, filterSubject, filterType, filterGrade]);
+  }, [activeStageScheduledExams, activeStageSubjects, searchQ, filterGrade, filterSection]);
 
   return (
-    <AppShell 
-      breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الاختبارات" }, { label: "الإدارة والسجل" }]}
-      actions={
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setIsPrintOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-bold text-foreground shadow-sm hover:bg-accent/90 transition-all hover:scale-105"
-          >
-            <Printer className="h-4 w-4" /> طباعة الجدول
-          </button>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all hover:scale-105"
-          >
-            <Plus className="h-4 w-4" /> جدولة اختبار جديد
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        
-        {/* Stats Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="rounded-3xl border border-border/50 bg-card p-5 shadow-sm glass">
-            <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
-                <FileText className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-muted-foreground">إجمالي الاختبارات</p>
-                <p className="text-3xl font-black text-foreground mt-0.5">{activeStageExams.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-3xl border border-border/50 bg-card p-5 shadow-sm glass">
-            <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-warning/10 p-3.5 text-warning">
-                <Clock className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-muted-foreground">أقرب اختبار مجدول</p>
-                <p className="text-xl font-black text-foreground mt-0.5 tabular-nums tracking-tight">
-                  {activeStageExams.length > 0 
-                    ? [...activeStageExams].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date 
-                    : "لا يوجد"}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-3xl border border-border/50 bg-card p-5 shadow-sm glass">
-            <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-info/10 p-3.5 text-info">
-                <CalendarDays className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-muted-foreground">المرحلة الحالية</p>
-                <p className="text-xl font-black text-foreground mt-0.5">{getStageLabel(stage)}</p>
-              </div>
-            </div>
+    <div className="space-y-6">
+      {/* Dashboard Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm flex items-center gap-4">
+          <div className="bg-primary/10 text-primary p-3 rounded-xl"><CalendarDays className="w-6 h-6" /></div>
+          <div>
+            <p className="text-sm text-muted-foreground font-bold">إجمالي الاختبارات</p>
+            <p className="text-2xl font-black">{activeStageScheduledExams.length}</p>
           </div>
         </div>
-
-        {/* Top Filters Bar */}
-        <PageCard title="عوامل التصفية">
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="البحث باسم المادة..."
-                className="h-11 w-full rounded-xl border border-input bg-background pr-9 pl-3 text-sm font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              />
-            </div>
-            <select 
-              className="h-11 rounded-xl border border-input bg-background px-3 text-sm font-bold cursor-pointer outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              value={filterSubject}
-              onChange={e => setFilterSubject(e.target.value)}
-            >
-              <option value="">كل المواد الدراسية</option>
-              {activeStageSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <select 
-              className="h-11 rounded-xl border border-input bg-background px-3 text-sm font-bold cursor-pointer outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              value={filterType}
-              onChange={e => setFilterType(e.target.value)}
-            >
-              <option value="">كل أنواع الاختبارات</option>
-              {activeStageExamTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-            <select 
-              className="h-11 rounded-xl border border-input bg-background px-3 text-sm font-bold cursor-pointer outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              value={filterGrade}
-              onChange={e => setFilterGrade(e.target.value)}
-            >
-              <option value="">كل الصفوف</option>
-              {uniqueGrades.map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
+        <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm flex items-center gap-4">
+          <div className="bg-warning/10 text-warning p-3 rounded-xl"><Clock className="w-6 h-6" /></div>
+          <div>
+            <p className="text-sm text-muted-foreground font-bold">اختبارات قادمة</p>
+            <p className="text-2xl font-black">{activeStageScheduledExams.filter(ex => ex.status === 'scheduled').length}</p>
           </div>
-        </PageCard>
-
-        {/* Table View */}
-        <PageCard title="سجل الاختبارات المجدولة">
-          <DataTable
-            rows={filteredExams}
-            columns={[
-              { 
-                key: "subject", 
-                header: "المادة الدراسية", 
-                cell: (r) => {
-                  const subject = activeStageSubjects.find(s => s.id === r.subjectId);
-                  return <span className="font-extrabold text-primary">{subject?.name || "غير محدد"}</span>;
-                } 
-              },
-              { 
-                key: "type", 
-                header: "نوع الاختبار", 
-                cell: (r) => {
-                  const type = activeStageExamTypes.find(t => t.id === r.typeId);
-                  return <Badge tone="info">{type?.name || "غير محدد"}</Badge>;
-                } 
-              },
-              { key: "term", header: "الفصل", cell: (r) => <span className="text-sm font-medium">{r.term}</span> },
-              { 
-                key: "target", 
-                header: "المستهدف", 
-                cell: (r) => {
-                  if (r.sectionId) {
-                    const section = activeStageSections.find(s => s.id === r.sectionId);
-                    return <span className="text-sm text-muted-foreground">{r.grade} - شعبة {section?.name}</span>;
-                  }
-                  if (r.grade) return <span className="text-sm text-muted-foreground">{r.grade} (جميع الشعب)</span>;
-                  return <span className="text-sm text-muted-foreground">جميع الصفوف</span>;
-                }
-              },
-              { 
-                key: "date", 
-                header: "تاريخ الاختبار", 
-                cell: (r) => (
-                  <span className="tabular-nums font-bold text-foreground bg-accent px-2 py-1 rounded-md border border-border">
-                    {r.date}
-                  </span>
-                ) 
-              },
-              { 
-                key: "marks", 
-                header: "التقييم الكلي", 
-                cell: (r) => (
-                  <span className="font-black text-lg text-success">
-                    {r.totalMarks} {examGradingMode === "percentage" ? "%" : "درجة"}
-                  </span>
-                ) 
-              },
-              { 
-                key: "actions", 
-                header: "", 
-                cell: (r) => (
-                  <button 
-                    onClick={() => {
-                      if(confirm("هل تريد حذف هذا الاختبار من الجدول؟")) {
-                        deleteExam(r.id);
-                        toast.success("تم حذف الاختبار بنجاح");
-                      }
-                    }}
-                    className="rounded-lg p-2 text-danger hover:bg-danger/10 transition-colors"
-                    title="حذف الاختبار"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )
-              },
-            ]}
-            empty="لا توجد اختبارات مجدولة حالياً."
-          />
-        </PageCard>
-
-        <AdvancedPrintEngine
-          isOpen={isPrintOpen}
-          onClose={() => setIsPrintOpen(false)}
-          title={`جدول الاختبارات المجدولة`}
-          subtitle={`العام الدراسي الحالي - ${getStageLabel(stage)}`}
-          data={filteredExams}
-          templates={[
-            {
-              id: "exams-table",
-              name: "جدول الاختبارات",
-              category: "قوائم الاختبارات",
-              columns: [
-                { key: "subject", label: "المادة الدراسية", render: (r) => activeStageSubjects.find(s => s.id === r.subjectId)?.name || "" },
-                { key: "type", label: "نوع الاختبار", render: (r) => activeStageExamTypes.find(t => t.id === r.typeId)?.name || "" },
-                { key: "term", label: "الفصل الدراسي", render: (r) => r.term },
-                { key: "target", label: "المستهدف", render: (r) => r.sectionId ? `${r.grade} - شعبة ${activeStageSections.find(s => s.id === r.sectionId)?.name}` : (r.grade || "جميع الصفوف") },
-                { key: "date", label: "التاريخ", render: (r) => r.date },
-                { key: "marks", label: "التقييم الكلي", render: (r) => `${r.totalMarks} ${examGradingMode === "percentage" ? "%" : "درجة"}` }
-              ]
-            }
-          ]}
-        />
+        </div>
+        <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm flex items-center gap-4">
+          <div className="bg-success/10 text-success p-3 rounded-xl"><CheckCircle className="w-6 h-6" /></div>
+          <div>
+            <p className="text-sm text-muted-foreground font-bold">مكتملة</p>
+            <p className="text-2xl font-black">{activeStageScheduledExams.filter(ex => ex.status === 'completed').length}</p>
+          </div>
+        </div>
       </div>
 
-      {/* Add Exam Modal */}
+      <PageCard
+        title="الاختبارات المجدولة"
+        description="إدارة وتخطيط جميع الاختبارات"
+        actions={
+          <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-bold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
+            <Plus className="w-5 h-5" /> جدولة اختبار جديد
+          </button>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-3 mb-6">
+          <div className="relative md:col-span-2">
+            <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              placeholder="البحث باسم المادة..."
+              className="h-11 w-full rounded-xl border border-border/50 bg-background pr-10 pl-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <select value={filterGrade} onChange={e => { setFilterGrade(e.target.value); setFilterSection(""); }} className="h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none w-full">
+            <option value="">كل الفصول</option>
+            {stageGrades.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <select disabled={!filterGrade} value={filterSection} onChange={e => setFilterSection(e.target.value)} className="h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none w-full disabled:opacity-50">
+            <option value="">كل الشعب</option>
+            {filterSections.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
+          </select>
+        </div>
+
+        <DataTable
+          rows={list}
+          columns={[
+            { key: "name", header: "الامتحان", cell: row => <span className="font-black text-primary">{row.name}</span> },
+            { key: "subj", header: "المادة", cell: row => <span className="font-bold text-base">{activeStageSubjects.find(s => s.id === row.subjectId)?.name}</span> },
+            { key: "type", header: "النوع", cell: row => {
+              const cat = activeStageExamCategories.find(c => c.id === row.categoryId);
+              return cat ? <span className={`px-3 py-1 rounded-full text-xs font-bold border border-current`} style={{color: cat.color || 'currentColor', backgroundColor: `${cat.color || 'var(--foreground)'}15`}}>{cat.name}</span> : <span className="text-xs text-muted-foreground">يدوي</span>
+            }},
+            { key: "path", header: "المسار", cell: row => {
+              const section = activeStageSections.find(s => s.id === row.sectionId);
+              return <span className="font-bold text-sm text-muted-foreground">{row.grade} / شعبة {section?.name || "-"}</span>
+            }},
+            { key: "date", header: "التاريخ", cell: row => <span className="font-bold tabular-nums" dir="ltr">{row.date}</span> },
+            { key: "marks", header: "الدرجة القصوى", cell: row => <span className="font-bold text-primary">{row.totalMarks} {row.gradingSystem === 'percentage' ? '%' : ''}</span> },
+            { key: "status", header: "الحالة", cell: row => (
+              <select 
+                className="bg-transparent font-bold text-sm cursor-pointer hover:underline"
+                value={row.status}
+                onChange={(e) => updateScheduledExam(row.id, { status: e.target.value as any })}
+              >
+                <option value="scheduled">مجدول ⏳</option>
+                <option value="ongoing">جارٍ الآن 📝</option>
+                <option value="completed">مكتمل ✅</option>
+                <option value="cancelled">ملغي ❌</option>
+              </select>
+            )},
+            { key: "actions", header: "", cell: row => (
+              <button onClick={() => deleteScheduledExam(row.id)} className="p-2 text-danger/70 hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"><Trash2 className="w-4 h-4"/></button>
+            )}
+          ]}
+        />
+      </PageCard>
+
+      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-border/50">
-              <h2 className="text-2xl font-black flex items-center gap-2 text-primary">
-                <CalendarDays className="h-6 w-6" /> جدولة اختبار جديد
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-card w-full max-w-2xl rounded-3xl shadow-2xl border border-border/50 overflow-hidden slide-in-from-bottom-4 animate-in">
+            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-accent/30">
+              <h2 className="text-xl font-black text-primary">جدولة اختبار جديد</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 bg-background rounded-full hover:bg-danger/10 hover:text-danger transition-colors border border-border/50">
+                <Trash2 className="w-5 h-5 hidden" /> {/* Just spacing placeholder if needed, using custom close below */}
+                <span className="font-bold text-xl leading-none">&times;</span>
               </button>
             </div>
             
-            <form onSubmit={handleAddExam} className="p-6 space-y-5 custom-scrollbar max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSave} className="p-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">مخصص للصف (الدرجة)</label>
-                  <select
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-                    value={newExam.grade}
-                    onChange={e => setNewExam({...newExam, grade: e.target.value, sectionId: "", subjectId: ""})}
-                  >
-                    <option value="">جميع الصفوف</option>
-                    {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">المرحلة <span className="text-danger">*</span></label>
+                  <select required value={stage} onChange={e => { setStage(e.target.value as any); setFormData(prev => ({ ...prev, grade: "", sectionId: "", subjectId: "", categoryId: "" })); }} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
+                    {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">مخصص لشعبة (اختياري)</label>
-                  <select
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-                    value={newExam.sectionId}
-                    onChange={e => setNewExam({...newExam, sectionId: e.target.value})}
-                    disabled={!newExam.grade}
-                  >
-                    <option value="">جميع الشعب</option>
-                    {activeStageSections.filter(s => s.grade === newExam.grade).map(s => (
-                      <option key={s.id} value={s.id}>شعبة {s.name}</option>
-                    ))}
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الفصل <span className="text-danger">*</span></label>
+                  <select required value={formData.grade || ""} onChange={e => setFormData(prev => ({ ...prev, grade: e.target.value, sectionId: "", subjectId: "", categoryId: "" }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">-- اختر الفصل --</option>
+                    {stageGrades.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-bold text-muted-foreground">المادة الدراسية <span className="text-danger">*</span></label>
-                <select
-                  required
-                  className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer disabled:opacity-50"
-                  value={newExam.subjectId}
-                  onChange={e => setNewExam({...newExam, subjectId: e.target.value})}
-                  disabled={!!newExam.grade === false && activeStageSubjects.some(s => s.grades && s.grades.length > 0)}
-                >
-                  <option value="">-- اختر المادة --</option>
-                  {activeStageSubjects
-                    .filter(s => !s.grades || s.grades.length === 0 || (newExam.grade && s.grades.includes(newExam.grade)))
-                    .map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                {(!newExam.grade && activeStageSubjects.some(s => s.grades && s.grades.length > 0)) && (
-                  <span className="block text-xs text-warning mt-1">الرجاء اختيار الصف أولاً لتظهر لك مواده الدراسية المخصصة.</span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">نوع الاختبار <span className="text-danger">*</span></label>
-                  <select
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الشعبة <span className="text-danger">*</span></label>
+                  <select required disabled={!formData.grade} value={formData.sectionId || ""} onChange={e => setFormData(prev => ({ ...prev, sectionId: e.target.value, subjectId: "", categoryId: "" }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50">
+                    <option value="">-- اختر الشعبة --</option>
+                    {formSections.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">اسم الامتحان <span className="text-danger">*</span></label>
+                  <input
                     required
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-                    value={newExam.typeId}
-                    onChange={e => setNewExam({...newExam, typeId: e.target.value})}
-                  >
-                    <option value="">-- اختر النوع --</option>
-                    {activeStageExamTypes
-                      .filter(t => !t.subjectId || t.subjectId === newExam.subjectId)
-                      .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    value={formData.name || ""}
+                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="مثال: شهري أول، شهري ثاني، فترة أولى"
+                    className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">المادة <span className="text-danger">*</span></label>
+                  <select required disabled={!formData.sectionId} value={formData.subjectId || ""} onChange={e => setFormData(prev => ({ ...prev, subjectId: e.target.value, categoryId: "" }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50">
+                    <option value="">-- اختر المادة --</option>
+                    {applicableSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الفصل الدراسي</label>
-                  <select
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-                    value={newExam.term}
-                    onChange={e => setNewExam({...newExam, term: e.target.value})}
-                  >
-                    <option value="الفصل الأول">الفصل الأول</option>
-                    <option value="الفصل الثاني">الفصل الثاني</option>
-                    <option value="الفصل الثالث">الفصل الثالث</option>
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">قالب التقييم (اختياري)</label>
+                  <select disabled={!formData.subjectId} value={formData.categoryId || ""} onChange={e => setFormData(prev => ({...prev, categoryId: e.target.value || undefined}))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50">
+                    <option value="">بدون قالب - إدخال يدوي</option>
+                    {applicableCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t border-border/50 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="mb-2 block text-sm font-bold text-muted-foreground">تاريخ الاختبار <span className="text-danger">*</span></label>
-                  <input 
-                    type="date" 
-                    required
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                    value={newExam.date}
-                    onChange={e => setNewExam({...newExam, date: e.target.value})}
-                  />
+                  <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary" />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">التقييم الكلي ({examGradingMode === "percentage" ? "%" : "درجة"}) <span className="text-danger">*</span></label>
-                  <input 
-                    type="number" 
-                    min="1" max={examGradingMode === "percentage" ? 100 : 1000}
-                    required
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors text-left"
-                    dir="ltr"
-                    value={newExam.totalMarks}
-                    onChange={e => setNewExam({...newExam, totalMarks: Number(e.target.value)})}
-                  />
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الدرجة القصوى <span className="text-danger">*</span></label>
+                  <input type="number" required min="1" value={formData.totalMarks} onChange={e => setFormData({...formData, totalMarks: Number(e.target.value)})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary" dir="ltr" />
                 </div>
               </div>
 
-              <div className="pt-6 flex justify-end gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl px-5 py-2.5 font-bold hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit" 
-                  className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm hover:scale-105"
-                >
-                  اعتماد الاختبار
-                </button>
+              <div className="pt-4 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 font-bold hover:bg-accent rounded-xl transition-colors">إلغاء</button>
+                <button type="submit" className="px-8 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-md">اعتماد الجدولة</button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </AppShell>
+    </div>
+  );
+}
+
+// ==========================================
+// 2. Exam Templates View (Settings)
+// ==========================================
+function ExamCategoriesView() {
+  const { stage, getStageLabel } = useStage();
+  const { activeStageExamCategories, activeStageSections, addExamCategory, deleteExamCategory } = useGlobalStore();
+
+  const uniqueGrades = useMemo(() => getGradesForStage(stage), [stage]);
+
+  const [formData, setFormData] = useState<Partial<ExamCategory>>({
+    name: "",
+    weight: 20,
+    grades: [],
+    gradingSystem: "marks",
+    maxMark: 20,
+    color: "#3b82f6"
+  });
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    addExamCategory({ ...formData as Omit<ExamCategory, "id">, stage });
+    toast.success("تمت إضافة نوع الاختبار!");
+    setFormData({ name: "", weight: 20, grades: [], gradingSystem: "marks", maxMark: 20, color: "#3b82f6" });
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-1">
+        <PageCard title="إضافة قالب تقييم" description="القالب اختياري لضبط الدرجة ونظام الرصد بسرعة">
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">اسم القالب</label>
+              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold" placeholder="مثال: درجات رقمية من 20" />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-muted-foreground">الوزن النسبي (%)</label>
+                <input required type="number" min="0" max="100" value={formData.weight} onChange={e => setFormData({...formData, weight: Number(e.target.value)})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold" />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-muted-foreground">الدرجة الافتراضية</label>
+                <input required type="number" min="1" value={formData.maxMark} onChange={e => setFormData({...formData, maxMark: Number(e.target.value)})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold" />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">نظام التقييم</label>
+              <select required value={formData.gradingSystem} onChange={e => setFormData({...formData, gradingSystem: e.target.value as any})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold">
+                <option value="marks">درجات رقمية (أرقام)</option>
+                <option value="percentage">نسب مئوية (%)</option>
+                {stage === "kindergarten" && <option value="descriptive">تقييم وصفي (نصوص)</option>}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">لون التمييز</label>
+              <input type="color" value={formData.color} onChange={e => setFormData({...formData, color: e.target.value})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-2 cursor-pointer" />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">مخصص لصفوف معينة (اختياري)</label>
+              <div className="flex flex-wrap gap-2 p-3 bg-accent/20 rounded-xl max-h-40 overflow-y-auto">
+                {uniqueGrades.map(g => (
+                  <label key={g} className="flex items-center gap-2 cursor-pointer p-1">
+                    <input type="checkbox" checked={formData.grades?.includes(g)} onChange={e => {
+                      if(e.target.checked) setFormData({...formData, grades: [...(formData.grades||[]), g]});
+                      else setFormData({...formData, grades: (formData.grades||[]).filter(gr => gr !== g)});
+                    }}/>
+                    <span className="text-sm font-bold">{g}</span>
+                  </label>
+                ))}
+                {uniqueGrades.length === 0 && <span className="text-xs text-muted-foreground">لا توجد صفوف بعد.</span>}
+              </div>
+            </div>
+
+            <button type="submit" className="w-full bg-primary text-primary-foreground h-12 rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm">
+              إضافة القالب
+            </button>
+          </form>
+        </PageCard>
+      </div>
+      
+      <div className="lg:col-span-2">
+        <PageCard title="قوالب التقييم المتاحة" description={`لـ ${getStageLabel(stage)}`}>
+          <DataTable
+            rows={activeStageExamCategories}
+            columns={[
+              { key: "name", header: "اسم القالب", cell: row => <span className="font-bold flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{backgroundColor: row.color}}></div> {row.name}</span> },
+              { key: "weight", header: "الوزن النسبي", cell: row => `${row.weight}%` },
+              { key: "max", header: "الدرجة", cell: row => row.maxMark },
+              { key: "sys", header: "التقييم", cell: row => <span className="text-xs bg-accent px-2 py-1 rounded-md">{row.gradingSystem === 'marks' ? 'درجات' : row.gradingSystem === 'percentage' ? 'نسب' : 'وصفي'}</span> },
+              { key: "grades", header: "الصفوف", cell: row => row.grades && row.grades.length > 0 ? <div className="flex flex-wrap gap-1">{row.grades.map((g: string) => <span key={g} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">{g}</span>)}</div> : <span className="text-xs text-muted-foreground">عام</span> },
+              { key: "actions", header: "", cell: row => (
+                <button onClick={() => deleteExamCategory(row.id)} className="p-2 text-danger/70 hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"><Trash2 className="w-4 h-4"/></button>
+              )}
+            ]}
+          />
+        </PageCard>
+      </div>
+    </div>
   );
 }

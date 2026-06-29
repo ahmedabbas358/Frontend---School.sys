@@ -5,6 +5,7 @@ import { CreditCard, Plus, Search, Filter, Printer, Receipt, DollarSign, CheckCi
 import { useState, useMemo } from "react";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
+import { getGradesForStage } from "@/lib/school-structure";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/finance/payments")({
 const paymentSchema = z.object({
   invoiceId: z.string().min(1, "رقم الفاتورة مطلوب"),
   amount: z.coerce.number().min(1, "المبلغ يجب أن يكون أكبر من صفر"),
-  method: z.enum(["cash", "transfer", "pos"], { required_error: "طريقة الدفع مطلوبة" }),
+  method: z.enum(["cash", "bank_transfer", "card", "cheque"], { required_error: "طريقة الدفع مطلوبة" }),
 });
 
 type PaymentForm = z.infer<typeof paymentSchema>;
@@ -55,13 +56,13 @@ function FinancePayments() {
 
   // Available grades
   const uniqueGrades = useMemo(() => {
-    return Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean).sort();
-  }, [activeStageSections]);
+    return getGradesForStage(stage);
+  }, [stage]);
 
   // Available sections for selected grade
   const availableSections = useMemo(() => {
-    if (!gradeFilter) return activeStageSections;
-    return activeStageSections.filter(s => s.grade === gradeFilter);
+    let sections = gradeFilter ? activeStageSections.filter(s => s.grade === gradeFilter) : activeStageSections;
+    return [...sections].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   }, [activeStageSections, gradeFilter]);
 
   const printTemplates: PrintTemplate[] = useMemo(() => {
@@ -105,7 +106,7 @@ function FinancePayments() {
 
   const onSubmit = (data: PaymentForm) => {
     addPayment(data.invoiceId, data.amount, data.method);
-    toast.success(`تم تسجيل دفعة بقيمة ${data.amount} {currency} للفاتورة ${data.invoiceId}`);
+    toast.success(`تم تسجيل دفعة بقيمة ${data.amount} ${currency} للفاتورة ${data.invoiceId}`);
     setIsModalOpen(false);
     reset();
   };
@@ -232,7 +233,7 @@ function FinancePayments() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">المبلغ المحصل (ر.س) <span className="text-danger">*</span></label>
+                  <label className="mb-1 block text-sm font-medium">المبلغ المحصل ({currency}) <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     {...register("amount")}
@@ -304,7 +305,7 @@ function FinancePayments() {
               value={gradeFilter}
               onChange={e => { setGradeFilter(e.target.value); setSectionFilter(""); }}
             >
-              <option value="">الصف (الكل)</option>
+              <option value="">الفصل (الكل)</option>
               {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
             <select 

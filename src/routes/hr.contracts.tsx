@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { FileBadge, Plus, Calendar, Settings } from "lucide-react";
-import { useState } from "react";
+import { useStage } from "@/contexts/StageContext";
+import { FileBadge, Plus, Calendar, Settings, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/hr/contracts")({
@@ -11,10 +12,35 @@ export const Route = createFileRoute("/hr/contracts")({
   component: ContractsPage,
 });
 
+function isExpiringSoon(endDate: string) {
+  const end = new Date(endDate);
+  const now = new Date();
+  const diffTime = Math.abs(end.getTime() - now.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 30 && end > now;
+}
+
 function ContractsPage() {
-  const { allStaff, allStaffContracts, addStaffContract } = useGlobalStore();
+  const { currency, activeStageStaff, allStaffContracts, addStaffContract } = useGlobalStore();
+  const { stage, getStageLabel } = useStage();
   const [showAdd, setShowAdd] = useState(false);
-  const activeStaff = allStaff.filter(s => !s.isDeleted);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const activeStaff = useMemo(() => activeStageStaff.filter(s => !s.isDeleted), [activeStageStaff]);
+  const activeStaffIds = useMemo(() => new Set(activeStaff.map(item => item.id)), [activeStaff]);
+  const scopedContracts = useMemo(() => {
+    return allStaffContracts
+      .filter(item => activeStaffIds.has(item.staffId))
+      .filter(item => statusFilter === "all" || item.status === statusFilter)
+      .filter(item => !q.trim() || item.staffName.includes(q.trim()) || item.id.includes(q.trim()));
+  }, [activeStaffIds, allStaffContracts, q, statusFilter]);
+
+  const stats = useMemo(() => ({
+    active: scopedContracts.filter(item => item.status === "active").length,
+    renewing: scopedContracts.filter(item => item.status === "renewing").length,
+    expired: scopedContracts.filter(item => item.status === "expired").length,
+    expiringSoon: scopedContracts.filter(item => item.status === "active" && isExpiringSoon(item.endDate)).length,
+  }), [scopedContracts]);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,14 +64,6 @@ function ContractsPage() {
     setShowAdd(false);
   };
 
-  const isExpiringSoon = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diffTime = Math.abs(end.getTime() - now.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    return diffDays <= 30 && end > now;
-  };
-
   return (
     <AppShell
       breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "شؤون الموظفين" }, { label: "العقود والوثائق" }]}
@@ -61,8 +79,27 @@ function ContractsPage() {
             <FileBadge className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-black">إدارة العقود والوثائق</h1>
-            <p className="text-sm font-bold text-muted-foreground mt-1">تتبع عقود الموظفين وتجديدها قبل انتهائها</p>
+            <h1 className="text-2xl font-black">إدارة العقود والوثائق ({getStageLabel(stage)})</h1>
+            <p className="text-sm font-bold text-muted-foreground mt-1">تتبع عقود موظفي المرحلة النشطة وتجديدها قبل انتهائها.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">سارية</p>
+            <p className="mt-1 text-2xl font-black text-success">{stats.active}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">تنتهي قريباً</p>
+            <p className="mt-1 text-2xl font-black text-warning">{stats.expiringSoon}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">قيد التجديد</p>
+            <p className="mt-1 text-2xl font-black text-primary">{stats.renewing}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">منتهية</p>
+            <p className="mt-1 text-2xl font-black text-danger">{stats.expired}</p>
           </div>
         </div>
 
@@ -117,9 +154,24 @@ function ContractsPage() {
           </PageCard>
         )}
 
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_180px]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input value={q} onChange={event => setQ(event.target.value)} placeholder="بحث باسم الموظف أو رقم العقد..." className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
+            </div>
+            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold">
+              <option value="all">كل الحالات</option>
+              <option value="active">سارية</option>
+              <option value="renewing">قيد التجديد</option>
+              <option value="expired">منتهية</option>
+            </select>
+          </div>
+        </div>
+
         <PageCard>
           <DataTable
-            rows={allStaffContracts}
+            rows={scopedContracts}
             columns={[
               { key: "id", header: "رقم العقد", cell: (r) => <span className="text-xs font-bold text-muted-foreground">{r.id}</span> },
               { key: "staff", header: "الموظف", cell: (r) => <div className="font-bold">{r.staffName}</div> },
@@ -136,7 +188,7 @@ function ContractsPage() {
                   <span className={`${isExpiringSoon(r.endDate) ? "text-danger font-bold" : ""}`}>{r.endDate}</span>
                 </div>
               )},
-              { key: "salary", header: "الراتب الأساسي", cell: (r) => <span className="font-bold text-success tabular">{r.basicSalary.toLocaleString("ar-EG")} ر.س</span> },
+              { key: "salary", header: "الراتب الأساسي", cell: (r) => <span className="font-bold text-success tabular">{r.basicSalary.toLocaleString("ar-EG")} {currency}</span> },
               { key: "status", header: "الحالة", cell: (r) => (
                 <Badge tone={r.status === "active" ? (isExpiringSoon(r.endDate) ? "warning" : "success") : r.status === "expired" ? "danger" : "primary"}>
                   {r.status === "active" ? (isExpiringSoon(r.endDate) ? "ينتهي قريباً" : "ساري") : r.status === "expired" ? "منتهي" : "قيد التجديد"}
@@ -150,7 +202,7 @@ function ContractsPage() {
                 </div>
               )}
             ]}
-            empty="لا توجد عقود مسجلة"
+            empty={`لا توجد عقود مسجلة لموظفي ${getStageLabel(stage)}.`}
           />
         </PageCard>
       </div>

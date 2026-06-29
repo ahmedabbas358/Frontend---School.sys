@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
-import { useStage } from "@/contexts/StageContext";
+import { useStage, GRADE_OPTIONS } from "@/contexts/StageContext";
 import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -17,14 +17,13 @@ export const Route = createFileRoute("/students/new")({
 const baseSchema = z.object({
   name: z.string().min(3, "الاسم يجب أن يكون 3 أحرف على الأقل"),
   dob: z.string().min(1, "تاريخ الميلاد مطلوب"),
-  nationalId: z.string().length(10, "رقم الهوية يجب أن يكون 10 أرقام"),
+  nationalId: z.string().min(1, "الرقم الوطني مطلوب"),
   grade: z.string().min(1, "الصف الدراسي مطلوب"),
   sectionId: z.string().optional(),
   gender: z.enum(["ذكر", "أنثى"], { required_error: "الجنس مطلوب" }),
-  
-  guardianName: z.string().min(3, "اسم ولي الأمر مطلوب"),
+  guardianName: z.string().min(2, "اسم ولي الأمر مطلوب"),
   guardianRelation: z.string().optional(),
-  guardianPhone: z.string().min(9, "رقم الجوال غير صحيح").optional().or(z.literal("")),
+  guardianPhone: z.string().optional(),
   address: z.string().optional(),
   
   bloodType: z.string().optional(),
@@ -48,8 +47,7 @@ function StudentRegistrationWizard() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Filter sections by stage
-  const availableSections = allSections.filter(sec => sec.stage === stage);
+  const currentGrades = GRADE_OPTIONS[stage] || [];
 
   // Select schema based on stage
   const currentSchema = 
@@ -74,6 +72,7 @@ function StudentRegistrationWizard() {
   });
 
   const selectedGrade = watch("grade");
+  const availableSections = allSections.filter(sec => sec.stage === stage && sec.grade === selectedGrade);
 
   const onSubmit = (data: FormValues) => {
     const studentData: any = {
@@ -99,10 +98,41 @@ function StudentRegistrationWizard() {
   ];
 
   const handleNext = async () => {
-    const fieldsToValidate = steps.find(s => s.id === currentStep)?.fields;
-    const isStepValid = await trigger(fieldsToValidate as any);
+    const currentFields = steps.find(s => s.id === currentStep)?.fields || [];
+    const isStepValid = await trigger(currentFields as any);
     if (isStepValid) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+      setCurrentStep(prev => prev === 1 ? 2 : 3);
+    } else {
+      toast.error("يرجى إكمال الحقول المطلوبة قبل الانتقال للخطوة التالية");
+    }
+  };
+
+  const goToStep = async (stepId: number) => {
+    if (stepId < currentStep) {
+      setCurrentStep(stepId);
+    } else if (stepId === currentStep + 1) {
+      const currentFields = steps.find(s => s.id === currentStep)?.fields || [];
+      const isStepValid = await trigger(currentFields as any);
+      if (isStepValid) {
+        setCurrentStep(stepId);
+      } else {
+        toast.error("يرجى إكمال الحقول المطلوبة قبل الانتقال للخطوة التالية");
+      }
+    } else if (stepId > currentStep + 1) {
+      toast.error("يرجى إكمال الخطوات بالتسلسل");
+    }
+  };
+
+  const handleFormError = (errors: any) => {
+    // Automatically jump to the step containing the first error
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length > 0) {
+      const firstErrorField = errorKeys[0];
+      const stepWithError = steps.find(s => s.fields.includes(firstErrorField));
+      if (stepWithError) {
+        setCurrentStep(stepWithError.id);
+        toast.error("يرجى مراجعة الحقول المطلوبة باللون الأحمر");
+      }
     }
   };
 
@@ -138,22 +168,29 @@ function StudentRegistrationWizard() {
             <div className="absolute right-0 top-1/2 h-1 bg-primary -z-10 rounded-full transition-all duration-500" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
             
             {steps.map((step) => (
-              <div key={step.id} className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 transition-all duration-300 ${
+              <div 
+                key={step.id} 
+                className="flex flex-col items-center gap-2 cursor-pointer group"
+                onClick={() => goToStep(step.id)}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 transition-all duration-300 group-hover:scale-110 ${
                   currentStep >= step.id 
                     ? "bg-primary border-background text-primary-foreground shadow-lg scale-110" 
-                    : "bg-card border-background text-muted-foreground shadow-sm"
+                    : "bg-card border-background text-muted-foreground shadow-sm group-hover:border-primary/50"
                 }`}>
                   {step.id}
                 </div>
-                <span className={`text-xs sm:text-sm font-bold ${currentStep >= step.id ? "text-primary" : "text-muted-foreground"}`}>{step.title}</span>
+                <span className={`text-xs sm:text-sm font-bold ${currentStep >= step.id ? "text-primary" : "text-muted-foreground group-hover:text-primary/70"}`}>{step.title}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form 
+          onSubmit={(e) => e.preventDefault()} 
+          className="space-y-8"
+        >
           <PageCard className="p-8 shadow-lg border-border/50 glass">
             
             {/* STEP 1: Basic Info */}
@@ -175,11 +212,11 @@ function StudentRegistrationWizard() {
                 </div>
                 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">رقم الهوية / الإقامة <span className="text-danger">*</span></label>
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الرقم الوطني <span className="text-danger">*</span></label>
                   <input
                     {...register("nationalId")}
                     className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium tabular-nums"
-                    placeholder="10 أرقام"
+                    placeholder="أدخل الرقم الوطني"
                   />
                   {errors.nationalId && <p className="mt-1.5 text-xs text-danger font-bold flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-danger"></span> {errors.nationalId.message as string}</p>}
                 </div>
@@ -208,11 +245,15 @@ function StudentRegistrationWizard() {
 
                 <div>
                   <label className="mb-2 block text-sm font-bold text-muted-foreground">الصف الدراسي المستهدف <span className="text-danger">*</span></label>
-                  <input
+                  <select
                     {...register("grade")}
-                    className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                    placeholder="مثال: الصف الأول"
-                  />
+                    className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer"
+                  >
+                    <option value="">-- اختر الصف --</option>
+                    {currentGrades.map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
                   {errors.grade && <p className="mt-1.5 text-xs text-danger font-bold flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-danger"></span> {errors.grade.message as string}</p>}
                 </div>
 
@@ -220,9 +261,10 @@ function StudentRegistrationWizard() {
                   <label className="mb-2 block text-sm font-bold text-primary flex items-center gap-2"><LayoutGrid className="h-4 w-4"/> التعيين في شعبة (اختياري)</label>
                   <select
                     {...register("sectionId")}
-                    className="w-full rounded-xl border border-primary/30 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer"
+                    disabled={!selectedGrade}
+                    className="w-full rounded-xl border border-primary/30 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer disabled:opacity-50"
                   >
-                    <option value="">-- تعيين لاحقاً (سيتم إضافته لقائمة الانتظار) --</option>
+                    <option value="">{selectedGrade ? "-- تعيين لاحقاً (سيتم إضافته لقائمة الانتظار) --" : "يرجى اختيار الصف الدراسي أولاً"}</option>
                     {availableSections.map(sec => {
                       const enrolledCount = activeStageStudents.filter(s => s.sectionId === sec.id).length;
                       return (
@@ -235,7 +277,7 @@ function StudentRegistrationWizard() {
               </div>
             </div>
 
-            {/* STEP 2: Guardian Info */}
+            {/* STEP 2: Contact & Guardian */}
             <div className={currentStep === 2 ? "block animate-in fade-in slide-in-from-right-4 duration-300" : "hidden"}>
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2 border-b border-border/50 pb-4">
                 <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">2</span>
@@ -401,7 +443,8 @@ function StudentRegistrationWizard() {
                 </button>
               ) : (
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit(onSubmit, handleFormError)}
                   disabled={isSubmitting}
                   className="flex items-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-all shadow-md hover:shadow-primary/20 hover:scale-105 disabled:opacity-50"
                 >

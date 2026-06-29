@@ -15,7 +15,7 @@ export const Route = createFileRoute("/guardians/$id")({
 
 function GuardianProfile() {
   const { id } = Route.useParams();
-  const { currency, allStudents, allInvoices, addPayment  } = useGlobalStore();
+  const { currency, allStudents, allInvoices, addPayment, allGuardians } = useGlobalStore();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [paymentData, setPaymentData] = useState({
@@ -25,10 +25,27 @@ function GuardianProfile() {
   });
 
   const guardianData = useMemo(() => {
+    const guardian = allGuardians.find(g => g.id === id);
+    
+    if (guardian) {
+      const students = allStudents.filter(s => 
+        (s.guardianPhone === guardian.phone && s.guardianPhone) || 
+        (s.guardianName === guardian.name && s.guardianName)
+      );
+      return {
+        id: guardian.id,
+        name: guardian.name,
+        phone: guardian.phone,
+        relation: guardian.relation,
+        address: "غير محدد",
+        students: students
+      };
+    }
+
+    // Fallback for legacy links where phone number was passed as ID
     const students = allStudents.filter(s => s.guardianPhone === id);
     if (students.length === 0) return null;
     
-    // Guardian details are inferred from the first student record
     return {
       id: students[0].guardianPhone,
       name: students[0].guardianName || "غير محدد",
@@ -37,7 +54,7 @@ function GuardianProfile() {
       address: students[0].address || "غير محدد",
       students: students
     };
-  }, [id, allStudents]);
+  }, [id, allStudents, allGuardians]);
 
   if (!guardianData) {
     return (

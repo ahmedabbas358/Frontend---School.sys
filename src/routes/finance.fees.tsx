@@ -2,10 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { Plus, DollarSign, Printer, Trash2, X, Building, GraduationCap, CheckSquare } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { useGlobalStore, FeeStructure } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
+import { getGradesForStage } from "@/lib/school-structure";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/finance/fees")({
@@ -18,7 +19,9 @@ function FinanceFees() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const uniqueGrades = Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean);
+  const uniqueGrades = useMemo(() => {
+    return getGradesForStage(stage);
+  }, [stage]);
 
   const [newFee, setNewFee] = useState<Partial<FeeStructure>>({
     name: "",
@@ -30,13 +33,23 @@ function FinanceFees() {
     sections: []
   });
 
+  const targetSections = useMemo(() => {
+    if (!newFee.grades || newFee.grades.length === 0) return activeStageSections;
+    return activeStageSections.filter(section => newFee.grades?.includes(section.grade));
+  }, [activeStageSections, newFee.grades]);
+
   const handleAddFee = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFee.name || !newFee.amount || !newFee.type) {
       toast.error("يرجى تعبئة الحقول المطلوبة");
       return;
     }
-    addFeeStructure(newFee as FeeStructure);
+    try {
+      addFeeStructure({ ...newFee, stage } as FeeStructure);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر حفظ بند الرسوم");
+      return;
+    }
     toast.success("تم إضافة بند الرسوم بنجاح");
     setIsModalOpen(false);
     setNewFee({ name: "", amount: 0, type: "", isMandatory: true, stage: stage, grades: [], sections: [] });
@@ -86,7 +99,7 @@ function FinanceFees() {
       targets.push(...sectionNames);
     }
 
-    if (targets.length === 0) return "جميع الصفوف والشعب";
+    if (targets.length === 0) return "جميع الفصول والشعب";
     return targets.join("، ");
   };
 
@@ -256,10 +269,10 @@ function FinanceFees() {
                   <div className="grid grid-cols-2 gap-4 max-h-48 overflow-y-auto custom-scrollbar p-1">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground mb-2 sticky top-0 bg-background py-1">
-                        <GraduationCap className="h-4 w-4" /> الصفوف
+                        <GraduationCap className="h-4 w-4" /> الفصول
                       </div>
                       {uniqueGrades.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">لا توجد صفوف مضافة.</p>
+                        <p className="text-xs text-muted-foreground">لا توجد فصول معرفة.</p>
                       ) : (
                         uniqueGrades.map((g) => (
                           <label key={g} className="flex items-center gap-2 cursor-pointer group bg-accent/30 p-2 rounded-lg border border-border/50 hover:border-primary/50 transition-colors">
@@ -271,9 +284,12 @@ function FinanceFees() {
                                 const checked = e.target.checked;
                                 setNewFee(prev => ({
                                   ...prev,
-                                  grades: checked 
+                                  grades: checked
                                     ? [...(prev.grades || []), g]
-                                    : (prev.grades || []).filter(grade => grade !== g)
+                                    : (prev.grades || []).filter(grade => grade !== g),
+                                  sections: checked
+                                    ? prev.sections
+                                    : (prev.sections || []).filter(sectionId => activeStageSections.find(section => section.id === sectionId)?.grade !== g)
                                 }));
                               }}
                             />
@@ -285,12 +301,12 @@ function FinanceFees() {
 
                     <div className="space-y-3 border-r border-border/50 pr-4">
                       <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground mb-2 sticky top-0 bg-background py-1">
-                        <Building className="h-4 w-4" /> الشعب الدراسية
+                            <Building className="h-4 w-4" /> الشعب الدراسية
                       </div>
-                      {activeStageSections.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">لا توجد شعب مضافة.</p>
+                      {targetSections.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">لا توجد شعب مطابقة للفصول المختارة.</p>
                       ) : (
-                        activeStageSections.map((sec) => (
+                        [...targetSections].sort((a,b)=>a.grade.localeCompare(b.grade, 'ar') || a.name.localeCompare(b.name,'ar')).map((sec) => (
                           <label key={sec.id} className="flex items-center gap-2 cursor-pointer group bg-accent/30 p-2 rounded-lg border border-border/50 hover:border-primary/50 transition-colors">
                             <input 
                               type="checkbox" 

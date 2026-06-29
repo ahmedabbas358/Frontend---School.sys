@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { Star, Plus, UserCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useStage } from "@/contexts/StageContext";
+import { Star, Plus, UserCircle2, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/hr/evaluations")({
@@ -12,9 +13,34 @@ export const Route = createFileRoute("/hr/evaluations")({
 });
 
 function EvaluationsPage() {
-  const { allStaff, allStaffEvaluations, addStaffEvaluation } = useGlobalStore();
+  const { activeStageStaff, allStaffEvaluations, addStaffEvaluation } = useGlobalStore();
+  const { stage, getStageLabel } = useStage();
   const [showAdd, setShowAdd] = useState(false);
-  const activeStaff = allStaff.filter(s => !s.isDeleted && s.status === "active");
+  const [q, setQ] = useState("");
+  const [levelFilter, setLevelFilter] = useState("all");
+  const activeStaff = useMemo(() => activeStageStaff.filter(s => !s.isDeleted && s.status === "active"), [activeStageStaff]);
+  const activeStaffIds = useMemo(() => new Set(activeStaff.map(item => item.id)), [activeStaff]);
+  const scopedEvaluations = useMemo(() => {
+    return allStaffEvaluations
+      .filter(item => activeStaffIds.has(item.staffId))
+      .filter(item => {
+        if (levelFilter === "excellent") return item.overallScore >= 4.5;
+        if (levelFilter === "good") return item.overallScore >= 3.5 && item.overallScore < 4.5;
+        if (levelFilter === "needs_review") return item.overallScore < 3.5;
+        return true;
+      })
+      .filter(item => !q.trim() || item.staffName.includes(q.trim()) || item.period.includes(q.trim()) || item.evaluator.includes(q.trim()));
+  }, [activeStaffIds, allStaffEvaluations, levelFilter, q]);
+
+  const stats = useMemo(() => {
+    const avg = scopedEvaluations.length ? scopedEvaluations.reduce((sum, item) => sum + item.overallScore, 0) / scopedEvaluations.length : 0;
+    return {
+      total: scopedEvaluations.length,
+      excellent: scopedEvaluations.filter(item => item.overallScore >= 4.5).length,
+      needsReview: scopedEvaluations.filter(item => item.overallScore < 3.5).length,
+      avg,
+    };
+  }, [scopedEvaluations]);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,8 +98,27 @@ function EvaluationsPage() {
             <Star className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-black">تقييم أداء الموظفين</h1>
-            <p className="text-sm font-bold text-muted-foreground mt-1">إدارة التقييمات الدورية للكادر التعليمي والإداري</p>
+            <h1 className="text-2xl font-black">تقييم أداء الموظفين ({getStageLabel(stage)})</h1>
+            <p className="text-sm font-bold text-muted-foreground mt-1">تقييمات دورية مرتبطة بموظفي المرحلة النشطة وتظهر في ملف الموظف ولوحة الموارد البشرية.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">عدد التقييمات</p>
+            <p className="mt-1 text-2xl font-black text-primary">{stats.total}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">متوسط الأداء</p>
+            <p className="mt-1 text-2xl font-black">{stats.avg.toFixed(1)} / 5</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">ممتاز</p>
+            <p className="mt-1 text-2xl font-black text-success">{stats.excellent}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-bold text-muted-foreground">تحتاج متابعة</p>
+            <p className="mt-1 text-2xl font-black text-warning">{stats.needsReview}</p>
           </div>
         </div>
 
@@ -135,9 +180,24 @@ function EvaluationsPage() {
           </PageCard>
         )}
 
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_180px]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input value={q} onChange={event => setQ(event.target.value)} placeholder="بحث باسم الموظف أو الفترة أو المقيم..." className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
+            </div>
+            <select value={levelFilter} onChange={event => setLevelFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold">
+              <option value="all">كل المستويات</option>
+              <option value="excellent">ممتاز</option>
+              <option value="good">جيد جداً</option>
+              <option value="needs_review">تحتاج متابعة</option>
+            </select>
+          </div>
+        </div>
+
         <PageCard>
           <DataTable
-            rows={allStaffEvaluations}
+            rows={scopedEvaluations}
             columns={[
               { key: "staff", header: "الموظف", cell: (r) => (
                 <div className="flex items-center gap-2">
@@ -161,7 +221,7 @@ function EvaluationsPage() {
                 </Badge>
               )}
             ]}
-            empty="لا توجد تقييمات مسجلة"
+            empty={`لا توجد تقييمات مسجلة لموظفي ${getStageLabel(stage)}.`}
           />
         </PageCard>
       </div>

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { Stethoscope, Plus, Search, Filter, Printer } from "lucide-react";
+import { Stethoscope, Plus, Search, Filter, Printer, ChevronDown } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
@@ -28,6 +28,8 @@ function ClinicVisits() {
   const { activeStageClinicVisits, activeStageStudents, addClinicVisit } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   const [q, setQ] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [isStudentDropdownOpen, setIsStudentDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
 
@@ -48,9 +50,17 @@ function ClinicVisits() {
     }
   ];
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<VisitForm>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<VisitForm>({
     resolver: zodResolver(visitSchema),
   });
+
+  const filteredStudents = useMemo(() => {
+    if (!studentSearch) return activeStageStudents;
+    return activeStageStudents.filter(s => s.name.includes(studentSearch) || s.id.includes(studentSearch));
+  }, [studentSearch, activeStageStudents]);
+  
+  const selectedStudentId = watch("studentId");
+  const selectedStudent = activeStageStudents.find(s => s.id === selectedStudentId);
 
   const onSubmit = (data: VisitForm) => {
     addClinicVisit({
@@ -104,15 +114,57 @@ function ClinicVisits() {
                 
                 <div>
                   <label className="mb-1 block text-sm font-medium">اسم الطالب ({getStageLabel(stage)}) <span className="text-danger">*</span></label>
-                  <select
-                    {...register("studentId")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                  >
-                    <option value="">-- اختر الطالب --</option>
-                    {activeStageStudents.map(st => (
-                      <option key={st.id} value={st.id}>{st.id} - {st.name}</option>
-                    ))}
-                  </select>
+                  
+                    <div className="relative">
+                      <div 
+                        className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm cursor-pointer hover:border-primary/50 transition-colors"
+                        onClick={() => setIsStudentDropdownOpen(!isStudentDropdownOpen)}
+                      >
+                        <span className={selectedStudentId ? "text-foreground font-bold" : "text-muted-foreground"}>
+                          {selectedStudent ? `${selectedStudent.id} - ${selectedStudent.name}` : "-- اختر الطالب --"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      
+                      {isStudentDropdownOpen && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg p-1">
+                          <div className="sticky top-0 bg-popover p-2 pb-1">
+                            <div className="relative">
+                              <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                              <input 
+                                autoFocus
+                                value={studentSearch}
+                                onChange={(e) => setStudentSearch(e.target.value)}
+                                placeholder="ابحث بالاسم أو الرقم..."
+                                className="h-8 w-full rounded-md border border-input bg-background pr-7 pl-3 text-xs outline-none focus:ring-1 focus:ring-primary"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
+                          <div className="mt-1">
+                            {filteredStudents.length === 0 ? (
+                              <div className="p-3 text-center text-xs text-muted-foreground">لا توجد نتائج</div>
+                            ) : (
+                              filteredStudents.map(st => (
+                                <div 
+                                  key={st.id} 
+                                  className="cursor-pointer rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                                  onClick={() => {
+                                    setValue("studentId", st.id, { shouldValidate: true });
+                                    setStudentSearch("");
+                                    setIsStudentDropdownOpen(false);
+                                  }}
+                                >
+                                  <div className="font-bold">{st.name}</div>
+                                  <div className="text-xs text-muted-foreground">{st.id}</div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                   {errors.studentId && <p className="mt-1 text-xs text-danger">{errors.studentId.message}</p>}
                 </div>
 

@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { 
   Save, Upload, Languages, Palette, BellRing, School as SchoolIcon,
   Calendar, DollarSign, Users, UserPlus, ShieldCheck, HardDrive, 
-  Link as LinkIcon, Lock, Database, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Settings
+  Link as LinkIcon, Lock, Database, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Settings, Building,
+  Smartphone, KeyRound, Webhook, Copy, RefreshCcw, FileText, QrCode
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
@@ -16,24 +17,29 @@ export const Route = createFileRoute("/settings")({
 
 const TABS = [
   { id: "school", label: "بيانات المدرسة", icon: SchoolIcon },
+  { id: "facilities", label: "المرافق والأصول", icon: Building },
   { id: "academic", label: "السنوات الأكاديمية", icon: Calendar },
   { id: "finance", label: "الإعدادات المالية", icon: DollarSign },
   { id: "hr", label: "الموارد البشرية", icon: Users },
   { id: "admission", label: "القبول والتسجيل", icon: UserPlus },
   { id: "brand", label: "الهوية البصرية", icon: Palette },
+  { id: "print", label: "قوالب الطباعة", icon: FileText },
   { id: "theme", label: "الثيم والتخصيص", icon: Palette },
   { id: "lang", label: "اللغة والاتجاه", icon: Languages },
   { id: "notif", label: "إعدادات الإشعارات", icon: BellRing },
   { id: "roles", label: "صلاحيات افتراضية", icon: ShieldCheck },
   { id: "backup", label: "النسخ الاحتياطي", icon: HardDrive },
   { id: "integrations", label: "تطبيقات الطرف الثالث", icon: LinkIcon },
+  { id: "mobile", label: "تطبيق الهاتف", icon: Smartphone },
+  { id: "api", label: "API والربط المتقدم", icon: KeyRound },
   { id: "security", label: "الأمان والدخول", icon: Lock },
   { id: "data_io", label: "الاستيراد والتصدير (ذكي)", icon: Database },
 ] as const;
 
 function SettingsPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("school");
-  const { currency, setCurrency, allAcademicYears } = useGlobalStore();
+  const [apiKey, setApiKey] = useState("sk_live_school_••••_7F3A9C");
+  const { currency, setCurrency, allAcademicYears, systemSettings, updateSettings } = useGlobalStore();
 
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "إعدادات النظام الشاملة" }]}>
@@ -64,17 +70,60 @@ function SettingsPage() {
         </nav>
 
         <div className="space-y-4">
+          
+          {tab === "facilities" && (
+            <PageCard title="إعدادات المرافق والأصول">
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="تصنيفات القاعات (مفصولة بفاصلة)">
+                    <input type="text" className={inp} value={systemSettings.roomCategories} onChange={e => updateSettings({roomCategories: e.target.value})} />
+                  </Field>
+                  <Field label="تصنيفات الأصول (مفصولة بفاصلة)">
+                    <input type="text" className={inp} value={systemSettings.assetCategories} onChange={e => updateSettings({assetCategories: e.target.value})} />
+                  </Field>
+                  <Field label="نظام ترقيم القاعات">
+                    <select className={inp} value={systemSettings.roomNumbering} onChange={e => updateSettings({roomNumbering: e.target.value})}>
+                      <option>ترقيم تلقائي (RM-XXXX)</option>
+                      <option>ترقيم يدوي مخصص</option>
+                    </select>
+                  </Field>
+                  <Field label="تنبيهات الصيانة المبكرة">
+                    <select className={inp} value={systemSettings.maintenanceAlert} onChange={e => updateSettings({maintenanceAlert: e.target.value})}>
+                      <option>مفعل (قبل 7 أيام)</option>
+                      <option>مفعل (قبل 3 أيام)</option>
+                      <option>معطل</option>
+                    </select>
+                  </Field>
+                </div>
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                   <h3 className="font-bold text-sm mb-2 text-primary">إعدادات المستودع</h3>
+                   <div className="grid gap-4 md:grid-cols-2 mt-4">
+                     <Field label="حد التنبيه للمخزون المنخفض">
+                        <input type="number" className={inp} value={systemSettings.inventoryAlertLimit} onChange={e => updateSettings({inventoryAlertLimit: parseInt(e.target.value) || 0})} />
+                     </Field>
+                     <Field label="طريقة جرد المخزون">
+                       <select className={inp} value={systemSettings.inventoryMethod} onChange={e => updateSettings({inventoryMethod: e.target.value})}>
+                         <option>FIFO (ما يدخل أولاً يخرج أولاً)</option>
+                         <option>LIFO (ما يدخل آخراً يخرج أولاً)</option>
+                       </select>
+                     </Field>
+                   </div>
+                </div>
+              </div>
+            </PageCard>
+          )}
+
           {tab === "school" && (
             <PageCard title="البيانات الأساسية للمدرسة">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="اسم المدرسة الرسمي"><input defaultValue="مدرسة النموذج الأهلية" className={inp} /></Field>
-                <Field label="رقم الترخيص الوزاري"><input defaultValue="LIC-2024-001" className={inp} /></Field>
-                <Field label="الهاتف الثابت"><input defaultValue="0112345678" className={inp} /></Field>
-                <Field label="البريد الإلكتروني الرسمي"><input type="email" defaultValue="info@school.edu" className={inp} /></Field>
-                <Field label="المدينة / المنطقة"><input defaultValue="الرياض - حي الواحة" className={inp} /></Field>
-                <Field label="المدير العام المعتمد"><input defaultValue="خالد القحطاني" className={inp} /></Field>
+                <Field label="اسم المدرسة الرسمي"><input value={systemSettings.schoolName} onChange={e => updateSettings({schoolName: e.target.value})} className={inp} /></Field>
+                <Field label="رقم الترخيص الوزاري"><input value={systemSettings.licenseNumber} onChange={e => updateSettings({licenseNumber: e.target.value})} className={inp} /></Field>
+                <Field label="الهاتف الثابت"><input value={systemSettings.phone} onChange={e => updateSettings({phone: e.target.value})} className={inp} /></Field>
+                <Field label="البريد الإلكتروني الرسمي"><input type="email" value={systemSettings.email} onChange={e => updateSettings({email: e.target.value})} className={inp} /></Field>
+                <Field label="المدينة / المنطقة"><input value={systemSettings.address} onChange={e => updateSettings({address: e.target.value})} className={inp} /></Field>
+                <Field label="المدير العام المعتمد"><input value={systemSettings.principalName} onChange={e => updateSettings({principalName: e.target.value})} className={inp} /></Field>
                 <div className="md:col-span-2">
-                  <Field label="الرؤية والرسالة (تظهر في التقارير)"><textarea className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" rows={3} defaultValue="الريادة في التعليم وصناعة جيل واعٍ مبتكر"></textarea></Field>
+                  <Field label="الرؤية والرسالة (تظهر في التقارير)"><textarea className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" rows={3} value={systemSettings.vision} onChange={e => updateSettings({vision: e.target.value})}></textarea></Field>
                 </div>
               </div>
             </PageCard>
@@ -91,14 +140,14 @@ function SettingsPage() {
                     </select>
                  </Field>
                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field label="بداية الدوام الشتوي"><input type="time" defaultValue="07:30" className={inp} /></Field>
-                    <Field label="بداية الدوام الصيفي"><input type="time" defaultValue="06:45" className={inp} /></Field>
+                    <Field label="بداية الدوام الشتوي"><input type="time" value={systemSettings.winterTime} onChange={e => updateSettings({winterTime: e.target.value})} className={inp} /></Field>
+                    <Field label="بداية الدوام الصيفي"><input type="time" value={systemSettings.summerTime} onChange={e => updateSettings({summerTime: e.target.value})} className={inp} /></Field>
                  </div>
                  <div className="border-t border-border pt-4 mt-4">
                     <h3 className="font-bold text-sm mb-3">حساب الغياب والتأخير</h3>
                     <div className="flex flex-col gap-3">
-                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> احتساب التأخير عن الطابور كغياب جزئي</label>
-                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> خصم درجات السلوك تلقائياً عند تجاوز الغياب 10 أيام</label>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.lateAsPartialAbsence} onChange={e => updateSettings({lateAsPartialAbsence: e.target.checked})} className="h-4 w-4" /> احتساب التأخير عن الطابور كغياب جزئي</label>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.deductBehaviorOnAbsence} onChange={e => updateSettings({deductBehaviorOnAbsence: e.target.checked})} className="h-4 w-4" /> خصم درجات السلوك تلقائياً عند تجاوز الغياب 10 أيام</label>
                     </div>
                  </div>
               </div>
@@ -112,14 +161,14 @@ function SettingsPage() {
                   <input 
                     value={currency} 
                     onChange={e => setCurrency(e.target.value)} 
-                    placeholder="مثال: ر.س أو دولار"
+                    placeholder="مثال: ج.س"
                     className={inp} 
                   />
                 </Field>
-                <Field label="الرقم الضريبي (VAT)"><input defaultValue="300012345600003" className={inp} /></Field>
-                <Field label="نسبة ضريبة القيمة المضافة (%)"><input type="number" defaultValue="15" className={inp} /></Field>
+                <Field label="الرقم الضريبي (VAT)"><input value={systemSettings.taxNumber} onChange={e => updateSettings({taxNumber: e.target.value})} className={inp} /></Field>
+                <Field label="نسبة ضريبة القيمة المضافة (%)"><input type="number" value={systemSettings.vatRate} onChange={e => updateSettings({vatRate: parseInt(e.target.value) || 0})} className={inp} /></Field>
                 <Field label="سياسة الاسترداد">
-                  <select className={inp}>
+                  <select className={inp} value={systemSettings.refundPolicy} onChange={e => updateSettings({refundPolicy: e.target.value})}>
                     <option>خلال 14 يوم من التسجيل</option>
                     <option>قبل بداية الفصل فقط</option>
                     <option>لا يوجد استرداد نقدي</option>
@@ -128,9 +177,9 @@ function SettingsPage() {
                 <div className="md:col-span-2 border-t border-border pt-4 mt-2">
                    <h3 className="font-bold text-sm mb-3">أتمتة العمليات المالية</h3>
                    <div className="flex flex-col gap-3">
-                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> ترحيل الرواتب آلياً لقسم المصروفات عند اعتماد المسير</label>
-                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> إنشاء مصروف آلياً عند إكمال صيانة مرفق (متصل بقسم المرافق)</label>
-                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> إضافة رسوم تلقائية عند استعارة كتاب متأخر (متصل بالمكتبة)</label>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.autoTransferPayroll} onChange={e => updateSettings({autoTransferPayroll: e.target.checked})} className="h-4 w-4" /> ترحيل الرواتب آلياً لقسم المصروفات عند اعتماد المسير</label>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.autoMaintenanceExpense} onChange={e => updateSettings({autoMaintenanceExpense: e.target.checked})} className="h-4 w-4" /> إنشاء مصروف آلياً عند إكمال صيانة مرفق (متصل بقسم المرافق)</label>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.autoLibraryFee} onChange={e => updateSettings({autoLibraryFee: e.target.checked})} className="h-4 w-4" /> إضافة رسوم تلقائية عند استعارة كتاب متأخر (متصل بالمكتبة)</label>
                    </div>
                 </div>
               </div>
@@ -140,13 +189,13 @@ function SettingsPage() {
           {tab === "hr" && (
             <PageCard title="سياسات الموارد البشرية">
                <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="عدد أيام الإجازة السنوية الافتراضية"><input type="number" defaultValue="30" className={inp} /></Field>
-                  <Field label="نسبة خصم التأخير اليومي (%)"><input type="number" defaultValue="2" className={inp} /></Field>
+                  <Field label="عدد أيام الإجازة السنوية الافتراضية"><input type="number" value={systemSettings.annualLeaveDays} onChange={e => updateSettings({annualLeaveDays: parseInt(e.target.value) || 0})} className={inp} /></Field>
+                  <Field label="نسبة خصم التأخير اليومي (%)"><input type="number" value={systemSettings.lateDeductionRate} onChange={e => updateSettings({lateDeductionRate: parseInt(e.target.value) || 0})} className={inp} /></Field>
                   <div className="md:col-span-2">
                      <h3 className="font-bold text-sm mb-3 mt-2">قواعد الحضور والانصراف</h3>
                      <div className="flex flex-col gap-3">
-                        <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> السماح بفترة سماح 15 دقيقة للتأخير الصباحي</label>
-                        <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> ربط جهاز البصمة مباشرة بمسير الرواتب</label>
+                        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.gracePeriod} onChange={e => updateSettings({gracePeriod: e.target.checked})} className="h-4 w-4" /> السماح بفترة سماح 15 دقيقة للتأخير الصباحي</label>
+                        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.fingerprintSync} onChange={e => updateSettings({fingerprintSync: e.target.checked})} className="h-4 w-4" /> ربط جهاز البصمة مباشرة بمسير الرواتب</label>
                      </div>
                   </div>
                </div>
@@ -157,19 +206,19 @@ function SettingsPage() {
             <PageCard title="سياسات القبول والتسجيل">
                <div className="grid gap-4">
                   <Field label="حالة القبول الحالية">
-                    <select className={inp}>
+                    <select className={inp} value={systemSettings.admissionStatus} onChange={e => updateSettings({admissionStatus: e.target.value})}>
                       <option>مفتوح للتسجيل الإلكتروني</option>
                       <option>مغلق (الوصول للسعة القصوى)</option>
                       <option>مفتوح لقائمة الانتظار فقط</option>
                     </select>
                   </Field>
-                  <Field label="الحد الأقصى للطلاب في الفصل"><input type="number" defaultValue="25" className={inp} /></Field>
+                  <Field label="الحد الأقصى للطلاب في الفصل"><input type="number" value={systemSettings.maxClassSize} onChange={e => updateSettings({maxClassSize: parseInt(e.target.value) || 0})} className={inp} /></Field>
                   <h3 className="font-bold text-sm mb-2 mt-2">الأوراق المطلوبة للقبول</h3>
                   <div className="flex flex-col gap-2 p-3 border border-border rounded-lg bg-card">
-                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> شهادة الميلاد الأصلية</label>
-                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> سجل التطعيمات الطبي</label>
-                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> شهادة النجاح من المدرسة السابقة</label>
-                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> كرت العائلة للمطابقة</label>
+                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.reqBirthCert} onChange={e => updateSettings({reqBirthCert: e.target.checked})} className="h-4 w-4" /> شهادة الميلاد الأصلية</label>
+                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.reqVaccine} onChange={e => updateSettings({reqVaccine: e.target.checked})} className="h-4 w-4" /> سجل التطعيمات الطبي</label>
+                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.reqPrevCert} onChange={e => updateSettings({reqPrevCert: e.target.checked})} className="h-4 w-4" /> شهادة النجاح من المدرسة السابقة</label>
+                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.reqFamilyCard} onChange={e => updateSettings({reqFamilyCard: e.target.checked})} className="h-4 w-4" /> كرت العائلة للمطابقة</label>
                   </div>
                </div>
             </PageCard>
@@ -180,24 +229,73 @@ function SettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <div className="text-xs font-bold text-muted-foreground mb-2">الشعار الرسمي (اللوغو)</div>
-                  <div className="grid h-32 place-items-center rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer text-primary">
+                  <label className="grid h-32 place-items-center rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer text-primary">
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.length) toast.success("تم رفع صورة الشعار بنجاح") }} />
                     <div className="flex flex-col items-center gap-2">
                        <Upload className="h-6 w-6" />
                        <span className="text-sm font-bold">رفع صورة الشعار</span>
                     </div>
-                  </div>
+                  </label>
                 </div>
                 <div>
                   <div className="text-xs font-bold text-muted-foreground mb-2">الختم المعتمد (للشهادات والفواتير)</div>
-                  <div className="grid h-32 place-items-center rounded-lg border-2 border-dashed border-border bg-muted/10 hover:bg-muted/30 transition-colors cursor-pointer text-muted-foreground">
+                  <label className="grid h-32 place-items-center rounded-lg border-2 border-dashed border-border bg-muted/10 hover:bg-muted/30 transition-colors cursor-pointer text-muted-foreground">
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.length) toast.success("تم رفع صورة الختم بنجاح") }} />
                     <div className="flex flex-col items-center gap-2">
                        <Upload className="h-6 w-6" />
                        <span className="text-sm font-bold">رفع صورة الختم</span>
                     </div>
-                  </div>
+                  </label>
                 </div>
                 <div className="md:col-span-2 mt-4">
-                  <Field label="تذييل المطبوعات الافتراضي"><textarea className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" rows={2} defaultValue="هذه الوثيقة معتمدة ومستخرجة من نظام مدارس الإلكتروني"></textarea></Field>
+                  <Field label="تذييل المطبوعات الافتراضي"><textarea className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" rows={2} value={systemSettings.footerText} onChange={e => updateSettings({footerText: e.target.value})}></textarea></Field>
+                </div>
+              </div>
+            </PageCard>
+          )}
+
+          {tab === "print" && (
+            <PageCard title="قوالب الطباعة والسياسات الافتراضية">
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Field label="القالب الافتراضي للكشوف الكبيرة">
+                    <select className={inp} value={systemSettings.defaultTemplate} onChange={e => updateSettings({defaultTemplate: e.target.value})}>
+                      <option>جدول مضغوط مع تكرار الترويسة</option>
+                      <option>جدول رسمي بتوقيعات</option>
+                      <option>بطاقات فردية</option>
+                    </select>
+                  </Field>
+                  <Field label="عدد الصفوف لكل دفعة طباعة">
+                    <select className={inp} value={systemSettings.rowsPerBatch} onChange={e => updateSettings({rowsPerBatch: e.target.value})}>
+                      <option>60 صف</option>
+                      <option>90 صف</option>
+                      <option>120 صف</option>
+                    </select>
+                  </Field>
+                  <Field label="اعتماد رمز تحقق QR">
+                    <select className={inp} value={systemSettings.qrCodeUsage} onChange={e => updateSettings({qrCodeUsage: e.target.value})}>
+                      <option>مفعل لكل الشهادات والفواتير</option>
+                      <option>مفعل للشهادات فقط</option>
+                      <option>معطل</option>
+                    </select>
+                  </Field>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border p-4">
+                    <div className="mb-3 flex items-center gap-2 font-bold"><FileText className="h-4 w-4 text-primary" /> ترويسة موحدة</div>
+                    <div className="space-y-3">
+                      <Field label="اسم الجهة أعلى المستند"><input className={inp} value={systemSettings.headerEntity} onChange={e => updateSettings({headerEntity: e.target.value})} /></Field>
+                      <Field label="اسم الإدارة التعليمية"><input className={inp} value={systemSettings.headerDepartment} onChange={e => updateSettings({headerDepartment: e.target.value})} /></Field>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border p-4">
+                    <div className="mb-3 flex items-center gap-2 font-bold"><QrCode className="h-4 w-4 text-primary" /> التحقق الرقمي</div>
+                    <div className="space-y-3">
+                      <Field label="رابط التحقق العام"><input className={inp} dir="ltr" value={systemSettings.qrVerifyUrl} onChange={e => updateSettings({qrVerifyUrl: e.target.value})} /></Field>
+                      <Field label="مدة صلاحية رابط التحقق"><select className={inp} value={systemSettings.qrExpiry} onChange={e => updateSettings({qrExpiry: e.target.value})}><option>سنة كاملة</option><option>90 يوم</option><option>دائم</option></select></Field>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.qrIncludeId} onChange={e => updateSettings({qrIncludeId: e.target.checked})} className="h-4 w-4" /> تضمين رقم الطالب/الموظف داخل رمز التحقق</label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </PageCard>
@@ -209,10 +307,10 @@ function SettingsPage() {
                 <div>
                   <h3 className="font-bold text-sm mb-3">وضع الألوان المفضل</h3>
                   <div className="grid gap-3 md:grid-cols-3">
-                    {["فاتح", "داكن", "حسب النظام المتزامن"].map((m, i) => (
-                      <label key={m} className={`cursor-pointer rounded-lg border p-4 text-sm font-bold flex items-center gap-3 transition-colors ${i === 0 ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
-                        <input type="radio" name="theme" defaultChecked={i === 0} className="h-4 w-4" />
-                        {m}
+                    {[{ id: "light", label: "فاتح" }, { id: "dark", label: "داكن" }, { id: "system", label: "حسب النظام المتزامن" }].map((m, i) => (
+                      <label key={m.id} className={`cursor-pointer rounded-lg border p-4 text-sm font-bold flex items-center gap-3 transition-colors ${systemSettings.themeMode === m.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+                        <input type="radio" name="theme" checked={systemSettings.themeMode === m.id} onChange={() => updateSettings({themeMode: m.id as any})} className="h-4 w-4" />
+                        {m.label}
                       </label>
                     ))}
                   </div>
@@ -231,10 +329,9 @@ function SettingsPage() {
           {tab === "lang" && (
             <PageCard title="اللغة والاتجاه">
               <Field label="لغة واجهة النظام الرئيسية">
-                <select className={inp}>
-                  <option>العربية (RTL)</option>
-                  <option>English (LTR)</option>
-                  <option>Français (LTR)</option>
+                <select className={inp} value={systemSettings.language} onChange={e => updateSettings({ language: e.target.value as "ar" | "en" })}>
+                  <option value="ar">العربية (RTL)</option>
+                  <option value="en">English (LTR)</option>
                 </select>
               </Field>
               <div className="mt-4 p-3 bg-muted rounded-lg text-xs font-bold text-muted-foreground border border-border">
@@ -248,15 +345,13 @@ function SettingsPage() {
                <h3 className="font-bold text-sm mb-4">التنبيهات التلقائية للنظام</h3>
                <ul className="space-y-3">
                 {[
-                  { l: "إرسال رسالة SMS لولي الأمر فور تسجيل الغياب", on: true },
-                  { l: "إشعار المدير بطلبات الصيانة العاجلة عبر النظام", on: true },
-                  { l: "إرسال فاتورة إلكترونية عند إصدار مطالبة مالية", on: true },
-                  { l: "تنبيه المعلمين بمواعيد تسليم النتائج", on: false },
-                  { l: "إشعار الطلاب بإصدار الكتب في المكتبة", on: true },
+                  { l: "إرسال رسالة SMS لولي الأمر فور تسجيل الغياب", field: "sms" },
+                  { l: "إشعار المدير بطلبات الصيانة العاجلة عبر النظام", field: "push" },
+                  { l: "إرسال فاتورة إلكترونية عند إصدار مطالبة مالية", field: "email" },
                 ].map((it) => (
                   <li key={it.l} className="flex items-center justify-between p-3 border border-border rounded-lg bg-card">
                     <span className="text-sm font-bold">{it.l}</span>
-                    <input type="checkbox" defaultChecked={it.on} className="h-5 w-5" />
+                    <input type="checkbox" checked={systemSettings.defaultChannels[it.field as keyof typeof systemSettings.defaultChannels]} onChange={e => updateSettings({ defaultChannels: { ...systemSettings.defaultChannels, [it.field]: e.target.checked } })} className="h-5 w-5" />
                   </li>
                 ))}
               </ul>
@@ -276,7 +371,7 @@ function SettingsPage() {
                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
                       <h3 className="font-bold text-sm mb-2 text-primary">إدارة الصلاحيات المتقدمة</h3>
                       <p className="text-xs text-muted-foreground mb-4">يتم تخصيص الصلاحيات الدقيقة لكل دور (قراءة، كتابة، حذف، اعتماد مالي) من خلال قسم الإدارة العامة.</p>
-                      <button className="text-xs font-bold text-primary underline underline-offset-4">الانتقال لمدير الصلاحيات</button>
+                      <Link to="/admin/permissions" className="text-xs font-bold text-primary underline underline-offset-4">الانتقال لمدير الصلاحيات</Link>
                    </div>
                 </div>
              </PageCard>
@@ -313,44 +408,169 @@ function SettingsPage() {
 
           {tab === "integrations" && (
              <PageCard title="تطبيقات الطرف الثالث (Integrations)">
-                <div className="space-y-4">
-                   <div className="p-4 border border-border rounded-xl flex items-center justify-between">
-                      <div>
-                         <h4 className="font-bold">منصة نور (نظام التعليم المركزي)</h4>
-                         <p className="text-xs text-muted-foreground mt-1">مزامنة الطلاب، الغياب، والدرجات تلقائياً.</p>
+                <div className="space-y-6">
+                   <div className="p-4 border border-border rounded-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                           <h4 className="font-bold">منصة نور (نظام التعليم المركزي)</h4>
+                           <p className="text-xs text-muted-foreground mt-1">مزامنة الطلاب، الغياب، والدرجات تلقائياً.</p>
+                        </div>
+                        <span className="px-3 py-1 bg-success/10 text-success text-xs font-bold rounded-lg">متصل ومفعل</span>
                       </div>
-                      <span className="px-3 py-1 bg-success/10 text-success text-xs font-bold rounded-lg">متصل ومفعل</span>
                    </div>
-                   <div className="p-4 border border-border rounded-xl flex items-center justify-between">
-                      <div>
-                         <h4 className="font-bold">بوابة الدفع (PayTabs / Stripe)</h4>
-                         <p className="text-xs text-muted-foreground mt-1">استقبال الرسوم الدراسية إلكترونياً وتحديث الفواتير آلياً.</p>
+
+                   <div className="p-4 border border-border rounded-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                           <h4 className="font-bold">بوابة الدفع الإلكتروني</h4>
+                           <p className="text-xs text-muted-foreground mt-1">استقبال الرسوم الدراسية إلكترونياً وتحديث الفواتير آلياً.</p>
+                        </div>
+                        <select className="h-9 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none" value={systemSettings.paymentGateway} onChange={e => updateSettings({paymentGateway: e.target.value})}>
+                          <option value="none">غير مفعل</option>
+                          <option value="stripe">Stripe</option>
+                          <option value="paytabs">PayTabs</option>
+                        </select>
                       </div>
-                      <button className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-lg hover:bg-primary/90">تكوين الربط</button>
+
+                      {systemSettings.paymentGateway === "stripe" && (
+                        <div className="grid gap-4 md:grid-cols-2 mt-4 pt-4 border-t border-border">
+                           <Field label="Stripe Public Key"><input type="text" dir="ltr" className={inp} value={systemSettings.stripePubKey || ""} onChange={e => updateSettings({stripePubKey: e.target.value})} placeholder="pk_test_..." /></Field>
+                           <Field label="Stripe Secret Key"><input type="password" dir="ltr" className={inp} value={systemSettings.stripeSecretKey || ""} onChange={e => updateSettings({stripeSecretKey: e.target.value})} placeholder="sk_test_..." /></Field>
+                        </div>
+                      )}
+
+                      {systemSettings.paymentGateway === "paytabs" && (
+                        <div className="grid gap-4 md:grid-cols-2 mt-4 pt-4 border-t border-border">
+                           <Field label="PayTabs Profile ID"><input type="text" dir="ltr" className={inp} value={systemSettings.paytabsProfileId || ""} onChange={e => updateSettings({paytabsProfileId: e.target.value})} placeholder="12345" /></Field>
+                           <Field label="PayTabs Server Key"><input type="password" dir="ltr" className={inp} value={systemSettings.paytabsServerKey || ""} onChange={e => updateSettings({paytabsServerKey: e.target.value})} placeholder="STJ..." /></Field>
+                        </div>
+                      )}
                    </div>
-                   <div className="p-4 border border-border rounded-xl flex items-center justify-between">
-                      <div>
-                         <h4 className="font-bold">مزود رسائل SMS (Twilio / Unifonic)</h4>
-                         <p className="text-xs text-muted-foreground mt-1">لإرسال إشعارات الغياب والمطالبات المالية.</p>
+
+                   <div className="p-4 border border-border rounded-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                           <h4 className="font-bold">مزود رسائل SMS</h4>
+                           <p className="text-xs text-muted-foreground mt-1">لإرسال إشعارات الغياب والمطالبات المالية.</p>
+                        </div>
+                        <select className="h-9 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none" value={systemSettings.smsProvider || "none"} onChange={e => updateSettings({smsProvider: e.target.value})}>
+                          <option value="none">غير مفعل</option>
+                          <option value="twilio">Twilio</option>
+                          <option value="unifonic">Unifonic</option>
+                        </select>
                       </div>
-                      <button className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-lg hover:bg-primary/90">تكوين الربط</button>
                    </div>
                 </div>
              </PageCard>
+          )}
+
+          {tab === "mobile" && (
+            <PageCard title="تطبيق الهاتف وبوابة ولي الأمر">
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                  {[
+                    { title: "بوابة ولي الأمر", desc: "فواتير، نقل، نتائج، إشعارات", status: "مفعل" },
+                    { title: "تطبيق المعلم", desc: "درجات، حضور، واجبات، رسائل", status: "مفعل" },
+                    { title: "تطبيق الإدارة", desc: "اعتمادات وتنبيهات وتقارير", status: "تجريبي" },
+                  ].map(item => (
+                    <div key={item.title} className="rounded-xl border border-border p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <Smartphone className="h-5 w-5 text-primary" />
+                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-bold text-success">{item.status}</span>
+                      </div>
+                      <div className="font-bold">{item.title}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{item.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="سياسة دخول الهاتف">
+                    <select className={inp} value={systemSettings.mobileLoginPolicy} onChange={e => updateSettings({mobileLoginPolicy: e.target.value})}>
+                      <option>رمز OTP عبر SMS أو WhatsApp</option>
+                      <option>كلمة مرور + تحقق ثنائي</option>
+                      <option>رابط دخول مؤقت</option>
+                    </select>
+                  </Field>
+                  <Field label="تزامن الإشعارات">
+                    <select className={inp} value={systemSettings.notifSync} onChange={e => updateSettings({notifSync: e.target.value})}>
+                      <option>لحظي للغياب والفواتير والدرجات</option>
+                      <option>كل 15 دقيقة</option>
+                      <option>يدوي من الإدارة</option>
+                    </select>
+                  </Field>
+                  <div className="md:col-span-2 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <h3 className="mb-2 font-bold text-primary">قواعد الخصوصية للهاتف</h3>
+                    <div className="grid gap-2 text-sm md:grid-cols-2">
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.parentViewLimit} onChange={e => updateSettings({parentViewLimit: e.target.checked})} className="h-4 w-4" /> ولي الأمر يرى أبناءه فقط حسب رقم الهاتف المعتمد.</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.teacherViewLimit} onChange={e => updateSettings({teacherViewLimit: e.target.checked})} className="h-4 w-4" /> المعلم يرى الشعب والمواد المسندة له فقط.</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.hideFinancial} onChange={e => updateSettings({hideFinancial: e.target.checked})} className="h-4 w-4" /> إخفاء البيانات المالية عن غير المخولين.</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.logMobileActivity} onChange={e => updateSettings({logMobileActivity: e.target.checked})} className="h-4 w-4" /> تسجيل كل عملية من الهاتف في سجل الأنشطة.</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PageCard>
+          )}
+
+          {tab === "api" && (
+            <PageCard title="API والربط المتقدم">
+              <div className="space-y-6">
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="font-bold">مفتاح API الرئيسي</div>
+                      <div className="text-xs text-muted-foreground">يستخدم للربط مع تطبيق الهاتف، بوابات الدفع، وأدوات التكامل.</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { navigator.clipboard?.writeText(systemSettings.apiKey); toast.success("تم نسخ مفتاح API"); }} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-bold hover:bg-accent"><Copy className="h-4 w-4" /> نسخ</button>
+                      <button onClick={() => { 
+                          const newKey = `sk_live_school_${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+                          updateSettings({apiKey: newKey}); 
+                          toast.success("تم توليد مفتاح جديد"); 
+                        }} className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"><RefreshCcw className="h-4 w-4" /> تدوير المفتاح</button>
+                    </div>
+                  </div>
+                  <input value={systemSettings.apiKey} readOnly dir="ltr" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-left text-sm font-bold" />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border p-4">
+                    <div className="mb-3 flex items-center gap-2 font-bold"><Webhook className="h-4 w-4 text-primary" /> Webhooks</div>
+                    <div className="space-y-3">
+                      <Field label="رابط استقبال الأحداث"><input className={inp} dir="ltr" value={systemSettings.webhookUrl} onChange={e => updateSettings({webhookUrl: e.target.value})} /></Field>
+                      <div className="grid gap-2 text-sm">
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.whStudentCreated} onChange={e => updateSettings({whStudentCreated: e.target.checked})} className="h-4 w-4" /> student.created</label>
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.whInvoicePaid} onChange={e => updateSettings({whInvoicePaid: e.target.checked})} className="h-4 w-4" /> invoice.paid</label>
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.whExamUpdated} onChange={e => updateSettings({whExamUpdated: e.target.checked})} className="h-4 w-4" /> exam.grade.updated</label>
+                        <label className="flex items-center gap-2"><input type="checkbox" checked={systemSettings.whTransportChanged} onChange={e => updateSettings({whTransportChanged: e.target.checked})} className="h-4 w-4" /> transport.subscription.changed</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border p-4">
+                    <div className="mb-3 flex items-center gap-2 font-bold"><Database className="h-4 w-4 text-primary" /> حدود واستخدام API</div>
+                    <div className="grid gap-3">
+                      <Field label="حد الطلبات بالدقيقة"><input type="number" className={inp} value={systemSettings.apiRateLimit} onChange={e => updateSettings({apiRateLimit: parseInt(e.target.value) || 0})} /></Field>
+                      <Field label="نطاق الوصول"><select className={inp} value={systemSettings.apiAccessScope} onChange={e => updateSettings({apiAccessScope: e.target.value})}><option>قراءة وكتابة حسب الصلاحيات</option><option>قراءة فقط</option><option>تطبيق الهاتف فقط</option></select></Field>
+                      <Field label="عناوين IP المسموحة"><textarea rows={3} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="ضع كل IP في سطر مستقل" value={systemSettings.apiAllowedIps} onChange={e => updateSettings({apiAllowedIps: e.target.value})}></textarea></Field>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PageCard>
           )}
 
           {tab === "security" && (
              <PageCard title="الأمان والتحكم بالدخول">
                 <div className="grid gap-4 md:grid-cols-2">
                    <Field label="سياسة كلمة المرور">
-                     <select className={inp}>
+                     <select className={inp} value={systemSettings.passwordPolicy} onChange={e => updateSettings({passwordPolicy: e.target.value})}>
                        <option>معقدة (حروف، أرقام، رموز)</option>
                        <option>متوسطة (حروف وأرقام)</option>
                        <option>بسيطة (أرقام فقط - غير مستحسن)</option>
                      </select>
                    </Field>
                    <Field label="مهلة الخروج التلقائي (Session Timeout)">
-                     <select className={inp}>
+                     <select className={inp} value={systemSettings.sessionTimeout} onChange={e => updateSettings({sessionTimeout: e.target.value})}>
                        <option>بعد 30 دقيقة من الخمول</option>
                        <option>بعد ساعة</option>
                        <option>لا تسجل خروج</option>
@@ -358,8 +578,8 @@ function SettingsPage() {
                    </Field>
                    <div className="md:col-span-2 mt-2">
                       <div className="flex flex-col gap-3">
-                         <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> فرض التحقق بخطوتين (2FA) للإداريين والمعلمين</label>
-                         <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked className="h-4 w-4" /> حظر حساب المستخدم مؤقتاً بعد 5 محاولات دخول فاشلة</label>
+                         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.force2FA} onChange={e => updateSettings({force2FA: e.target.checked})} className="h-4 w-4" /> فرض التحقق بخطوتين (2FA) للإداريين والمعلمين</label>
+                         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={systemSettings.lockAfter5Fails} onChange={e => updateSettings({lockAfter5Fails: e.target.checked})} className="h-4 w-4" /> حظر حساب المستخدم مؤقتاً بعد 5 محاولات دخول فاشلة</label>
                       </div>
                    </div>
                 </div>
@@ -382,12 +602,13 @@ function SettingsPage() {
                      <ArrowDownToLine className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors mb-3" />
                      <h4 className="font-bold text-sm">استيراد بيانات نظام "نور"</h4>
                      <p className="text-xs text-muted-foreground mt-1 mb-4">رفع ملفات Excel أو CSV لمطابقة الطلاب والمعلمين آلياً.</p>
-                     <div className="flex items-center gap-2 text-xs font-bold text-primary">
+                     <label className="flex items-center gap-2 text-xs font-bold text-primary cursor-pointer w-fit">
+                       <input type="file" className="hidden" accept=".csv, .xlsx" onChange={(e) => { if (e.target.files?.length) toast.success("بدأت عملية استيراد ومطابقة البيانات") }} />
                        <Upload className="h-4 w-4" /> ارفع الملف الآن
-                     </div>
+                     </label>
                   </div>
                   
-                  <div className="border border-border rounded-xl p-5 hover:border-primary/50 transition-colors cursor-pointer group">
+                  <div onClick={() => toast.success("تم إرسال طلب التصدير للخوادم، سيتم تنبيهك عند الانتهاء")} className="border border-border rounded-xl p-5 hover:border-primary/50 transition-colors cursor-pointer group">
                      <ArrowUpFromLine className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors mb-3" />
                      <h4 className="font-bold text-sm">النسخ الاحتياطي السحابي (تصدير)</h4>
                      <p className="text-xs text-muted-foreground mt-1 mb-4">تصدير كافة سجلات المنصة بنسق معتمد لوزارة التعليم.</p>

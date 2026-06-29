@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { Wrench, Plus, CheckCircle, AlertTriangle } from "lucide-react";
+import { Wrench, Plus, CheckCircle, AlertTriangle, Trash2, Edit2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -12,13 +12,21 @@ export const Route = createFileRoute("/facilities/maintenance")({
 });
 
 function MaintenancePage() {
-  const { allMaintenanceRequests, updateMaintenanceRequest, addMaintenanceRequest } = useGlobalStore();
+  const { allMaintenanceRequests, updateMaintenanceRequest, addMaintenanceRequest, undoMaintenanceRequest, deleteMaintenanceRequest, currency } = useGlobalStore();
   const [showAdd, setShowAdd] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<any | null>(null);
 
   const handleComplete = (id: string, costEstimate: number) => {
     if (confirm("هل أنت متأكد من إكمال طلب الصيانة؟ سيتم إنشاء مصروف مالي تلقائياً بناءً على التكلفة.")) {
       updateMaintenanceRequest(id, { status: "completed", costEstimate, dateCompleted: new Date().toISOString().split("T")[0] });
       toast.success("تم إكمال الطلب وإنشاء المصروف المالي بنجاح");
+    }
+  };
+
+  const handleUndoComplete = (id: string) => {
+    if (confirm("هل أنت متأكد من التراجع عن إكمال هذا الطلب؟ سيتم حذف المصروف المالي المرتبط إن وجد.")) {
+      undoMaintenanceRequest(id);
+      toast.success("تم التراجع عن إكمال الطلب");
     }
   };
 
@@ -36,6 +44,21 @@ function MaintenancePage() {
     });
     toast.success("تم رفع طلب الصيانة بنجاح");
     setShowAdd(false);
+  };
+
+  const handleEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRequest) return;
+    const formData = new FormData(e.target as HTMLFormElement);
+    updateMaintenanceRequest(editingRequest.id, {
+      title: formData.get("title") as string,
+      description: formData.get("description") as string,
+      location: formData.get("location") as string,
+      priority: formData.get("priority") as "high" | "medium" | "low",
+      costEstimate: Number(formData.get("costEstimate")) || 0,
+    });
+    toast.success("تم تحديث طلب الصيانة بنجاح");
+    setEditingRequest(null);
   };
 
   return (
@@ -95,6 +118,43 @@ function MaintenancePage() {
           </PageCard>
         )}
 
+        {editingRequest && (
+          <PageCard title="تعديل طلب الصيانة" className="border-primary/20 bg-primary/5">
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground mb-1 block">عنوان الطلب</label>
+                  <input name="title" defaultValue={editingRequest.title} required className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground mb-1 block">الموقع</label>
+                  <input name="location" defaultValue={editingRequest.location} required className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-bold text-muted-foreground mb-1 block">وصف العطل</label>
+                  <textarea name="description" defaultValue={editingRequest.description} required className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" rows={2}></textarea>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground mb-1 block">الأولوية</label>
+                  <select name="priority" defaultValue={editingRequest.priority} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
+                    <option value="low">منخفضة</option>
+                    <option value="medium">متوسطة</option>
+                    <option value="high">عاجلة</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground mb-1 block">التكلفة التقديرية (اختياري)</label>
+                  <input name="costEstimate" defaultValue={editingRequest.costEstimate || ''} type="number" className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setEditingRequest(null)} className="px-4 py-2 text-sm font-bold text-muted-foreground bg-muted/50 rounded-lg hover:bg-muted">إلغاء</button>
+                <button type="submit" className="px-4 py-2 text-sm font-bold text-primary-foreground bg-primary rounded-lg hover:bg-primary/90">تحديث الطلب</button>
+              </div>
+            </form>
+          </PageCard>
+        )}
+
         <PageCard>
           <DataTable
             rows={allMaintenanceRequests}
@@ -112,15 +172,25 @@ function MaintenancePage() {
                   {r.status === "completed" ? "منجز" : r.status === "in_progress" ? "قيد التنفيذ" : "جديد"}
                 </Badge>
               )},
-              { key: "cost", header: "التكلفة", cell: (r) => <span className="font-bold text-success">{r.costEstimate ? `${r.costEstimate} ر.س` : "-"}</span> },
+              { key: "cost", header: "التكلفة", cell: (r) => <span className="font-bold text-success">{r.costEstimate ? `${r.costEstimate} ${currency}` : "-"}</span> },
               { key: "date", header: "تاريخ الطلب", cell: (r) => r.dateRequested },
               { key: "actions", header: "", cell: (r) => (
-                <div className="flex justify-end">
-                  {r.status !== "completed" && (
+                <div className="flex justify-end gap-2">
+                  {r.status !== "completed" ? (
                     <button onClick={() => handleComplete(r.id, r.costEstimate || 0)} className="flex items-center gap-1 text-xs font-bold text-success bg-success/10 hover:bg-success/20 px-2 py-1.5 rounded-lg">
                       <CheckCircle className="h-4 w-4" /> إكمال الطلب وتحويله لمصروف
                     </button>
+                  ) : (
+                    <button onClick={() => handleUndoComplete(r.id)} className="flex items-center gap-1 text-xs font-bold text-warning bg-warning/10 hover:bg-warning/20 px-2 py-1.5 rounded-lg">
+                      تراجع
+                    </button>
                   )}
+                  <button onClick={() => setEditingRequest(r)} className="rounded-md p-2 text-primary hover:bg-primary/10 transition-colors">
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => { if(confirm('هل أنت متأكد من الحذف؟')) deleteMaintenanceRequest(r.id); }} className="rounded-md p-2 text-danger hover:bg-danger/10 transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               )},
             ]}
