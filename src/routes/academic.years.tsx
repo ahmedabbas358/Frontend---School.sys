@@ -1,27 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell, Badge, PageCard } from "@/components/app-shell";
-import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { Plus, Pencil, Trash2, X, Calendar, CheckCircle2 } from "lucide-react";
+import { 
+  Plus, Pencil, Calendar, CheckCircle2, X
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/academic/years")({
-  head: () => ({ meta: [{ title: "السنوات الدراسية" }] }),
-  component: AcademicYearsPage,
+  head: () => ({ meta: [{ title: "السنوات الدراسية | منصة مدارس" }] }),
+  component: AcademicYearsSimple,
 });
 
-function AcademicYearsPage() {
-  const { allAcademicYears, addAcademicYear, updateAcademicYear } = useGlobalStore();
+function AcademicYearsSimple() {
+  const { 
+    allAcademicYears,
+    updateAcademicYear,
+    addAcademicYear
+  } = useGlobalStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    name: "",
-    startDate: "",
-    endDate: "",
-    isCurrent: false
+    name: "", startDate: "", endDate: "", isCurrent: false
   });
 
   const openAddModal = () => {
@@ -32,12 +34,7 @@ function AcademicYearsPage() {
 
   const openEditModal = (year: any) => {
     setEditingId(year.id);
-    setFormData({ 
-      name: year.name, 
-      startDate: year.startDate, 
-      endDate: year.endDate, 
-      isCurrent: year.isCurrent 
-    });
+    setFormData({ name: year.name, startDate: year.startDate, endDate: year.endDate, isCurrent: year.isCurrent });
     setIsModalOpen(true);
   };
 
@@ -47,7 +44,6 @@ function AcademicYearsPage() {
       toast.error("يرجى تعبئة جميع الحقول الإلزامية");
       return;
     }
-
     if (editingId) {
       updateAcademicYear(editingId, formData);
       toast.success("تم تعديل السنة الدراسية بنجاح");
@@ -55,172 +51,137 @@ function AcademicYearsPage() {
       addAcademicYear(formData);
       toast.success("تمت إضافة السنة الدراسية بنجاح");
     }
-    
     setIsModalOpen(false);
   };
 
-  const handleSetCurrent = (id: string) => {
-    updateAcademicYear(id, { isCurrent: true });
-    toast.success("تم تعيين السنة كسنة حالية مفعلة");
-  };
-
   return (
-    <AppShell
-      breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الإدارة الأكاديمية" }, { label: "السنوات الدراسية" }]}
-      actions={
-        <button 
-          onClick={openAddModal}
-          className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all hover:scale-105"
-        >
-          <Plus className="h-4 w-4" /> سنة جديدة
-        </button>
-      }
-    >
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        
-        {/* Header Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm glass flex items-center gap-4">
-            <div className="rounded-xl bg-primary/10 p-3 text-primary">
-              <Calendar className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">إجمالي السنوات المسجلة</p>
-              <p className="text-2xl font-bold">{allAcademicYears.length}</p>
-            </div>
+    <AppShell>
+      <div className="flex flex-col h-full animate-in fade-in">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-black mb-2 flex items-center gap-3">
+              <Calendar className="h-8 w-8 text-primary" />
+              السنوات الدراسية
+            </h1>
+            <p className="text-muted-foreground">
+              إدارة فترات وتواريخ الأعوام الدراسية للنظام. يتم بدء عام جديد بسجل فارغ كلياً.
+            </p>
           </div>
-          <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm glass flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">السنة الدراسية المفعلة حالياً</p>
-              <p className="text-xl font-bold mt-1 text-primary">{allAcademicYears.find(y => y.isCurrent)?.name || "لا يوجد"}</p>
-            </div>
-            <Badge tone="success" className="h-8">نشط</Badge>
+          <div className="flex gap-3">
+            <button 
+              onClick={openAddModal}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
+            >
+              <Plus className="h-5 w-5" /> سنة دراسية جديدة
+            </button>
           </div>
         </div>
 
-        <PageCard>
-          <DataTable
-            rows={allAcademicYears}
-            columns={[
-              { key: "n", header: "اسم السنة", cell: (r) => <span className="font-bold text-lg">{r.name}</span> },
-              { key: "s", header: "تاريخ البداية", cell: (r) => <span className="tabular font-medium text-muted-foreground">{r.startDate}</span> },
-              { key: "e", header: "تاريخ النهاية", cell: (r) => <span className="tabular font-medium text-muted-foreground">{r.endDate}</span> },
-              { 
-                key: "st", 
-                header: "الحالة", 
-                cell: (r) => (
-                  <Badge tone={r.isCurrent ? "success" : "neutral"} className="px-3 py-1 font-bold">
-                    {r.isCurrent ? "السنة الحالية" : "منتهية / غير مفعلة"}
-                  </Badge>
-                ) 
-              },
-              {
-                key: "act",
-                header: "إجراءات",
-                cell: (r) => (
-                  <div className="flex gap-2 justify-end">
-                    {!r.isCurrent && (
-                      <button 
-                        onClick={() => handleSetCurrent(r.id)}
-                        className="rounded-lg p-2 text-success hover:bg-success/10 transition-colors" 
-                        title="تعيين كسنة حالية"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                      </button>
+        <PageCard className="border-border">
+          <table className="w-full text-sm text-right">
+            <thead className="bg-muted">
+              <tr>
+                <th className="p-4 font-bold rounded-tr-lg">اسم السنة الدراسية</th>
+                <th className="p-4 font-bold">تاريخ البداية</th>
+                <th className="p-4 font-bold">تاريخ النهاية</th>
+                <th className="p-4 font-bold">الحالة</th>
+                <th className="p-4 font-bold rounded-tl-lg text-center">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allAcademicYears.map(year => (
+                <tr key={year.id} className="border-b border-border hover:bg-accent/30 transition-colors">
+                  <td className="p-4 font-bold">{year.name}</td>
+                  <td className="p-4 font-bold text-muted-foreground" dir="ltr">{year.startDate}</td>
+                  <td className="p-4 font-bold text-muted-foreground" dir="ltr">{year.endDate}</td>
+                  <td className="p-4">
+                    {year.isCurrent ? (
+                      <Badge tone="success"><CheckCircle2 className="h-3 w-3 mr-1"/> نشط حالياً</Badge>
+                    ) : (
+                      <Badge tone="neutral">منتهي</Badge>
                     )}
+                  </td>
+                  <td className="p-4 text-center">
                     <button 
-                      onClick={() => openEditModal(r)}
-                      className="rounded-lg p-2 text-primary hover:bg-primary/10 transition-colors" 
+                      onClick={() => openEditModal(year)}
+                      className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
                       title="تعديل"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button className="rounded-lg p-2 text-danger hover:bg-danger/10 transition-colors" title="حذف">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ),
-              },
-            ]}
-          />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </PageCard>
-      </div>
 
-      {/* Add/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">{editingId ? "تعديل السنة الدراسية" : "إضافة سنة دراسية جديدة"}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
-              </button>
+        {/* Modal for Add / Edit */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border flex flex-col overflow-hidden animate-in zoom-in-95">
+              <div className="flex justify-between items-center p-4 border-b border-border bg-muted/30">
+                <h3 className="font-bold text-lg">{editingId ? "تعديل سنة دراسية" : "إضافة سنة دراسية جديدة"}</h3>
+                <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <form onSubmit={handleSave} className="p-4 flex flex-col gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground mb-1">اسم السنة الدراسية *</label>
+                  <input 
+                    type="text" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="مثال: ١٤٤٥ / ١٤٤٦ هـ" 
+                    className="w-full bg-background border border-border rounded-xl px-3 py-2 outline-none focus:border-primary transition-colors" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground mb-1">تاريخ البداية *</label>
+                    <input 
+                      type="date" 
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2 outline-none focus:border-primary transition-colors" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground mb-1">تاريخ النهاية *</label>
+                    <input 
+                      type="date" 
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                      className="w-full bg-background border border-border rounded-xl px-3 py-2 outline-none focus:border-primary transition-colors" 
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 mt-2">
+                  <input 
+                    type="checkbox" 
+                    id="isCurrent"
+                    checked={formData.isCurrent}
+                    onChange={(e) => setFormData({...formData, isCurrent: e.target.checked})}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="isCurrent" className="text-sm font-bold cursor-pointer">
+                    تعيين كعام دراسي نشط (حالي)
+                  </label>
+                </div>
+                <p className="text-xs text-warning mt-1">تنبيه: تفعيل هذا العام سيبدأ السجلات من جديد بشكل فارغ.</p>
+
+                <div className="mt-4 flex justify-end gap-2">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-xl transition-colors">إلغاء</button>
+                  <button type="submit" className="px-4 py-2 text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-colors">حفظ السنة الدراسية</button>
+                </div>
+              </form>
             </div>
-            
-            <form onSubmit={handleSave} className="space-y-5">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">اسم السنة (مثال: ١٤٤٥ هـ) *</label>
-                <input
-                  required
-                  placeholder="مثال: ١٤٤٦ هـ"
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-muted-foreground">تاريخ البداية *</label>
-                  <input
-                    required
-                    type="date"
-                    className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold tabular-nums"
-                    value={formData.startDate}
-                    onChange={e => setFormData({...formData, startDate: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-muted-foreground">تاريخ النهاية *</label>
-                  <input
-                    required
-                    type="date"
-                    className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold tabular-nums"
-                    value={formData.endDate}
-                    onChange={e => setFormData({...formData, endDate: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center gap-3 p-3 border border-border/50 rounded-xl cursor-pointer hover:bg-accent/50 transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={formData.isCurrent}
-                  onChange={(e) => setFormData({...formData, isCurrent: e.target.checked})}
-                  className="w-5 h-5 accent-primary rounded cursor-pointer"
-                />
-                <span className="font-bold text-sm">تعيين هذه السنة كسنة دراسية حالية مفعلة</span>
-              </label>
-
-              <div className="pt-5 mt-2 border-t border-border/50 flex justify-end gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl px-5 py-2.5 font-bold hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit" 
-                  className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm hover:shadow-md hover:scale-105"
-                >
-                  {editingId ? "حفظ التعديلات" : "إضافة السنة"}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
     </AppShell>
   );
 }

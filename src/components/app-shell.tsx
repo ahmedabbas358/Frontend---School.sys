@@ -26,7 +26,8 @@ import {
   CalendarRange,
   ClipboardCheck,
   Sun,
-  Moon
+  Moon,
+  ShieldAlert
 } from "lucide-react";
 import { useStage, EducationalStage } from "@/contexts/StageContext";
 
@@ -68,7 +69,6 @@ const NAV: Item[] = [
         { to: "/academic/classes", label: "الصفوف" },
         { to: "/academic/subjects", label: "المواد" },
         { to: "/academic/assignments", label: "الإسناد التدريسي" },
-        { to: "/academic/promotion", label: "النقل الذكي (ترحيل)" },
         { to: "/schedule", label: "الجدول الأسبوعي" },
       ],
     },
@@ -87,10 +87,10 @@ const NAV: Item[] = [
     kind: "group",
     group: {
       label: "الحضور والانضباط",
-      icon: ClipboardCheck,
+      icon: ShieldAlert,
       items: [
-        { to: "/attendance/take", label: "رصد الحضور" },
-        { to: "/attendance/reports", label: "تقارير الحضور" },
+        { to: "/attendance/take", label: "رصد الحضور (بالحصص)" },
+        { to: "/attendance/reports", label: "السجل الأسبوعي والشهري" },
         { to: "/discipline/incidents", label: "الحوادث السلوكية" },
         { to: "/discipline/merits", label: "المكافآت" },
       ],
@@ -102,9 +102,8 @@ const NAV: Item[] = [
       label: "الاختبارات",
       icon: ClipboardList,
       items: [
-        { to: "/exams/types", label: "أنواع الاختبارات" },
         { to: "/exams", label: "جدول الاختبارات" },
-        { to: "/academic/grades", label: "النتائج" },
+        { to: "/exams/grades", label: "النتائج ورصد الدرجات" },
         { to: "/exams/reports", label: "التقارير والشهادات" },
       ],
     },
@@ -115,6 +114,8 @@ const NAV: Item[] = [
       label: "المالية والمحاسبة",
       icon: DollarSign,
       items: [
+        { to: "/finance/dashboard", label: "اللوحة المالية" },
+        { to: "/finance/ledger", label: "السجل المالي (دفتر اليومية)" },
         { to: "/finance/invoices", label: "إدارة الفواتير" },
         { to: "/finance/fees", label: "الرسوم الدراسية" },
         { to: "/finance/payments", label: "سندات الصرف والقبض" },
@@ -157,6 +158,7 @@ const NAV: Item[] = [
       ],
     },
   },
+
   {
     kind: "group",
     group: {
@@ -189,7 +191,7 @@ const BOTTOM_NAV = [
   { to: "/", label: "الرئيسية", icon: LayoutDashboard },
   { to: "/students/new", label: "الطلاب", icon: Users },
   { to: "/attendance/take", label: "الحضور", icon: ClipboardCheck },
-  { to: "/finance/payments", label: "المالية", icon: DollarSign },
+  { to: "/finance/dashboard", label: "المالية", icon: DollarSign },
   { to: "/settings", label: "الإعدادات", icon: Settings },
 ];
 

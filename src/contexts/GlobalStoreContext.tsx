@@ -7,6 +7,7 @@ export interface Guardian {
   phone: string;
   relation: string;
   address?: string;
+  gender?: "ذكر" | "أنثى";
   isDeleted?: boolean;
   deletedAt?: string;
 }
@@ -38,7 +39,7 @@ export interface Student {
   medicalNotes?: string;
   enrollmentDate?: string;
   academicYearId?: string;
-  status?: "نشط" | "موقوف" | "منقول" | "خريج" | "راسب";
+  status?: "نشط" | "موقوف" | "منقول" | "خريج" | "راسب" | "ناجح";
   enrollmentHistory?: EnrollmentRecord[];
   major?: "science" | "literature";
   pickupPersons?: string;
@@ -46,6 +47,19 @@ export interface Student {
   elective?: string;
   isDeleted?: boolean;
   deletedAt?: string;
+}
+
+export interface StudentEnrollment {
+  id: string;
+  studentId: string;
+  academicYearId: string;
+  stage: EducationalStage;
+  grade: string;
+  sectionId?: string;
+  major?: "science" | "literature";
+  elective?: string;
+  status: "نشط" | "موقوف" | "منقول" | "خريج" | "راسب" | "ناجح";
+  enrollmentDate: string;
 }
 
 export interface AcademicYear {
@@ -146,6 +160,35 @@ export interface Expense {
   notes?: string;
 }
 
+export interface Account {
+  id: string;
+  name: string;
+  type: "asset" | "liability" | "equity" | "revenue" | "expense";
+  code: string;
+  description?: string;
+  isSystemAccount?: boolean;
+}
+
+export interface JournalEntry {
+  id: string;
+  academicYearId: string;
+  date: string;
+  referenceId?: string;
+  referenceType?: "invoice" | "payment" | "expense" | "manual";
+  description: string;
+  status: "posted" | "draft" | "voided";
+}
+
+export interface JournalLine {
+  id: string;
+  journalEntryId: string;
+  accountId: string;
+  debit: number;
+  credit: number;
+  studentId?: string;
+  description?: string;
+}
+
 export interface Book {
   id: string;
   title: string;
@@ -205,6 +248,27 @@ export interface Staff {
   basicSalary?: number;
   allowance?: number;
   deduction?: number;
+  // New Payroll Fields
+  paymentType?: "Monthly" | "PerLesson" | "Daily";
+  rate?: number;
+  hireDate?: string;
+}
+
+export interface EmployeeAssignment {
+  id: string;
+  employeeId: string;
+  academicYearId: string;
+  stage: EducationalStage | "all";
+  role: string;
+  department: string;
+  status: "active" | "on_leave" | "terminated";
+  basicSalary?: number;
+  allowance?: number;
+  deduction?: number;
+  paymentType?: "Monthly" | "PerLesson" | "Daily";
+  rate?: number;
+  subjects?: string[];
+  sections?: string[];
 }
 
 export interface ClinicVisit {
@@ -218,16 +282,80 @@ export interface ClinicVisit {
   stage: EducationalStage;
 }
 
+export interface AttendanceSession {
+  id: string;
+  academicYearId: string;
+  sectionId: string;
+  subjectId: string;
+  teacherId: string;
+  periodNumber: number;
+  date: string;
+  status: "open" | "closed";
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  sessionId: string;
+  studentEnrollmentId: string;
+  status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "LEFT_EARLY" | "SICK" | "SUSPENDED" | "REMOTE";
+  reason?: string;
+  note?: string;
+  markedBy: string;
+  markedAt: string;
+}
+
+export interface AttendanceExcuse {
+  id: string;
+  studentEnrollmentId: string;
+  attendanceRecordId: string;
+  reason: string;
+  attachment?: string;
+  status: "Pending" | "Approved" | "Rejected";
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+export interface BehaviorTransaction {
+  id: string;
+  studentEnrollmentId: string;
+  type: "positive" | "negative";
+  points: number;
+  categoryId?: string;
+  reason: string;
+  createdBy: string;
+  date: string;
+}
+
+export interface DisciplineCategory {
+  id: string;
+  name: string;
+  type: "academic" | "behavioral" | "appearance";
+  severity: "low" | "medium" | "high";
+  defaultPoints: number;
+  recommendedAction: string;
+}
+
 export interface DisciplineIncident {
   id: string;
-  studentId: string;
-  studentName: string;
+  studentEnrollmentId: string;
   date: string;
-  type: "positive" | "negative";
-  category: string;
-  points: number;
+  location?: string;
   description: string;
-  stage: EducationalStage;
+  witnesses?: string;
+  responsiblePerson: string;
+  attachments?: string;
+  actionTaken?: string;
+}
+
+export interface DisciplineAction {
+  id: string;
+  incidentId: string;
+  type: string;
+  date: string;
+  responsiblePerson: string;
+  notes?: string;
 }
 
 export interface Section {
@@ -249,70 +377,36 @@ export interface ScheduleSlot {
   stage: EducationalStage;
 }
 
-export interface ExamType {
-  id: string;
-  name: string;
-  weight: number;
-  stage: EducationalStage | "all";
-  subjectId?: string; // Optional: If provided, this exam type is specific to a single subject
-}
-
 export interface Exam {
   id: string;
-  subjectId: string;
-  typeId: string;
-  term: string;
-  date: string;
-  totalMarks: number;
-  stage: EducationalStage;
-  grade?: string;
-  sectionId?: string;
+  academicYearId: string;
+  name: string; // e.g., "اختبار منتصف الفصل الدراسي الأول"
+  term: string; // "الفصل الأول"
+  type: "midterm" | "final" | "quiz" | "monthly";
+  startDate: string;
+  endDate: string;
+  status: "draft" | "upcoming" | "ongoing" | "grading" | "completed";
 }
 
-export interface ExamMark {
+export interface ExamSubject {
   id: string;
   examId: string;
-  studentId: string;
   subjectId: string;
-  mark: number;
-  notes?: string;
-  stage: EducationalStage;
-}
-
-export interface ExamCategory {
-  id: string;
-  name: string;
-  weight: number;
-  grades?: string[];
-  gradingSystem: string;
-  maxMark: number;
-  color: string;
+  date: string; // specific date for this subject's exam
+  maxScore: number;
+  passScore: number;
+  weight: number; // e.g., 20% of the term
   stage: EducationalStage | "all";
+  grade: string; // e.g. "الصف الأول"
 }
 
-export interface ScheduledExam {
+export interface ExamResult {
   id: string;
-  name: string;
-  grade: string;
-  sectionId: string;
-  categoryId?: string;
-  subjectId: string;
-  term: string;
-  date: string;
-  totalMarks: number;
-  gradingSystem: string;
-  status: string;
-  classId: string;
-  stage: string;
-}
-
-export interface ExamGrade {
-  id: string;
-  examId: string;
-  studentId: string;
+  examSubjectId: string;
+  studentEnrollmentId: string;
   mark: number;
   notes?: string;
-  descriptiveGrade?: string;
+  status: "draft" | "submitted" | "approved" | "published";
 }
 
 export interface Subject {
@@ -636,6 +730,12 @@ const initialStudents: Student[] = [
   { id: "STU-1003", name: "عمر فهد العتيبي", dob: "2008-09-10", nationalId: "1002003004", guardianName: "فهد العتيبي", stage: "high", grade: "الصف الأول الثانوي", major: "science", elective: "حاسب آلي" }
 ];
 
+const initialStudentEnrollments: StudentEnrollment[] = [
+  { id: "ENR-1001", studentId: "STU-1001", academicYearId: "Y-1001", stage: "primary", grade: "الصف الأول الابتدائي", sectionId: "SEC-1001", status: "نشط", enrollmentDate: "2023-08-01" },
+  { id: "ENR-1002", studentId: "STU-1002", academicYearId: "Y-1001", stage: "kindergarten", grade: "روضة 2", status: "نشط", enrollmentDate: "2023-08-01" },
+  { id: "ENR-1003", studentId: "STU-1003", academicYearId: "Y-1001", stage: "high", grade: "الصف الأول الثانوي", major: "science", elective: "حاسب آلي", status: "نشط", enrollmentDate: "2023-08-01" }
+];
+
 const initialInvoices: Invoice[] = [
   { id: "INV-1001", studentId: "STU-1001", studentName: "أحمد محمد محمود", title: "الرسوم الدراسية - القسط الأول", amount: 5000, netAmount: 5000, discountAmount: 0, paid: 5000, issueDate: "2023-08-01", dueDate: "2023-09-01", status: "paid", stage: "primary" },
   { id: "INV-1002", studentId: "STU-1002", studentName: "سارة خالد العتيبي", title: "الرسوم الدراسية - القسط الأول", amount: 6000, netAmount: 6000, discountAmount: 0, paid: 3000, issueDate: "2023-08-01", dueDate: "2023-09-01", status: "partial", stage: "kindergarten" },
@@ -702,14 +802,19 @@ const initialStaff: Staff[] = [
   { id: "EMP-1003", name: "سالم المري", role: "حارس أمن", department: "الخدمات العامة", status: "active", stage: "all", basicSalary: 4000, allowance: 500, deduction: 0 },
 ];
 
+const initialEmployeeAssignments: EmployeeAssignment[] = [
+  { id: "EA-1001", employeeId: "EMP-1001", academicYearId: "Y-1001", stage: "high", role: "معلم رياضيات", department: "الشؤون الأكاديمية", status: "active", basicSalary: 8500, allowance: 1500, deduction: 0 },
+  { id: "EA-1002", employeeId: "EMP-1002", academicYearId: "Y-1001", stage: "kindergarten", role: "مربية أطفال", department: "رياض الأطفال", status: "active", basicSalary: 6000, allowance: 1000, deduction: 300 },
+  { id: "EA-1004", employeeId: "EMP-1004", academicYearId: "Y-1001", stage: "primary", role: "معلم صف", department: "الصفوف الأولية", status: "active", basicSalary: 7500, allowance: 1200, deduction: 0 },
+  { id: "EA-1005", employeeId: "EMP-1005", academicYearId: "Y-1001", stage: "middle", role: "معلم علوم", department: "العلوم", status: "active", basicSalary: 8000, allowance: 1000, deduction: 100 },
+  { id: "EA-1003", employeeId: "EMP-1003", academicYearId: "Y-1001", stage: "all", role: "حارس أمن", department: "الخدمات العامة", status: "active", basicSalary: 4000, allowance: 500, deduction: 0 },
+];
+
 const initialClinicVisits: ClinicVisit[] = [
   { id: "CV-001", studentId: "STU-1002", studentName: "سارة خالد السعيد", date: "2023-10-15", symptoms: "ارتفاع في درجة الحرارة", diagnosis: "حمى خفيفة", actionTaken: "إعطاء خافض حرارة والاتصال بولي الأمر", stage: "kindergarten" }
 ];
 
-const initialDiscipline: DisciplineIncident[] = [
-  { id: "DI-001", studentId: "STU-1003", studentName: "عمر فهد العتيبي", date: "2023-10-12", type: "negative", category: "تأخر صباحي", points: -2, description: "تأخر عن الطابور الصباحي", stage: "high" },
-  { id: "DI-002", studentId: "STU-1001", studentName: "أحمد محمد محمود", date: "2023-10-14", type: "positive", category: "مشاركة متميزة", points: 5, description: "حل مسألة صعبة في الإذاعة המدرسية", stage: "primary" }
-];
+const initialDiscipline: DisciplineIncident[] = [];
 
 const initialSections: Section[] = [
   { id: "SEC-101", name: "أ", grade: "الصف الأول", capacity: 25, stage: "primary" },
@@ -723,20 +828,9 @@ const initialSections: Section[] = [
 
 const initialScheduleSlots: ScheduleSlot[] = [];
 
-const initialExamTypes: ExamType[] = [
-  { id: "EXT-001", name: "اختبار قصير", weight: 10, stage: "all" },
-  { id: "EXT-002", name: "اختبار نصفي", weight: 30, stage: "all" },
-  { id: "EXT-003", name: "اختبار نهائي", weight: 60, stage: "all" },
-];
-
-const initialExams: Exam[] = [
-  { id: "EX-1001", subjectId: "SUB-2", typeId: "EXT-002", term: "الفصل الأول", date: "2023-11-15", totalMarks: 30, stage: "primary", grade: "الصف الأول الابتدائي" },
-  { id: "EX-1002", subjectId: "SUB-3", typeId: "EXT-003", term: "الفصل الأول", date: "2023-12-20", totalMarks: 50, stage: "high" },
-];
-
-const initialExamMarks: ExamMark[] = [
-  { id: "EM-1001", examId: "EX-1001", studentId: "STU-1001", subjectId: "SUB-2", mark: 28, stage: "primary" }
-];
+const initialExams: Exam[] = [];
+const initialExamSubjects: ExamSubject[] = [];
+const initialExamResults: ExamResult[] = [];
 
 const initialSubjects: Subject[] = [
   { id: "SUB-101", name: "الرياضيات", code: "MATH101", creditHours: 5, stage: "primary", grades: ["الصف الأول", "الصف الثاني", "الصف الثالث", "الصف الرابع", "الصف الخامس", "الصف السادس"] },
@@ -747,6 +841,20 @@ const initialSubjects: Subject[] = [
   { id: "SUB-106", name: "الكيمياء", code: "CHEM101", creditHours: 4, stage: "high", grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"], fee: 800 },
   { id: "SUB-107", name: "لغتي الجميلة", code: "ARAB100", creditHours: 5, stage: "primary", grades: ["الصف الأول", "الصف الثاني", "الصف الثالث"] },
 ];
+
+const initialAccounts: Account[] = [
+  { id: "ACC-101", name: "الصندوق", type: "asset", code: "101", isSystemAccount: true },
+  { id: "ACC-102", name: "البنك", type: "asset", code: "102", isSystemAccount: true },
+  { id: "ACC-103", name: "ذمم الطلاب", type: "asset", code: "103", isSystemAccount: true },
+  { id: "ACC-401", name: "إيرادات دراسية", type: "revenue", code: "401", isSystemAccount: true },
+  { id: "ACC-402", name: "إيرادات أخرى", type: "revenue", code: "402", isSystemAccount: true },
+  { id: "ACC-501", name: "مصروفات رواتب", type: "expense", code: "501", isSystemAccount: true },
+  { id: "ACC-502", name: "مصروفات تشغيلية", type: "expense", code: "502", isSystemAccount: true },
+];
+
+const initialJournalEntries: JournalEntry[] = [];
+const initialJournalLines: JournalLine[] = [];
+
 
 const initialAcademicYears: AcademicYear[] = [
   { id: "Y-1001", name: "١٤٤٥ هـ", startDate: "2023-08-20", endDate: "2024-06-10", isCurrent: false },
@@ -796,12 +904,17 @@ interface GlobalStoreContextType {
   // All Data
   allStudents: Student[];
   allDeletedStudents: Student[];
+  allStudentEnrollments: StudentEnrollment[];
+  allEmployeeAssignments: EmployeeAssignment[];
   allInvoices: Invoice[];
   allFeeStructures: FeeStructure[];
   allDiscounts: Discount[];
   allPayments: Payment[];
   allExpenses: Expense[];
   allExpenseCategories: ExpenseCategory[];
+  allAccounts: Account[];
+  allJournalEntries: JournalEntry[];
+  allJournalLines: JournalLine[];
   allBooks: Book[];
   allLibraryIssues: LibraryIssue[];
   allInventoryItems: InventoryItem[];
@@ -809,17 +922,21 @@ interface GlobalStoreContextType {
   allStaff: Staff[];
   allClinicVisits: ClinicVisit[];
   allDisciplineIncidents: DisciplineIncident[];
+  allAttendanceSessions: AttendanceSession[];
+  allAttendanceRecords: AttendanceRecord[];
+  allAttendanceExcuses: AttendanceExcuse[];
+  allBehaviorTransactions: BehaviorTransaction[];
+  allDisciplineCategories: DisciplineCategory[];
+  allDisciplineActions: DisciplineAction[];
   allSections: Section[];
   allExams: Exam[];
-  allExamMarks: ExamMark[];
-  allExamTypes: ExamType[];
+  allExamSubjects: ExamSubject[];
+  allExamResults: ExamResult[];
   allSubjects: Subject[];
   allScheduleSlots: ScheduleSlot[];
   allAcademicYears: AcademicYear[];
   allTeachingAssignments: TeachingAssignment[];
-  allScheduledExams: ScheduledExam[];
-  allExamCategories: ExamCategory[];
-  allExamGrades: ExamGrade[];
+
   
   allMaintenanceRequests: MaintenanceRequest[];
   allRooms: Room[];
@@ -843,14 +960,11 @@ interface GlobalStoreContextType {
   activeStageDisciplineIncidents: DisciplineIncident[];
   activeStageSections: Section[];
   activeStageExams: Exam[];
-  activeStageExamMarks: ExamMark[];
-  activeStageExamTypes: ExamType[];
+  activeStageExamSubjects: ExamSubject[];
   activeStageSubjects: Subject[];
   activeStageScheduleSlots: ScheduleSlot[];
   activeStageTeachingAssignments: TeachingAssignment[];
-  activeStageScheduledExams: ScheduledExam[];
-  activeStageExamCategories: ExamCategory[];
-  activeStageExamGrades: ExamGrade[];
+
 
   // Actions
   addStudent: (student: Omit<Student, "id">) => void;
@@ -881,6 +995,9 @@ interface GlobalStoreContextType {
   updateExpense: (id: string, updates: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
 
+  addJournalEntry: (entry: Omit<JournalEntry, "id">, lines: Omit<JournalLine, "id" | "journalEntryId">[]) => void;
+  rolloverFinancialBalances: (fromYearId: string, toYearId: string) => void;
+
   addBook: (book: Omit<Book, "id" | "available">) => void;
   issueBook: (bookId: string, studentId: string) => void;
   returnBook: (issueId: string) => void;
@@ -894,7 +1011,9 @@ interface GlobalStoreContextType {
   upsertStaffAttendance: (record: StaffAttendanceRecord) => void;
   addStaffAdvance: (record: Omit<StaffAdvance, "id">) => void;
   addClinicVisit: (visit: Omit<ClinicVisit, "id" | "studentName" | "stage">) => void;
-  addDisciplineIncident: (incident: Omit<DisciplineIncident, "id" | "studentName" | "stage">) => void;
+  addDisciplineIncident: (incident: Omit<DisciplineIncident, "id">) => void;
+  addAttendanceSession: (session: Omit<AttendanceSession, "id">, records: Omit<AttendanceRecord, "id" | "sessionId">[]) => void;
+  addBehaviorTransaction: (transaction: Omit<BehaviorTransaction, "id">) => void;
   addSection: (section: Omit<Section, "id">) => void;
   updateSection: (id: string, updates: Partial<Section>) => void;
   deleteSection: (id: string) => void;
@@ -902,23 +1021,15 @@ interface GlobalStoreContextType {
   currency: string;
   setCurrency: (c: string) => void;
   
-  examGradingMode: "marks" | "percentage";
-  setExamGradingMode: (mode: "marks" | "percentage") => void;
-  addExamType: (type: Omit<ExamType, "id">) => void;
-  updateExamType: (id: string, updates: Partial<ExamType>) => void;
-  deleteExamType: (id: string) => void;
-  
   addExam: (exam: Omit<Exam, "id">) => void;
+  updateExam: (id: string, updates: Partial<Exam>) => void;
   deleteExam: (id: string) => void;
-  saveExamMarks: (marks: Omit<ExamMark, "id">[]) => void;
-  saveExamGrades: (grades: Omit<ExamGrade, "id">[]) => void;
   
-  addScheduledExam: (exam: Omit<ScheduledExam, "id" | "createdAt">) => void;
-  updateScheduledExam: (id: string, updates: Partial<ScheduledExam>) => void;
-  deleteScheduledExam: (id: string) => void;
-
-  addExamCategory: (cat: Omit<ExamCategory, "id">) => void;
-  deleteExamCategory: (id: string) => void;
+  addExamSubject: (examSubject: Omit<ExamSubject, "id">) => void;
+  updateExamSubject: (id: string, updates: Partial<ExamSubject>) => void;
+  deleteExamSubject: (id: string) => void;
+  
+  saveExamResults: (results: Omit<ExamResult, "id">[]) => void;
 
   addSubject: (subject: Omit<Subject, "id">) => void;
   deleteSubject: (id: string) => void;
@@ -930,6 +1041,7 @@ interface GlobalStoreContextType {
   deleteTeachingAssignment: (id: string) => void;
   assignStudentToSection: (studentId: string, sectionId?: string) => void;
   promoteStudents: (promotions: { studentId: string; nextGrade: string; nextAcademicYearId: string; status: "ناجح" | "راسب" | "منقول" | "خريج" }[]) => void;
+  promoteStaff: (promotions: { employeeId: string; nextRole: string; nextAcademicYearId: string; status: "active" | "on_leave" | "terminated"; basicSalary: number }[]) => void;
   generateBulkData: (count: number) => void;
 
   addMaintenanceRequest: (req: Omit<MaintenanceRequest, "id">) => void;
@@ -989,6 +1101,8 @@ interface GlobalStoreContextType {
   markAllNotificationsAsRead: () => void;
   deleteNotification: (id: string) => void;
   addNotification: (n: Omit<AppNotification, "id" | "timestamp" | "read">) => void;
+
+  currentAcademicYearId: string | undefined;
 }
 
 const GlobalStoreContext = createContext<GlobalStoreContextType | undefined>(undefined);
@@ -996,6 +1110,7 @@ const GlobalStoreContext = createContext<GlobalStoreContextType | undefined>(und
 export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const { stage: activeStage } = useStage();
   const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [studentEnrollments, setStudentEnrollments] = useState<StudentEnrollment[]>(initialStudentEnrollments);
   const [deletedStudents, setDeletedStudents] = useState<Student[]>([]);
   const [guardians, setGuardians] = useState<Guardian[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
@@ -1009,13 +1124,28 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(initialInventoryItems);
   const [inventoryTransactions, setInventoryTransactions] = useState<InventoryTransaction[]>(initialInventoryTransactions);
   const [staff, setStaff] = useState<Staff[]>(initialStaff);
+  const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>(initialEmployeeAssignments);
   const [clinicVisits, setClinicVisits] = useState<ClinicVisit[]>(initialClinicVisits);
-  const [disciplineIncidents, setDisciplineIncidents] = useState<DisciplineIncident[]>(initialDiscipline);
+  const [disciplineIncidents, setDisciplineIncidents] = useState<DisciplineIncident[]>([]);
+  const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceExcuses, setAttendanceExcuses] = useState<AttendanceExcuse[]>([]);
+  const [behaviorTransactions, setBehaviorTransactions] = useState<BehaviorTransaction[]>([]);
+  const [disciplineCategories, setDisciplineCategories] = useState<DisciplineCategory[]>([
+    { id: "DC-01", name: "غياب متكرر", type: "behavioral", severity: "medium", defaultPoints: -3, recommendedAction: "إنذار أول" },
+    { id: "DC-02", name: "شغب في الفصل", type: "behavioral", severity: "high", defaultPoints: -5, recommendedAction: "استدعاء ولي الأمر" },
+    { id: "DC-03", name: "تأخر دراسي", type: "academic", severity: "low", defaultPoints: -1, recommendedAction: "تنبيه" },
+    { id: "DC-04", name: "مشاركة متميزة", type: "behavioral", severity: "low", defaultPoints: 5, recommendedAction: "شكر" },
+    { id: "DC-05", name: "تفوق أكاديمي", type: "academic", severity: "high", defaultPoints: 10, recommendedAction: "شهادة تقدير" }
+  ]);
+  const [disciplineActions, setDisciplineActions] = useState<DisciplineAction[]>([]);
   const [sections, setSections] = useState<Section[]>(initialSections);
   const [exams, setExams] = useState<Exam[]>(initialExams);
-  const [examMarks, setExamMarks] = useState<ExamMark[]>(initialExamMarks);
-  const [examTypes, setExamTypes] = useState<ExamType[]>(initialExamTypes);
-  const [examGradingMode, setExamGradingMode] = useState<"marks" | "percentage">("marks");
+  const [examSubjects, setExamSubjects] = useState<ExamSubject[]>(initialExamSubjects);
+  const [examResults, setExamResults] = useState<ExamResult[]>(initialExamResults);
+  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(initialJournalEntries);
+  const [journalLines, setJournalLines] = useState<JournalLine[]>(initialJournalLines);
   const [currency, setCurrency] = useState(() => {
     try {
       const saved = localStorage.getItem("darasi_currency");
@@ -1101,9 +1231,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [transportRoutes, setTransportRoutes] = useState<TransportRoute[]>([]);
   const [transportSubscriptions, setTransportSubscriptions] = useState<TransportSubscription[]>([]);
 
-  const [scheduledExams, setScheduledExams] = useState<ScheduledExam[]>([]);
-  const [examCategories, setExamCategories] = useState<ExamCategory[]>([]);
-  const [examGrades, setExamGrades] = useState<ExamGrade[]>([]);
+
 
   const [timetableSettings, setTimetableSettings] = useState<TimetableSettings>({
     maxPeriodsPerDay: 7,
@@ -1112,31 +1240,48 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     stage: "all"
   });
 
-  // Derived state filtered by the global active stage
-  const activeStageStudents = useMemo(() => students.filter(s => s.stage === activeStage), [students, activeStage]);
+  const currentAcademicYearId = useMemo(() => academicYears.find(y => y.isCurrent)?.id, [academicYears]);
+
+  // Derived state filtered by the global active stage and active year
+  const activeStageStudents = useMemo(() => {
+    return studentEnrollments
+      .filter(e => e.academicYearId === currentAcademicYearId && e.stage === activeStage)
+      .map(e => {
+        const studentIdentity = students.find(s => s.id === e.studentId);
+        return { ...studentIdentity, ...e } as Student;
+      });
+  }, [studentEnrollments, students, currentAcademicYearId, activeStage]);
+  
   const allDeletedStudents = useMemo(() => students.filter(s => s.isDeleted), [students]);
   const activeStageInvoices = useMemo(() => invoices.filter(inv => inv.stage === activeStage), [invoices, activeStage]);
   const activeStageFeeStructures = useMemo(() => feeStructures.filter(f => f.stage === "all" || f.stage === activeStage), [feeStructures, activeStage]);
   const activeStageBooks = useMemo(() => books.filter(b => b.stage === activeStage), [books, activeStage]);
   const activeStageLibraryIssues = useMemo(() => libraryIssues.filter(li => li.stage === activeStage), [libraryIssues, activeStage]);
-  const activeStageStaff = useMemo(() => staff.filter(st => st.stage === activeStage || st.stage === "all"), [staff, activeStage]);
+  
+  const activeStageStaff = useMemo(() => {
+    return employeeAssignments
+      .filter(a => a.academicYearId === currentAcademicYearId && (a.stage === activeStage || a.stage === "all"))
+      .map(a => {
+        const employeeIdentity = staff.find(s => s.id === a.employeeId);
+        return { ...employeeIdentity, ...a } as Staff;
+      });
+  }, [employeeAssignments, staff, currentAcademicYearId, activeStage]);
   const activeStageStaffAttendance = useMemo(() => staffAttendance.filter(sa => activeStageStaff.some(s => s.id === sa.staffId)), [staffAttendance, activeStageStaff]);
   const activeStageClinicVisits = useMemo(() => clinicVisits.filter(cv => cv.stage === activeStage), [clinicVisits, activeStage]);
-  const activeStageDisciplineIncidents = useMemo(() => disciplineIncidents.filter(di => di.stage === activeStage), [disciplineIncidents, activeStage]);
+  const activeStageDisciplineIncidents = useMemo(() => {
+    return disciplineIncidents.filter(di => {
+      const enrollment = studentEnrollments.find(e => e.id === di.studentEnrollmentId);
+      return enrollment && enrollment.stage === activeStage;
+    });
+  }, [disciplineIncidents, studentEnrollments, activeStage]);
   const activeStageSections = useMemo(() => sections.filter(sec => sec.stage === activeStage), [sections, activeStage]);
-  const activeStageExams = useMemo(() => exams.filter(ex => ex.stage === activeStage), [exams, activeStage]);
-  const activeStageExamMarks = useMemo(() => examMarks.filter(em => em.stage === activeStage), [examMarks, activeStage]);
-  const activeStageExamTypes = useMemo(() => examTypes.filter(et => et.stage === activeStage || et.stage === "all"), [examTypes, activeStage]);
+  const activeStageExams = useMemo(() => exams.filter(ex => ex.academicYearId === currentAcademicYearId), [exams, currentAcademicYearId]);
+  const activeStageExamSubjects = useMemo(() => examSubjects.filter(sub => sub.stage === activeStage || sub.stage === "all"), [examSubjects, activeStage]);
   const activeStageSubjects = useMemo(() => subjects.filter(sub => sub.stage === activeStage || sub.stage === "all"), [subjects, activeStage]);
   const activeStageScheduleSlots = useMemo(() => scheduleSlots.filter(s => s.stage === activeStage), [scheduleSlots, activeStage]);
   const activeStageTeachingAssignments = useMemo(() => teachingAssignments.filter(ta => ta.stage === activeStage), [teachingAssignments, activeStage]);
 
-  const activeStageScheduledExams = useMemo(() => scheduledExams.filter(e => e.stage === activeStage), [scheduledExams, activeStage]);
-  const activeStageExamCategories = useMemo(() => examCategories.filter(c => c.stage === activeStage), [examCategories, activeStage]);
-  const activeStageExamGrades = useMemo(() => examGrades.filter(g => {
-    const ex = scheduledExams.find(e => e.id === g.examId);
-    return ex?.stage === activeStage;
-  }), [examGrades, scheduledExams, activeStage]);
+
 
   const activeStageTextbooks = useMemo(() => textbooks.filter(t => t.stage === activeStage), [textbooks, activeStage]);
   const activeStageDistributions = useMemo(() => textbookDistributions.filter(d => d.stage === activeStage), [textbookDistributions, activeStage]);
@@ -1144,17 +1289,35 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   // --- Actions ---
   const addStudent = (studentData: Omit<Student, "id">) => {
-    const newStudentId = `STU-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newStudent = { ...studentData, id: newStudentId } as Student;
-    setStudents((prev) => [newStudent, ...prev]);
+    const existingStudent = students.find(s => s.nationalId === studentData.nationalId);
+    const newStudentId = existingStudent ? existingStudent.id : `STU-${Math.floor(1000 + Math.random() * 9000)}`;
+    
+    if (!existingStudent) {
+      const newStudent = { ...studentData, id: newStudentId } as Student;
+      setStudents((prev) => [newStudent, ...prev]);
+    }
+
+    const newEnrollment: StudentEnrollment = {
+      id: `ENR-${Math.floor(1000 + Math.random() * 9000)}`,
+      studentId: newStudentId,
+      academicYearId: currentAcademicYearId || "",
+      stage: studentData.stage,
+      grade: studentData.grade,
+      sectionId: studentData.sectionId,
+      status: studentData.status || "نشط",
+      enrollmentDate: new Date().toISOString().split("T")[0],
+      major: studentData.major,
+      elective: studentData.elective
+    };
+    setStudentEnrollments(prev => [newEnrollment, ...prev]);
 
     // Calculate tuition base
-    const tuitionAmount = newStudent.stage === "kindergarten" ? 6000 : newStudent.stage === "primary" ? 5000 : newStudent.stage === "middle" ? 6500 : 8000;
+    const tuitionAmount = studentData.stage === "kindergarten" ? 6000 : studentData.stage === "primary" ? 5000 : studentData.stage === "middle" ? 6500 : 8000;
     
     // Calculate additional fees from subjects
     const applicableSubjects = subjects.filter(sub => 
-      (sub.stage === "all" || sub.stage === newStudent.stage) && 
-      (!sub.grades || sub.grades.length === 0 || sub.grades.includes(newStudent.grade))
+      (sub.stage === "all" || sub.stage === studentData.stage) && 
+      (!sub.grades || sub.grades.length === 0 || sub.grades.includes(studentData.grade))
     );
     const subjectFees = applicableSubjects.reduce((acc, curr) => acc + (curr.fee || 0), 0);
     
@@ -1163,14 +1326,14 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     const newInvoice: Invoice = {
       id: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
       studentId: newStudentId, 
-      studentName: newStudent.name, 
+      studentName: studentData.name, 
       amount: totalAmount, 
       netAmount: totalAmount, 
       discountAmount: 0, 
       paid: 0,
       dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
       status: "unpaid", 
-      stage: newStudent.stage, 
+      stage: studentData.stage, 
       issueDate: new Date().toISOString().split('T')[0], 
       title: subjectFees > 0 ? "الرسوم الدراسية ورسوم المواد" : "الرسوم الدراسية"
     };
@@ -1179,6 +1342,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   const updateStudent = (id: string, updates: Partial<Student>) => {
     setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    setStudentEnrollments(prev => prev.map(e => (e.studentId === id && e.academicYearId === currentAcademicYearId) ? { ...e, ...updates } as StudentEnrollment : e));
   };
 
   const softDeleteStudent = (id: string) => {
@@ -1191,6 +1355,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   const hardDeleteStudent = (id: string) => {
     setStudents(prev => prev.filter(s => s.id !== id));
+    setStudentEnrollments(prev => prev.filter(e => e.studentId !== id));
   };
 
   const addGuardian = (g: Omit<Guardian, "id">) => {
@@ -1214,35 +1379,54 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   };
 
   const assignStudentToSection = (studentId: string, sectionId?: string) => {
-    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, sectionId } : s));
+    setStudentEnrollments(prev => prev.map(e => (e.studentId === studentId && e.academicYearId === currentAcademicYearId) ? { ...e, sectionId } : e));
   };
 
   const promoteStudents = (promotions: { studentId: string; nextGrade: string; nextAcademicYearId: string; status: "ناجح" | "راسب" | "منقول" | "خريج" }[]) => {
-    setStudents(prev => {
-      const updated = [...prev];
+    setStudentEnrollments(prev => {
+      let updated = [...prev];
       promotions.forEach(promo => {
-        const idx = updated.findIndex(s => s.id === promo.studentId);
-        if (idx > -1) {
-          const student = updated[idx];
-          const newHistory = [...(student.enrollmentHistory || [])];
-          
-          if (student.academicYearId && student.grade) {
-            newHistory.push({
-              id: `enr-${Math.random().toString(36).substr(2, 9)}`,
-              academicYearId: student.academicYearId,
-              grade: student.grade,
-              status: promo.status,
-              date: new Date().toISOString()
-            });
-          }
+        const currentEnr = updated.find(e => e.studentId === promo.studentId && e.academicYearId === currentAcademicYearId);
+        
+        if (currentEnr) {
+           currentEnr.status = promo.status;
+        }
 
-          updated[idx] = {
-            ...student,
-            grade: promo.nextGrade,
+        updated.push({
+          id: `ENR-${Math.floor(1000 + Math.random() * 9000)}`,
+          studentId: promo.studentId,
+          academicYearId: promo.nextAcademicYearId,
+          stage: currentEnr?.stage || "primary",
+          grade: promo.nextGrade,
+          status: promo.status === "خريج" ? "خريج" : "نشط",
+          enrollmentDate: new Date().toISOString().split("T")[0]
+        });
+      });
+      return updated;
+    });
+  };
+
+  const promoteStaff = (promotions: { employeeId: string; nextRole: string; nextAcademicYearId: string; status: "active" | "on_leave" | "terminated"; basicSalary: number }[]) => {
+    setEmployeeAssignments(prev => {
+      let updated = [...prev];
+      promotions.forEach(promo => {
+        const currentAssgn = updated.find(e => e.employeeId === promo.employeeId && e.academicYearId === currentAcademicYearId);
+        
+        if (currentAssgn && promo.status !== "active") {
+           currentAssgn.status = promo.status;
+        }
+
+        if (promo.status !== "terminated") {
+          updated.push({
+            id: `EMP-ASSGN-${Math.floor(1000 + Math.random() * 9000)}`,
+            employeeId: promo.employeeId,
             academicYearId: promo.nextAcademicYearId,
-            status: promo.status === "خريج" ? "خريج" : "نشط",
-            enrollmentHistory: newHistory
-          };
+            role: promo.nextRole,
+            department: currentAssgn?.department || "General",
+            status: promo.status,
+            basicSalary: promo.basicSalary,
+            stage: currentAssgn?.stage || "all"
+          });
         }
       });
       return updated;
@@ -1251,12 +1435,29 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   // --- Finance Methods ---
   const addInvoice = (invoiceData: Omit<Invoice, "id" | "paid" | "status">) => {
-    setInvoices(prev => [{
-      ...invoiceData,
-      id: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
-      paid: 0,
-      status: "unpaid"
-    }, ...prev]);
+    const id = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newInvoice = { ...invoiceData, id, paid: 0, status: "unpaid" as const };
+    setInvoices(prev => [newInvoice, ...prev]);
+
+    // Create Journal Entry
+    const jId = `JE-${Math.floor(10000 + Math.random() * 90000)}`;
+    const je: JournalEntry = {
+      id: jId,
+      academicYearId: currentAcademicYearId || "",
+      date: newInvoice.issueDate || new Date().toISOString().split("T")[0],
+      referenceId: id,
+      referenceType: "invoice",
+      description: `استحقاق ${newInvoice.title} للطالب ${newInvoice.studentName}`,
+      status: "posted"
+    };
+    
+    // Debit AR (ACC-103), Credit Revenue (ACC-401)
+    const amount = newInvoice.netAmount ?? newInvoice.amount;
+    const jl1: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: "ACC-103", debit: amount, credit: 0, studentId: newInvoice.studentId };
+    const jl2: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: "ACC-401", debit: 0, credit: amount, studentId: newInvoice.studentId };
+    
+    setJournalEntries(prev => [je, ...prev]);
+    setJournalLines(prev => [jl1, jl2, ...prev]);
   };
 
   const updateInvoice = (id: string, updates: Partial<Invoice>) => {
@@ -1290,16 +1491,106 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const updateDiscount = (id: string, updates: Partial<Discount>) => setDiscounts(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
   const deleteDiscount = (id: string) => setDiscounts(prev => prev.filter(d => d.id !== id));
 
-  const addExpense = (expenseData: Omit<Expense, "id">) => setExpenses(prev => [{ ...expenseData, id: `EXP-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  const addJournalEntry = (entry: Omit<JournalEntry, "id">, lines: Omit<JournalLine, "id" | "journalEntryId">[]) => {
+    const jId = `JE-${Math.floor(10000 + Math.random() * 90000)}`;
+    const je = { ...entry, id: jId } as JournalEntry;
+    setJournalEntries(prev => [je, ...prev]);
+    
+    const jLines = lines.map(l => ({ ...l, id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId } as JournalLine));
+    setJournalLines(prev => [...jLines, ...prev]);
+  };
+
+  const rolloverFinancialBalances = (fromYearId: string, toYearId: string) => {
+    // Calculate balances for each student in fromYearId
+    const entriesFrom = journalEntries.filter(e => e.academicYearId === fromYearId);
+    const entryIds = new Set(entriesFrom.map(e => e.id));
+    const arLines = journalLines.filter(l => entryIds.has(l.journalEntryId) && l.accountId === "ACC-103" && l.studentId);
+    
+    const balances: Record<string, number> = {};
+    for (const l of arLines) {
+      if (!l.studentId) continue;
+      balances[l.studentId] = (balances[l.studentId] || 0) + (l.debit - l.credit);
+    }
+    
+    // Create Opening Balance Entry in toYearId
+    const jId = `JE-${Math.floor(10000 + Math.random() * 90000)}`;
+    const je: JournalEntry = {
+      id: jId,
+      academicYearId: toYearId,
+      date: new Date().toISOString().split("T")[0],
+      referenceType: "manual",
+      description: "رصيد افتتاحي مرحل من السنة السابقة",
+      status: "posted"
+    };
+
+    let totalDebit = 0;
+    let totalCredit = 0;
+    const lines: JournalLine[] = [];
+    
+    for (const [studentId, balance] of Object.entries(balances)) {
+      if (balance === 0) continue;
+      const jlId = `JL-${Math.floor(10000 + Math.random() * 90000)}`;
+      if (balance > 0) {
+        lines.push({ id: jlId, journalEntryId: jId, accountId: "ACC-103", debit: balance, credit: 0, studentId });
+        totalDebit += balance;
+      } else {
+        lines.push({ id: jlId, journalEntryId: jId, accountId: "ACC-103", debit: 0, credit: -balance, studentId });
+        totalCredit += -balance;
+      }
+    }
+    
+    if (lines.length > 0) {
+      // Balance the entry with Retained Earnings or a general Opening Balance account. 
+      // For simplicity, we credit/debit Retained Earnings/Equity (assume ACC-101 for now or a new one)
+      const diff = totalDebit - totalCredit;
+      const jlBalId = `JL-${Math.floor(10000 + Math.random() * 90000)}`;
+      if (diff > 0) {
+         lines.push({ id: jlBalId, journalEntryId: jId, accountId: "ACC-402", debit: 0, credit: diff }); // Credit some account to balance
+      } else if (diff < 0) {
+         lines.push({ id: jlBalId, journalEntryId: jId, accountId: "ACC-402", debit: -diff, credit: 0 }); // Debit some account to balance
+      }
+      
+      setJournalEntries(prev => [je, ...prev]);
+      setJournalLines(prev => [...lines, ...prev]);
+    }
+  };
+
+  const addExpense = (expenseData: Omit<Expense, "id">) => {
+    const id = `EXP-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newExpense = { ...expenseData, id };
+    setExpenses(prev => [newExpense, ...prev]);
+
+    // Create Journal Entry
+    const jId = `JE-${Math.floor(10000 + Math.random() * 90000)}`;
+    const je: JournalEntry = {
+      id: jId,
+      academicYearId: currentAcademicYearId || "",
+      date: newExpense.date,
+      referenceId: id,
+      referenceType: "expense",
+      description: `صرف ${newExpense.title} - المستفيد: ${newExpense.beneficiary}`,
+      status: "posted"
+    };
+    
+    // Debit Expense (ACC-502), Credit Cash/Bank (ACC-101 / ACC-102)
+    const amount = newExpense.amount;
+    const creditAcc = newExpense.method === 'cash' ? 'ACC-101' : 'ACC-102';
+    const jl1: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: "ACC-502", debit: amount, credit: 0 };
+    const jl2: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: creditAcc, debit: 0, credit: amount };
+    
+    setJournalEntries(prev => [je, ...prev]);
+    setJournalLines(prev => [jl1, jl2, ...prev]);
+  };
   const updateExpense = (id: string, updates: Partial<Expense>) => setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   const deleteExpense = (id: string) => setExpenses(prev => prev.filter(e => e.id !== id));
 
   const addPayment = (invoiceId: string, amount: number, method: string = "cash", referenceNo?: string) => {
     const paymentId = `PAY-${Math.floor(1000 + Math.random() * 9000)}`;
+    const studentId = invoices.find(i => i.id === invoiceId)?.studentId || "";
     const payment: Payment = {
       id: paymentId,
       invoiceId,
-      studentId: invoices.find(i => i.id === invoiceId)?.studentId || "",
+      studentId,
       amount,
       date: new Date().toISOString().split("T")[0],
       method: method as any,
@@ -1307,6 +1598,26 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     };
     
     setPayments(prev => [payment, ...prev]);
+
+    // Create Journal Entry
+    const jId = `JE-${Math.floor(10000 + Math.random() * 90000)}`;
+    const je: JournalEntry = {
+      id: jId,
+      academicYearId: currentAcademicYearId || "",
+      date: payment.date,
+      referenceId: paymentId,
+      referenceType: "payment",
+      description: `سداد للرقم المرجعي ${referenceNo || invoiceId}`,
+      status: "posted"
+    };
+    
+    // Debit Cash/Bank (ACC-101 / ACC-102), Credit AR (ACC-103)
+    const debitAcc = method === 'cash' ? 'ACC-101' : 'ACC-102';
+    const jl1: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: debitAcc, debit: amount, credit: 0 };
+    const jl2: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: "ACC-103", debit: 0, credit: amount, studentId };
+    
+    setJournalEntries(prev => [je, ...prev]);
+    setJournalLines(prev => [jl1, jl2, ...prev]);
 
     setInvoices((prev) =>
       prev.map((inv) => {
@@ -1393,7 +1704,31 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   };
 
   const addStaff = (staffData: Omit<Staff, "id">) => {
-    setStaff(prev => [{ ...staffData, id: `EMP-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+    const existingStaff = staff.find(s => s.employeeNo && s.employeeNo === staffData.employeeNo);
+    const newStaffId = existingStaff ? existingStaff.id : `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    if (!existingStaff) {
+      const newStaff = { ...staffData, id: newStaffId } as Staff;
+      setStaff(prev => [newStaff, ...prev]);
+    }
+
+    const newAssignment: EmployeeAssignment = {
+      id: `EA-${Math.floor(1000 + Math.random() * 9000)}`,
+      employeeId: newStaffId,
+      academicYearId: currentAcademicYearId || "",
+      stage: staffData.stage,
+      role: staffData.role,
+      department: staffData.department,
+      status: staffData.status,
+      basicSalary: staffData.basicSalary,
+      allowance: staffData.allowance,
+      deduction: staffData.deduction,
+      paymentType: staffData.paymentType,
+      rate: staffData.rate,
+      subjects: staffData.subjects,
+      sections: staffData.sections
+    };
+    setEmployeeAssignments(prev => [newAssignment, ...prev]);
   };
 
   const upsertStaffAttendance = (record: StaffAttendanceRecord) => {
@@ -1414,6 +1749,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   const updateStaff = (id: string, updates: Partial<Staff>) => {
     setStaff(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    setEmployeeAssignments(prev => prev.map(a => (a.employeeId === id && a.academicYearId === currentAcademicYearId) ? { ...a, ...updates } as EmployeeAssignment : a));
   };
 
   const softDeleteStaff = (id: string) => {
@@ -1426,6 +1762,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   const hardDeleteStaff = (id: string) => {
     setStaff(prev => prev.filter(s => s.id !== id));
+    setEmployeeAssignments(prev => prev.filter(a => a.employeeId !== id));
   };
 
   const restoreItem = (type: 'student' | 'guardian' | 'staff', id: string) => {
@@ -1453,17 +1790,48 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setClinicVisits(prev => [newVisit, ...prev]);
   };
 
-  const addDisciplineIncident = (incidentData: Omit<DisciplineIncident, "id" | "studentName" | "stage">) => {
-    const student = students.find(s => s.id === incidentData.studentId);
-    if (!student) return;
-
+  const addDisciplineIncident = (incidentData: Omit<DisciplineIncident, "id">) => {
     const newIncident: DisciplineIncident = {
       ...incidentData,
       id: `DI-${Math.floor(1000 + Math.random() * 9000)}`,
-      studentName: student.name,
-      stage: student.stage,
     };
     setDisciplineIncidents(prev => [newIncident, ...prev]);
+  };
+
+  const addAttendanceSession = (sessionData: Omit<AttendanceSession, "id">, recordsData: Omit<AttendanceRecord, "id" | "sessionId">[]) => {
+    const sessionId = `AS-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newSession: AttendanceSession = { ...sessionData, id: sessionId };
+    
+    const newRecords = recordsData.map(r => ({
+      ...r,
+      id: `AR-${Math.floor(10000 + Math.random() * 90000)}`,
+      sessionId
+    }));
+
+    setAttendanceSessions(prev => [newSession, ...prev]);
+    setAttendanceRecords(prev => [...newRecords, ...prev]);
+
+    // Automatically generate warnings/incidents for absent students
+    recordsData.forEach(r => {
+      if (r.status === "ABSENT") {
+        setDisciplineIncidents(prev => [{
+          id: `DI-${Math.floor(1000 + Math.random() * 9000)}`,
+          studentEnrollmentId: r.studentEnrollmentId,
+          date: sessionData.date,
+          description: `غياب غير مبرر عن الحصة ${sessionData.periodNumber || "اليوم"}`,
+          responsiblePerson: "نظام الرصد التلقائي",
+          actionTaken: "إنذار غياب مبدئي"
+        }, ...prev]);
+      }
+    });
+  };
+
+  const addBehaviorTransaction = (transactionData: Omit<BehaviorTransaction, "id">) => {
+    const newTransaction: BehaviorTransaction = {
+      ...transactionData,
+      id: `BTX-${Math.floor(1000 + Math.random() * 9000)}`,
+    };
+    setBehaviorTransactions(prev => [newTransaction, ...prev]);
   };
 
   const addSection = (sectionData: Omit<Section, "id">) => {
@@ -1478,62 +1846,45 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setSections(prev => prev.filter(s => s.id !== id));
   };
 
-  const addExamType = (typeData: Omit<ExamType, "id">) => {
-    setExamTypes(prev => [{ ...typeData, id: `EXT-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
-  };
-
-  const updateExamType = (id: string, updates: Partial<ExamType>) => {
-    setExamTypes(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  };
-
-  const deleteExamType = (id: string) => {
-    setExamTypes(prev => prev.filter(t => t.id !== id));
-  };
-
   const addExam = (examData: Omit<Exam, "id">) => {
     setExams(prev => [{ ...examData, id: `EX-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
   };
 
+  const updateExam = (id: string, updates: Partial<Exam>) => {
+    setExams(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  };
+
   const deleteExam = (id: string) => {
     setExams(prev => prev.filter(e => e.id !== id));
+    // optionally cascade delete subjects and results...
   };
 
-  const saveExamMarks = (newMarks: Omit<ExamMark, "id">[]) => {
-    setExamMarks(prev => {
+  const addExamSubject = (examSubject: Omit<ExamSubject, "id">) => {
+    setExamSubjects(prev => [{ ...examSubject, id: `ES-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  };
+
+  const updateExamSubject = (id: string, updates: Partial<ExamSubject>) => {
+    setExamSubjects(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const deleteExamSubject = (id: string) => {
+    setExamSubjects(prev => prev.filter(s => s.id !== id));
+  };
+
+  const saveExamResults = (newResults: Omit<ExamResult, "id">[]) => {
+    setExamResults(prev => {
       let updated = [...prev];
-      for (const m of newMarks) {
-        const existingIdx = updated.findIndex(exm => exm.examId === m.examId && exm.studentId === m.studentId);
+      for (const r of newResults) {
+        const existingIdx = updated.findIndex(exr => exr.examSubjectId === r.examSubjectId && exr.studentEnrollmentId === r.studentEnrollmentId);
         if (existingIdx >= 0) {
-          updated[existingIdx] = { ...updated[existingIdx], mark: m.mark, notes: m.notes };
+          updated[existingIdx] = { ...updated[existingIdx], mark: r.mark, notes: r.notes, status: r.status };
         } else {
-          updated.push({ ...m, id: `EM-${Math.floor(1000 + Math.random() * 9000)}` });
+          updated.push({ ...r, id: `ER-${Math.floor(1000 + Math.random() * 9000)}` });
         }
       }
       return updated;
     });
   };
-
-  const saveExamGrades = (newGrades: Omit<ExamGrade, "id">[]) => {
-    setExamGrades(prev => {
-      let updated = [...prev];
-      for (const g of newGrades) {
-        const existingIdx = updated.findIndex(exg => exg.examId === g.examId && exg.studentId === g.studentId);
-        if (existingIdx >= 0) {
-          updated[existingIdx] = { ...updated[existingIdx], mark: g.mark, descriptiveGrade: g.descriptiveGrade, notes: g.notes };
-        } else {
-          updated.push({ ...g, id: `EG-${Math.floor(1000 + Math.random() * 9000)}` });
-        }
-      }
-      return updated;
-    });
-  };
-
-  const addScheduledExam = (examData: Omit<ScheduledExam, "id" | "createdAt">) => setScheduledExams(p => [{ ...examData as any, id: `SE-${Math.floor(1000 + Math.random() * 9000)}` }, ...p]);
-  const updateScheduledExam = (id: string, updates: Partial<ScheduledExam>) => setScheduledExams(p => p.map(e => e.id === id ? { ...e, ...updates } : e));
-  const deleteScheduledExam = (id: string) => setScheduledExams(p => p.filter(e => e.id !== id));
-
-  const addExamCategory = (cat: Omit<ExamCategory, "id">) => setExamCategories(p => [{ ...cat, id: `EC-${Math.floor(1000 + Math.random() * 9000)}` }, ...p]);
-  const deleteExamCategory = (id: string) => setExamCategories(p => p.filter(c => c.id !== id));
 
   const addSubject = (subjectData: Omit<Subject, "id">) => {
     setSubjects(prev => [{ ...subjectData, id: `SUB-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
@@ -1577,7 +1928,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       if (updates.isCurrent) {
         newState = newState.map(y => ({ ...y, isCurrent: false }));
       }
-      newState.map(y => y.id === id ? { ...y, ...updates } : y);
+      newState = newState.map(y => y.id === id ? { ...y, ...updates } : y);
       return newState;
     });
   };
@@ -1707,19 +2058,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      if (Math.random() > 0.95) {
-        newDisciplineIncidents.push({
-          id: `DI-BLK-${i}-${now}`,
-          studentId: id,
-          studentName: name,
-          date: new Date().toISOString().split("T")[0],
-          type: Math.random() > 0.5 ? "positive" : "negative",
-          category: "سلوك عام",
-          points: 10,
-          description: "ملاحظة سلوكية مسجلة آلياً",
-          stage
-        });
-      }
+
 
       if (Math.random() > 0.98) {
         newLibraryIssues.push({
@@ -1770,24 +2109,35 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     <GlobalStoreContext.Provider value={{
       allStudents: students,
       allDeletedStudents,
-      allInvoices: invoices, allFeeStructures: feeStructures, allDiscounts: discounts, allPayments: payments, allExpenses: expenses, allExpenseCategories: expenseCategories, allBooks: books, allLibraryIssues: libraryIssues,
+      allStudentEnrollments: studentEnrollments,
+      allEmployeeAssignments: employeeAssignments,
+      allInvoices: invoices, allFeeStructures: feeStructures, allDiscounts: discounts, allPayments: payments, allExpenses: expenses,
+      allExpenseCategories: expenseCategories,
+      allAccounts: accounts,
+      allJournalEntries: journalEntries,
+      allJournalLines: journalLines,
+      allBooks: books, allLibraryIssues: libraryIssues,
       allInventoryItems: inventoryItems, allInventoryTransactions: inventoryTransactions,
       allStaff: staff, allClinicVisits: clinicVisits, allDisciplineIncidents: disciplineIncidents,
-      allSections: sections, allExams: exams, allExamMarks: examMarks, allExamTypes: examTypes, allSubjects: subjects,
+      allSections: sections, allExams: exams, allExamSubjects: examSubjects, allExamResults: examResults, allSubjects: subjects,
       allScheduleSlots: scheduleSlots, allAcademicYears: academicYears, allTeachingAssignments: teachingAssignments,
-      allScheduledExams: scheduledExams, allExamCategories: examCategories, allExamGrades: examGrades,
       
       allMaintenanceRequests: maintenanceRequests, allRooms: rooms,
       allStaffEvaluations: staffEvaluations, allStaffContracts: staffContracts, allStaffLeaves: staffLeaves,
       allStaffAttendance: staffAttendance, allStaffAdvances: staffAdvances,
       allActivityLogs: activityLogs,
       allUsers: users,
+      allAttendanceSessions: attendanceSessions,
+      allAttendanceRecords: attendanceRecords,
+      allAttendanceExcuses: attendanceExcuses,
+      allBehaviorTransactions: behaviorTransactions,
+      allDisciplineCategories: disciplineCategories,
+      allDisciplineActions: disciplineActions,
 
       activeStageStudents, activeStageInvoices, activeStageFeeStructures, activeStageBooks, activeStageLibraryIssues,
       activeStageStaff, activeStageStaffAttendance, activeStageClinicVisits, activeStageDisciplineIncidents, activeStageSections,
-      activeStageExams, activeStageExamMarks, activeStageExamTypes, activeStageSubjects,
+      activeStageExams, activeStageExamSubjects, activeStageSubjects,
       activeStageScheduleSlots, activeStageTeachingAssignments,
-      activeStageScheduledExams, activeStageExamCategories, activeStageExamGrades,
       allGuardians: guardians,
       
       allTextbooks: textbooks,
@@ -1819,20 +2169,18 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       hardDeleteStudent,
       addGuardian, updateGuardian, softDeleteGuardian, restoreGuardian, hardDeleteGuardian,
       restoreItem, hardDeleteItem,
-      addPayment, addInvoice, updateInvoice, deleteInvoice, addFeeStructure, updateFeeStructure, deleteFeeStructure, addDiscount, updateDiscount, deleteDiscount, addExpense, updateExpense, deleteExpense,
+      addPayment, addInvoice, updateInvoice, deleteInvoice, addFeeStructure, updateFeeStructure, deleteFeeStructure, addDiscount, updateDiscount, deleteDiscount, addExpense, updateExpense, deleteExpense, addJournalEntry, rolloverFinancialBalances,
       addBook, issueBook, returnBook, addInventoryItem, updateInventoryItem, deleteInventoryItem,
-      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, addStaffAdvance, addClinicVisit, addDisciplineIncident,
+      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, addStaffAdvance, addClinicVisit, addDisciplineIncident, addAttendanceSession, addBehaviorTransaction,
       addSection, updateSection, deleteSection, 
-      examGradingMode,
-      setExamGradingMode,
+
       currency,
       setCurrency,
-      addExamType, updateExamType, deleteExamType,
-      addExam, deleteExam, saveExamMarks, saveExamGrades, addSubject, deleteSubject,
-      addScheduledExam, updateScheduledExam, deleteScheduledExam, addExamCategory, deleteExamCategory,
+      addExam, updateExam, deleteExam, addExamSubject, updateExamSubject, deleteExamSubject, saveExamResults, addSubject, deleteSubject,
       updateScheduleSlot, clearScheduleSlot, addAcademicYear, updateAcademicYear, addTeachingAssignment, deleteTeachingAssignment,
       assignStudentToSection,
       promoteStudents,
+      promoteStaff,
       
       addMaintenanceRequest, updateMaintenanceRequest, undoMaintenanceRequest, deleteMaintenanceRequest,
       addRoom, updateRoom, deleteRoom,
@@ -1846,7 +2194,8 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       unreadNotificationsCount,
       markAllNotificationsAsRead,
       deleteNotification,
-      addNotification
+      addNotification,
+      currentAcademicYearId
     }}>
       {children}
     </GlobalStoreContext.Provider>

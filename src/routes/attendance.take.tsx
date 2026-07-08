@@ -21,7 +21,7 @@ const LABELS: Record<Status, string> = {
 };
 
 function TakeAttendance() {
-  const { activeStageStudents, activeStageSections, activeStageSubjects } = useGlobalStore();
+  const { activeStageStudents, activeStageSections, activeStageSubjects, addAttendanceSession, currentAcademicYearId, allStudentEnrollments, allScheduleSlots, allAttendanceSessions, allAttendanceRecords } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   
   const [activeTab, setActiveTab] = useState<"take" | "weekly">("take");
@@ -35,6 +35,23 @@ function TakeAttendance() {
   const [searchQ, setSearchQ] = useState("");
 
   const selectedSection = activeStageSections.find(s => s.id === sectionId);
+  
+  // Auto-link to Schedule
+  const dayOfWeekStr = useMemo(() => {
+    const d = new Date(date);
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    return days[d.getDay()];
+  }, [date]);
+
+  // Find subject from schedule automatically
+  useMemo(() => {
+    if (!sectionId || !period || !dayOfWeekStr) return;
+    const slot = allScheduleSlots.find(s => s.sectionId === sectionId && s.day === dayOfWeekStr && s.period === Number(period));
+    if (slot && slot.subjectId !== subjectId) {
+      setSubjectId(slot.subjectId);
+    }
+  }, [sectionId, period, dayOfWeekStr, allScheduleSlots]);
+
   const baseList = useMemo(() => {
     if (!selectedSection) return [];
     return activeStageStudents.filter((s) => s.grade === selectedSection.grade);
@@ -67,9 +84,39 @@ function TakeAttendance() {
 
   const handleSave = () => {
     if (!period) return toast.error("الرجاء إدخال رقم الحصة يدوياً");
+    if (!currentAcademicYearId) return toast.error("لا يوجد عام دراسي نشط");
+
     const pending = baseList.length - Object.keys(marks).length;
     if (pending > 0) return toast.warning(`تنبيه: لم يتم رصد ${pending} طالب`);
-    toast.success("تم حفظ الحضور بنجاح وربطه بالجدول المدرسي");
+
+    const sessionData = {
+      academicYearId: currentAcademicYearId,
+      sectionId: sectionId,
+      subjectId: subjectId,
+      teacherId: "current_user", // Placeholder for actual logged in teacher
+      periodNumber: Number(period),
+      date: date,
+      status: "closed" as const,
+      createdBy: "current_user",
+      createdAt: new Date().toISOString()
+    };
+
+    const recordsData = Object.entries(marks).map(([studentId, status]) => {
+      const enrollment = allStudentEnrollments.find(e => e.studentId === studentId && e.academicYearId === currentAcademicYearId);
+      return {
+        studentEnrollmentId: enrollment?.id || "",
+        status: status.toUpperCase() as any, // PRESENT, ABSENT, etc.
+        markedBy: "current_user",
+        markedAt: new Date().toISOString()
+      };
+    }).filter(r => r.studentEnrollmentId); // Ignore students without an enrollment
+
+    if (recordsData.length > 0) {
+      addAttendanceSession(sessionData, recordsData);
+      toast.success("تم حفظ الحضور بنجاح واعتماد الجلسة");
+    } else {
+      toast.error("حدث خطأ: الطلاب غير مسجلين في العام الحالي");
+    }
   };
 
   if (activeStageSections.length === 0) {
@@ -192,30 +239,28 @@ function TakeAttendance() {
               <table className="w-full text-sm text-right border border-border rounded-lg">
                  <thead className="bg-muted border-b border-border">
                    <tr>
-                     <th className="px-4 py-3 font-bold">الطالب</th>
-                     <th className="px-4 py-3 font-bold text-center">الأحد</th>
-                     <th className="px-4 py-3 font-bold text-center">الاثنين</th>
-                     <th className="px-4 py-3 font-bold text-center">الثلاثاء</th>
-                     <th className="px-4 py-3 font-bold text-center">الأربعاء</th>
-                     <th className="px-4 py-3 font-bold text-center">الخميس</th>
-                     <th className="px-4 py-3 font-bold text-center text-danger border-r border-border">إجمالي الغياب المجمع</th>
+                     <th className="px-4 py-3 font-bold text-center">الطالب</th>
+                     <th className="px-4 py-3 font-bold text-center">إجمالي حصص الغياب</th>
+                     <th className="px-4 py-3 font-bold text-center text-danger border-r border-border">حالة الإنذارات</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-border">
-                   {baseList.slice(0, 8).map((s, i) => {
-                     const total = i === 1 ? 4 : i === 3 ? 12 : 0; // Mock totals
+                   {baseList.map((s) => {
+                     const enrollmentId = allStudentEnrollments.find(e => e.studentId === s.id && e.academicYearId === currentAcademicYearId)?.id;
+                     let totalAbsences = 0;
+                     if (enrollmentId) {
+                       totalAbsences = allAttendanceRecords.filter(r => r.studentEnrollmentId === enrollmentId && r.status === "ABSENT").length;
+                     }
                      return (
                        <tr key={s.id} className="hover:bg-muted/30">
                          <td className="px-4 py-3 font-bold">{s.name}</td>
-                         <td className="px-4 py-3 text-center"><Badge tone="success">ح</Badge></td>
-                         <td className="px-4 py-3 text-center">{i === 1 ? <Badge tone="danger">غ</Badge> : <Badge tone="success">ح</Badge>}</td>
-                         <td className="px-4 py-3 text-center"><Badge tone="success">ح</Badge></td>
-                         <td className="px-4 py-3 text-center">{i === 3 ? <Badge tone="danger">غ</Badge> : <Badge tone="success">ح</Badge>}</td>
-                         <td className="px-4 py-3 text-center"><Badge tone="success">ح</Badge></td>
+                         <td className="px-4 py-3 text-center">
+                            <span className={totalAbsences >= 5 ? 'text-danger font-bold' : totalAbsences > 0 ? 'text-warning font-bold' : 'text-success'}>
+                              {totalAbsences} <span className="text-xs font-normal">حصص</span>
+                            </span>
+                         </td>
                          <td className="px-4 py-3 text-center border-r border-border font-black text-lg">
-                           <span className={total >= 10 ? 'text-danger' : total > 0 ? 'text-warning' : 'text-success'}>
-                             {total} <span className="text-xs font-normal">أيام</span>
-                           </span>
+                           {totalAbsences >= 5 ? <Badge tone="danger">إنذار غياب</Badge> : <Badge tone="success">سليم</Badge>}
                          </td>
                        </tr>
                      )
@@ -226,8 +271,10 @@ function TakeAttendance() {
             <div className="mt-4 p-3 bg-danger/10 border border-danger/20 rounded-lg flex items-start gap-3">
                <AlertTriangle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
                <div>
-                 <h4 className="font-bold text-danger text-sm">تنبيهات الإنذارات المبكرة</h4>
-                 <p className="text-xs text-danger/80 mt-1">يوجد (1) طالب تجاوز الحد المسموح للغياب المجمع (10 أيام). يرجى إصدار إشعار فصل أو إنذار نهائي.</p>
+                 <h4 className="font-bold text-danger text-sm">تنبيهات الإنذارات التلقائية</h4>
+                 <p className="text-xs text-danger/80 mt-1">
+                    تم ربط الحضور تلقائياً بنظام المخالفات. أي طالب يتجاوز (5) حصص غياب يصدر له إنذار مباشر في ملفه التأديبي.
+                 </p>
                </div>
             </div>
           </PageCard>
