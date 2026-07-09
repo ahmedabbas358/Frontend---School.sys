@@ -13,7 +13,7 @@ export const Route = createFileRoute("/finance/dashboard")({
 
 function FinanceDashboard() {
   const { stage, getStageLabel } = useStage();
-  const { currency, activeStageInvoices, allExpenses, allPayments, activeStageStaff, currentAcademicYearId, academicYears } = useGlobalStore();
+  const { currency, activeStageInvoices, allExpenses, allPayments, activeStageStaff, currentAcademicYearId, allAcademicYears } = useGlobalStore();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(currentAcademicYearId);
 
@@ -103,7 +103,7 @@ function FinanceDashboard() {
     const map = new Map<string, { studentId: string, studentName: string, amount: number }>();
     filteredInvoices.forEach(inv => {
       const due = (inv.netAmount ?? inv.amount) - inv.paid;
-      if (due > 0 && (inv.status === 'issued' || inv.status === 'partial' || inv.status === 'overdue')) {
+      if (due > 0 && (inv.status === 'issued' || inv.status === 'partial')) {
         if (!map.has(inv.studentId)) {
           map.set(inv.studentId, { studentId: inv.studentId, studentName: inv.studentName, amount: 0 });
         }
@@ -132,7 +132,7 @@ function FinanceDashboard() {
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
         
         <FilterBar>
-          <AcademicYearSelector value={selectedYear} onChange={setSelectedYear} years={academicYears} />
+          <AcademicYearSelector value={selectedYear ?? ''} onChange={setSelectedYear} years={allAcademicYears} />
         </FilterBar>
 
         {/* Quick Actions */}
@@ -231,7 +231,7 @@ function FinanceDashboard() {
                         </div>
                         <div>
                           <div className="text-sm font-bold">{s.studentName}</div>
-                          <Link to={`/students/${s.studentId}`} className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5">
+                          <Link to={`/finance/invoices`} className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5">
                             الملف المالي <ArrowRight className="w-3 h-3" />
                           </Link>
                         </div>

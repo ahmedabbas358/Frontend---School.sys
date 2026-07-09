@@ -6,14 +6,14 @@ import { Badge } from "./app-shell";
 export function FinancialCard({ 
   title, 
   value, 
-  currency, 
+  currency = '', 
   trend, 
   icon: Icon, 
   colorClass 
 }: { 
   title: string; 
   value: number; 
-  currency: string; 
+  currency?: string; 
   trend?: { value: number; isPositive: boolean; label: string };
   icon: React.ComponentType<{ className?: string }>;
   colorClass: string;
@@ -28,7 +28,7 @@ export function FinancialCard({
         <h3 className="text-sm font-bold text-muted-foreground">{title}</h3>
       </div>
       <p className={`text-3xl font-black tabular-nums relative z-10 ${colorClass.split(" ")[0]}`}>
-        {value.toLocaleString()} <span className="text-lg font-bold">{currency}</span>
+        {value.toLocaleString()} {currency && <span className="text-lg font-bold">{currency}</span>}
       </p>
       {trend && (
         <div className="mt-4 flex items-center gap-2 text-sm font-bold relative z-10">

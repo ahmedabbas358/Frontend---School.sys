@@ -15,7 +15,7 @@ export const Route = createFileRoute("/hr/leaves")({
 const leaveTypeLabels: Record<StaffLeave["type"], string> = {
   annual: "سنوية",
   sick: "مرضية",
-  unpaid: "بدون راتب",
+  issued: "بدون راتب",
   emergency: "طارئة",
 };
 

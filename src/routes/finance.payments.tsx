@@ -194,13 +194,7 @@ function FinancePayments() {
             currency="" 
             icon={CreditCard} 
             colorClass="text-foreground bg-muted" 
-          >
-            <div className="flex items-center gap-3 text-xs font-bold mt-2">
-              <span className="flex items-center gap-1 text-success"><span className="h-2 w-2 rounded-full bg-success" /> {summaryStats.cashCount} نقدي</span>
-              <span className="flex items-center gap-1 text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> {summaryStats.transferCount} تحويل</span>
-              <span className="flex items-center gap-1 text-warning"><span className="h-2 w-2 rounded-full bg-warning" /> {summaryStats.cardCount} بطاقة/شيك</span>
-            </div>
-          </FinancialCard>
+          />
         </div>
 
         {/* Payment Modal */}

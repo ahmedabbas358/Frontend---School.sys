@@ -97,7 +97,7 @@ function FinanceReports() {
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
         <FilterBar>
           <div className="flex items-center gap-4">
-            <AcademicYearSelector value={selectedYear} onChange={setSelectedYear} years={allAcademicYears} />
+            <AcademicYearSelector value={selectedYear ?? ''} onChange={setSelectedYear} years={allAcademicYears} />
             <select 
               className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold"
               value={reportType}

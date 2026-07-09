@@ -192,14 +192,14 @@ function HrPayroll() {
           <SmartAlert 
             type="info"
             title="التكامل المالي الآلي"
-            message="اعتماد مسير الرواتب سيقوم تلقائياً بتوليد سندات صرف لكل موظف في قسم المصروفات المالية وتحديث الرصيد المالي للمدرسة."
+            description="اعتماد مسير الرواتب سيقوم تلقائياً بتوليد سندات صرف لكل موظف في قسم المصروفات المالية وتحديث الرصيد المالي للمدرسة."
           />
         )}
         {isApproved && (
           <SmartAlert 
-            type="success"
+            type="info"
             title="تم اعتماد مسير الرواتب"
-            message="تم اعتماد هذا المسير وترحيل المصروفات آلياً إلى المركز المالي بنجاح. لا يمكن التعديل عليه."
+            description="تم اعتماد هذا المسير وترحيل المصروفات آلياً إلى المركز المالي بنجاح. لا يمكن التعديل عليه."
           />
         )}
 
@@ -210,7 +210,7 @@ function HrPayroll() {
           </div>
           <div className="flex items-center gap-3">
             <input type="month" value={payrollMonth} onChange={event => setPayrollMonth(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold" />
-            <FinancialWorkflowBadge status={isApproved ? "approved" : "pending"} />
+            <FinancialWorkflowBadge status={isApproved ? "approved" : "draft"} />
           </div>
         </FilterBar>
 

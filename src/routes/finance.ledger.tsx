@@ -66,7 +66,7 @@ function FinanceLedger() {
       date: manualDate,
       description: manualDescription,
       referenceId: manualReference || undefined,
-      academicYearId: currentAcademicYearId,
+      academicYearId: currentAcademicYearId ?? '',
       moduleId: 'manual'
     }, manualLines.map(l => ({
       accountId: l.accountId,
@@ -538,7 +538,7 @@ function FinanceLedger() {
                 {(allAuditLogs || [])
                   .filter(log => {
                     const matchSearch = log.action.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                        log.details.toLowerCase().includes(searchTerm.toLowerCase());
+                                        (log.details ?? '').toLowerCase().includes(searchTerm.toLowerCase());
                     return matchSearch;
                   })
                   .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -552,9 +552,9 @@ function FinanceLedger() {
                         <h4 className="font-bold">{log.action}</h4>
                         <span className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleString('ar-EG')}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{log.details}</p>
+                      <p className="text-sm text-muted-foreground mb-2">{log.details ?? '-'}</p>
                       <div className="flex items-center gap-3 text-xs">
-                        <span className="bg-primary/10 text-primary px-2 py-1 rounded font-bold">بواسطة: {log.performedBy}</span>
+                        <span className="bg-primary/10 text-primary px-2 py-1 rounded font-bold">بواسطة: {log.userName ?? log.userId}</span>
                         <span className="bg-muted px-2 py-1 rounded">الكيان: {log.entityType} ({log.entityId})</span>
                       </div>
                     </div>

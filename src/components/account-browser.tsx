@@ -332,7 +332,7 @@ export function AccountBrowserModal({ isOpen, onClose, onSelect }: AccountBrowse
                               <div>
                                 <p className="font-black text-foreground">{guardian.name}</p>
                                 <p className="text-xs font-bold text-muted-foreground mt-1">
-                                  هاتف: <span className="font-mono" dir="ltr">{guardian.phone}</span> | المهنة: {guardian.profession || 'غير محدد'}
+                                  هاتف: <span className="font-mono" dir="ltr">{guardian.phone}</span>
                                 </p>
                               </div>
                               {selectedEntity?.id === guardian.id && <CheckCircle2 className="w-6 h-6 text-primary" />}

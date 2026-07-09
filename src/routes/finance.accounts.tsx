@@ -110,7 +110,7 @@ function FinanceAccounts() {
         ...l,
         date: entry?.date || '',
         description: l.description || entry?.description || '',
-        entryRef: entry?.reference || '',
+        entryRef: entry?.referenceId || '',
       };
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

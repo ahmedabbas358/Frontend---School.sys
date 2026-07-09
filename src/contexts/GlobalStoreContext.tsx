@@ -2400,6 +2400,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       markAllNotificationsAsRead,
       deleteNotification,
       addNotification,
+      addAuditLog,
       currentAcademicYearId
     }}>
       {children}
