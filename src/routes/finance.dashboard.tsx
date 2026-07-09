@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
-import { useMemo } from "react";
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Users, ArrowUpRight, ArrowDownRight, Printer } from "lucide-react";
+import { useMemo, useState } from "react";
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Users, ArrowUpRight, ArrowDownRight, Printer, AlertTriangle, FileText, Plus, ArrowRight, User } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
-import { useState } from "react";
+import { FinancialCard, FinancialTimeline, MiniBarChart, ProgressRing, FinancialSummaryCard, FilterBar, AcademicYearSelector, EmptyState } from "@/components/financial-components";
 
 export const Route = createFileRoute("/finance/dashboard")({
   component: FinanceDashboard,
@@ -13,135 +13,250 @@ export const Route = createFileRoute("/finance/dashboard")({
 
 function FinanceDashboard() {
   const { stage, getStageLabel } = useStage();
-  const { currency, activeStageInvoices, allExpenses, allPayments, activeStageStaff } = useGlobalStore();
+  const { currency, activeStageInvoices, allExpenses, allPayments, activeStageStaff, currentAcademicYearId, academicYears } = useGlobalStore();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(currentAcademicYearId);
+
+  // Filter data by selected year (if 'all', use all data, else filter)
+  const filteredInvoices = useMemo(() => {
+    return activeStageInvoices; // Invoices are tied to stage but usually we would filter by year if they had one. For now, use activeStageInvoices.
+  }, [activeStageInvoices, selectedYear]);
 
   // Calculate Revenue Metrics
   const revenueStats = useMemo(() => {
-    const totalExpected = activeStageInvoices.reduce((sum, inv) => sum + (inv.netAmount ?? inv.amount), 0);
-    const totalPaid = activeStageInvoices.reduce((sum, inv) => sum + inv.paid, 0);
+    const totalExpected = filteredInvoices.reduce((sum, inv) => sum + (inv.netAmount ?? inv.amount), 0);
+    const totalPaid = filteredInvoices.reduce((sum, inv) => sum + inv.paid, 0);
     const totalDue = totalExpected - totalPaid;
-    return { totalExpected, totalPaid, totalDue };
-  }, [activeStageInvoices]);
+    const totalDiscounts = filteredInvoices.reduce((sum, inv) => sum + (inv.discountAmount || 0), 0);
+    return { totalExpected, totalPaid, totalDue, totalDiscounts };
+  }, [filteredInvoices]);
 
   // Calculate Expense Metrics
   const expenseStats = useMemo(() => {
     const totalExpenses = allExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    // Rough estimate of monthly payroll based on basic salary
-    const estimatedPayroll = activeStageStaff.reduce((sum, staff) => sum + (staff.basicSalary || 0), 0);
-    return { totalExpenses, estimatedPayroll };
-  }, [allExpenses, activeStageStaff]);
+    return { totalExpenses };
+  }, [allExpenses, selectedYear]);
+
+  // Payroll Metrics
+  const payrollStats = useMemo(() => {
+    const estimatedPayroll = activeStageStaff.filter(s => !s.isDeleted && s.status !== "terminated").reduce((sum, staff) => sum + (staff.basicSalary || 0), 0);
+    return { estimatedPayroll, paidPayroll: 0 }; // In a real app we'd track paid payroll
+  }, [activeStageStaff]);
 
   const netBalance = revenueStats.totalPaid - expenseStats.totalExpenses;
 
-  const recentPayments = useMemo(() => {
-    return [...allPayments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-  }, [allPayments]);
+  const recentTransactions = useMemo(() => {
+    const payments = allPayments.map(p => {
+      const invoice = activeStageInvoices.find(i => i.id === p.invoiceId);
+      return {
+        id: `p-${p.id}`,
+        date: p.date,
+        title: `تحصيل رسوم - ${invoice?.studentName || "طالب"}`,
+        subtitle: p.method,
+        amount: p.amount,
+        type: "income" as const,
+        currency,
+        method: p.method,
+        link: "/finance/invoices"
+      };
+    });
+    const expenses = allExpenses.map(e => ({
+      id: `e-${e.id}`,
+      date: e.date,
+      title: e.title,
+      subtitle: e.beneficiary,
+      amount: e.amount,
+      type: "expense" as const,
+      currency,
+      method: e.method,
+      link: "/finance/expenses"
+    }));
+    return [...payments, ...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10);
+  }, [allPayments, allExpenses, activeStageInvoices, currency]);
 
-  const recentExpenses = useMemo(() => {
-    return [...allExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-  }, [allExpenses]);
+  const chartData = useMemo(() => {
+    // Generate last 6 months revenue vs expenses
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      return { month: d.getMonth(), year: d.getFullYear(), label: d.toLocaleString('ar-EG', { month: 'short' }) };
+    });
+
+    return months.map(m => {
+      const income = allPayments.filter(p => {
+        const d = new Date(p.date);
+        return d.getMonth() === m.month && d.getFullYear() === m.year;
+      }).reduce((sum, p) => sum + p.amount, 0);
+
+      const expense = allExpenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === m.month && d.getFullYear() === m.year;
+      }).reduce((sum, e) => sum + e.amount, 0);
+
+      // MiniBarChart expects a single value, let's show net balance per month
+      // Alternatively, we can just show income.
+      return income > 0 ? income : 0; 
+    });
+  }, [allPayments, allExpenses]);
+
+  const studentsWithArrears = useMemo(() => {
+    const map = new Map<string, { studentId: string, studentName: string, amount: number }>();
+    filteredInvoices.forEach(inv => {
+      const due = (inv.netAmount ?? inv.amount) - inv.paid;
+      if (due > 0 && (inv.status === 'issued' || inv.status === 'partial' || inv.status === 'overdue')) {
+        if (!map.has(inv.studentId)) {
+          map.set(inv.studentId, { studentId: inv.studentId, studentName: inv.studentName, amount: 0 });
+        }
+        map.get(inv.studentId)!.amount += due;
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.amount - a.amount).slice(0, 5);
+  }, [filteredInvoices]);
 
   return (
     <AppShell
       breadcrumb={[
         { label: "الرئيسية", to: "/" },
-        { label: "المالية والمحاسبة" },
-        { label: "لوحة البيانات المالية" },
+        { label: "المركز المالي" },
+        { label: "اللوحة المالية" },
       ]}
       actions={
         <button 
           onClick={() => setIsPrintOpen(true)}
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary/10 px-4 text-sm font-bold text-primary hover:bg-primary/20 transition-all border border-primary/20"
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 text-sm font-bold shadow-sm hover:bg-primary/90 transition-all"
         >
           <Printer className="h-4 w-4" /> طباعة الملخص
         </button>
       }
     >
-      <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="space-y-6 animate-in fade-in duration-500 pb-20">
         
-        {/* Top Highlight Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-6 text-primary-foreground shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -ml-10 -mt-10"></div>
-            <div className="flex items-center gap-3 mb-4 relative z-10">
-              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm"><Wallet className="h-6 w-6 text-white" /></div>
-              <h3 className="text-lg font-bold">الرصيد الصافي المتاح</h3>
-            </div>
-            <p className="text-4xl font-black tabular-nums relative z-10">{netBalance.toLocaleString()} <span className="text-xl font-bold">{currency}</span></p>
-            <p className="text-sm text-primary-foreground/80 mt-2 font-medium relative z-10">الفرق بين التحصيلات والمصروفات</p>
-          </div>
+        <FilterBar>
+          <AcademicYearSelector value={selectedYear} onChange={setSelectedYear} years={academicYears} />
+        </FilterBar>
 
-          <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-success/10 rounded-2xl"><TrendingUp className="h-6 w-6 text-success" /></div>
-              <h3 className="text-lg font-bold">إجمالي التحصيلات</h3>
-            </div>
-            <p className="text-3xl font-black text-success tabular-nums">{revenueStats.totalPaid.toLocaleString()} <span className="text-lg font-bold">{currency}</span></p>
-            <div className="mt-2 text-sm text-muted-foreground flex justify-between font-bold">
-              <span>المتبقي للتحصيل:</span>
-              <span className="text-danger">{revenueStats.totalDue.toLocaleString()} {currency}</span>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-danger/10 rounded-2xl"><TrendingDown className="h-6 w-6 text-danger" /></div>
-              <h3 className="text-lg font-bold">إجمالي المصروفات</h3>
-            </div>
-            <p className="text-3xl font-black text-danger tabular-nums">{expenseStats.totalExpenses.toLocaleString()} <span className="text-lg font-bold">{currency}</span></p>
-            <div className="mt-2 text-sm text-muted-foreground flex justify-between font-bold">
-              <span>الرواتب التقديرية (شهرياً):</span>
-              <span>{expenseStats.estimatedPayroll.toLocaleString()} {currency}</span>
-            </div>
-          </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link to="/finance/invoices" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all group">
+            <div className="p-2 bg-primary/10 text-primary rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
+            <div className="font-bold text-sm">إصدار فاتورة</div>
+          </Link>
+          <Link to="/finance/payments" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-success/50 hover:bg-success/5 transition-all group">
+            <div className="p-2 bg-success/10 text-success rounded-xl group-hover:scale-110 transition-transform"><ArrowDownRight className="w-5 h-5" /></div>
+            <div className="font-bold text-sm">سند قبض</div>
+          </Link>
+          <Link to="/finance/expenses" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-danger/50 hover:bg-danger/5 transition-all group">
+            <div className="p-2 bg-danger/10 text-danger rounded-xl group-hover:scale-110 transition-transform"><ArrowUpRight className="w-5 h-5" /></div>
+            <div className="font-bold text-sm">تسجيل مصروف</div>
+          </Link>
+          <Link to="/hr/payroll" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-warning/50 hover:bg-warning/5 transition-all group">
+            <div className="p-2 bg-warning/10 text-warning rounded-xl group-hover:scale-110 transition-transform"><Users className="w-5 h-5" /></div>
+            <div className="font-bold text-sm">مسير الرواتب</div>
+          </Link>
         </div>
 
+        {/* Core KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FinancialCard 
+            title="الرصيد الصافي المتاح" 
+            value={netBalance} 
+            currency={currency} 
+            icon={Wallet} 
+            colorClass="text-primary bg-primary" 
+          />
+          <FinancialCard 
+            title="إجمالي التحصيلات" 
+            value={revenueStats.totalPaid} 
+            currency={currency} 
+            icon={TrendingUp} 
+            colorClass="text-success bg-success" 
+          />
+          <FinancialCard 
+            title="المصروفات التشغيلية" 
+            value={expenseStats.totalExpenses} 
+            currency={currency} 
+            icon={TrendingDown} 
+            colorClass="text-danger bg-danger" 
+          />
+          <FinancialCard 
+            title="إجمالي المتأخرات" 
+            value={revenueStats.totalDue} 
+            currency={currency} 
+            icon={AlertTriangle} 
+            colorClass="text-warning bg-warning" 
+          />
+        </div>
+
+        {/* Detailed Summaries */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <PageCard title="أحدث المقبوضات (تحصيلات الطلاب)">
-            {recentPayments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا توجد تحصيلات مسجلة</p>
-            ) : (
-              <div className="space-y-4">
-                {recentPayments.map(p => {
-                  const invoice = activeStageInvoices.find(i => i.id === p.invoiceId);
-                  return (
-                    <div key={p.id} className="flex justify-between items-center p-4 border border-border/50 rounded-2xl bg-background hover:border-success/30 transition-colors">
+          <FinancialSummaryCard 
+            title="تحصيل الرسوم الدراسية"
+            total={revenueStats.totalExpected}
+            paid={revenueStats.totalPaid}
+            currency={currency}
+            icon={Wallet}
+          />
+          <FinancialSummaryCard 
+            title="صرف رواتب الموظفين (تقديري)"
+            total={payrollStats.estimatedPayroll}
+            paid={payrollStats.paidPayroll}
+            currency={currency}
+            icon={Users}
+          />
+        </div>
+
+        {/* Advanced Views */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Activity */}
+          <div className="lg:col-span-2">
+            <PageCard title="أحدث الحركات المالية">
+              <FinancialTimeline transactions={recentTransactions} />
+            </PageCard>
+          </div>
+
+          {/* Arrears List */}
+          <div>
+            <PageCard title="أعلى المتأخرات">
+              {studentsWithArrears.length === 0 ? (
+                <div className="py-8 text-center text-sm font-bold text-muted-foreground bg-muted/20 rounded-xl">
+                  لا توجد متأخرات حالياً.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {studentsWithArrears.map(s => (
+                    <div key={s.studentId} className="flex items-center justify-between p-3 border border-border/50 rounded-xl bg-card hover:bg-accent/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-success/10 text-success"><ArrowDownRight className="h-5 w-5" /></div>
+                        <div className="p-2 bg-muted rounded-full">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                        </div>
                         <div>
-                          <p className="font-bold text-sm">{invoice?.studentName || 'غير معروف'}</p>
-                          <p className="text-xs text-muted-foreground">{p.date} • {p.method}</p>
+                          <div className="text-sm font-bold">{s.studentName}</div>
+                          <Link to={`/students/${s.studentId}`} className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5">
+                            الملف المالي <ArrowRight className="w-3 h-3" />
+                          </Link>
                         </div>
                       </div>
-                      <span className="font-black text-success">+{p.amount.toLocaleString()} {currency}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </PageCard>
-
-          <PageCard title="أحدث المصروفات">
-            {recentExpenses.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا توجد مصروفات مسجلة</p>
-            ) : (
-              <div className="space-y-4">
-                {recentExpenses.map(e => (
-                  <div key={e.id} className="flex justify-between items-center p-4 border border-border/50 rounded-2xl bg-background hover:border-danger/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-danger/10 text-danger"><ArrowUpRight className="h-5 w-5" /></div>
-                      <div>
-                        <p className="font-bold text-sm">{e.title}</p>
-                        <p className="text-xs text-muted-foreground">{e.date} • {e.beneficiary}</p>
+                      <div className="text-danger font-black text-sm">
+                        {s.amount.toLocaleString()} {currency}
                       </div>
                     </div>
-                    <span className="font-black text-danger">-{e.amount.toLocaleString()} {currency}</span>
-                  </div>
-                ))}
+                  ))}
+                  <Link to="/finance/invoices" className="block w-full py-2 mt-2 text-center text-sm font-bold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                    عرض جميع المتأخرات
+                  </Link>
+                </div>
+              )}
+            </PageCard>
+
+            <PageCard title="الإيرادات (6 أشهر)" className="mt-6">
+              <div className="h-48 flex flex-col justify-end mt-4">
+                <MiniBarChart data={chartData} height={150} />
+                <div className="flex justify-between mt-4 text-xs font-bold text-muted-foreground border-t border-border/50 pt-2">
+                  <span>الشهر -5</span><span>-4</span><span>-3</span><span>-2</span><span>الشهر الماضي</span><span>الشهر الحالي</span>
+                </div>
               </div>
-            )}
-          </PageCard>
+            </PageCard>
+          </div>
         </div>
       </div>
 
@@ -175,39 +290,21 @@ function FinanceDashboard() {
 
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <h3 className="text-lg font-bold mb-4 border-b pb-2">أحدث التحصيلات</h3>
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-gray-50"><th className="text-right py-2 px-2">البيان</th><th className="text-left py-2 px-2">المبلغ</th></tr>
-                      </thead>
+                    <h3 className="text-lg font-bold mb-4 border-b pb-2">تفاصيل الرسوم</h3>
+                    <table className="w-full text-sm mb-6">
                       <tbody>
-                        {recentPayments.map(p => {
-                          const invoice = activeStageInvoices.find(i => i.id === p.invoiceId);
-                          return (
-                            <tr key={p.id} className="border-b">
-                              <td className="py-2 px-2">{invoice?.studentName || 'غير معروف'} - {p.date}</td>
-                              <td className="text-left font-bold text-green-600 py-2 px-2">+{p.amount.toLocaleString()}</td>
-                            </tr>
-                          );
-                        })}
+                        <tr className="border-b"><td className="py-2 px-2">إجمالي المتوقع</td><td className="text-left font-bold">{revenueStats.totalExpected.toLocaleString()}</td></tr>
+                        <tr className="border-b"><td className="py-2 px-2">المحصل</td><td className="text-left font-bold text-green-600">{revenueStats.totalPaid.toLocaleString()}</td></tr>
+                        <tr className="border-b"><td className="py-2 px-2">المتأخرات</td><td className="text-left font-bold text-red-600">{revenueStats.totalDue.toLocaleString()}</td></tr>
+                        <tr className="border-b"><td className="py-2 px-2">إجمالي الخصومات</td><td className="text-left font-bold text-orange-600">{revenueStats.totalDiscounts.toLocaleString()}</td></tr>
                       </tbody>
                     </table>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold mb-4 border-b pb-2">أحدث المصروفات</h3>
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-gray-50"><th className="text-right py-2 px-2">البيان</th><th className="text-left py-2 px-2">المبلغ</th></tr>
-                      </thead>
-                      <tbody>
-                        {recentExpenses.map(e => (
-                          <tr key={e.id} className="border-b">
-                            <td className="py-2 px-2">{e.title} - {e.date}</td>
-                            <td className="text-left font-bold text-red-600 py-2 px-2">-{e.amount.toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <h3 className="text-lg font-bold mb-4 border-b pb-2">الرواتب المتوقعة (أساسي)</h3>
+                    <p className="text-2xl font-black text-blue-600 text-center mt-4">
+                      {payrollStats.estimatedPayroll.toLocaleString()} {currency}
+                    </p>
                   </div>
                 </div>
               </div>

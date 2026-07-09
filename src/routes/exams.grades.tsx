@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
-import { useGlobalStore, ExamGrade } from "@/contexts/GlobalStoreContext";
+import { useGlobalStore, ExamResult, ExamSubject, Exam } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
-import { getGradesForStage, isItemAllowedForGrade } from "@/lib/school-structure";
 import { Search, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,135 +16,119 @@ function ExamGradesPage() {
   const { 
     activeStageSections, 
     activeStageSubjects, 
-    activeStageScheduledExams,
-    activeStageExamCategories,
+    activeStageExams,
+    activeStageExamSubjects,
     activeStageStudents,
-    activeStageExamGrades,
-    saveExamGrades
+    allExamResults,
+    allStudentEnrollments,
+    currentAcademicYearId,
+    saveExamResults
   } = useGlobalStore();
 
-  const uniqueGrades = useMemo(() => getGradesForStage(stage), [stage]);
-
-  const [filterGrade, setFilterGrade] = useState("");
-  const [filterSection, setFilterSection] = useState("");
-  const [filterSubject, setFilterSubject] = useState("");
-  const [filterExam, setFilterExam] = useState("");
+  const [filterExamId, setFilterExamId] = useState("");
+  const [filterSubjectId, setFilterSubjectId] = useState("");
+  const [filterSectionId, setFilterSectionId] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
 
-  const [studentGrades, setStudentGrades] = useState<Record<string, Partial<ExamGrade>>>({});
+  const [studentResults, setStudentResults] = useState<Record<string, Partial<ExamResult>>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  // Filter derivations
-  const sectionsForGrade = useMemo(() => (
-    filterGrade ? activeStageSections.filter(section => section.stage === stage && section.grade === filterGrade) : []
-  ), [activeStageSections, stage, filterGrade]);
-  const selectedSection = useMemo(() => sectionsForGrade.find(section => section.id === filterSection), [sectionsForGrade, filterSection]);
+  // Derivations
+  const selectedExam = useMemo(() => activeStageExams.find(e => e.id === filterExamId), [activeStageExams, filterExamId]);
   
-  const subjectsForSection = useMemo(() => {
+  const applicableExamSubjects = useMemo(() => {
+    if (!selectedExam) return [];
+    return activeStageExamSubjects.filter(es => es.examId === selectedExam.id && es.stage === stage);
+  }, [activeStageExamSubjects, selectedExam, stage]);
+
+  const selectedExamSubject = useMemo(() => applicableExamSubjects.find(es => es.id === filterSubjectId), [applicableExamSubjects, filterSubjectId]);
+
+  const applicableSections = useMemo(() => {
+    if (!selectedExamSubject) return [];
+    return activeStageSections.filter(s => s.stage === stage && s.grade === selectedExamSubject.grade);
+  }, [activeStageSections, stage, selectedExamSubject]);
+
+  const selectedSection = useMemo(() => applicableSections.find(s => s.id === filterSectionId), [applicableSections, filterSectionId]);
+
+  const studentsInSection = useMemo(() => {
     if (!selectedSection) return [];
-    return activeStageSubjects.filter(s => isItemAllowedForGrade(s, stage, selectedSection.grade));
-  }, [activeStageSubjects, selectedSection, stage]);
-
-  const examsForSubject = useMemo(() => {
-    if (!filterSubject || !filterSection || !filterGrade) return [];
-    return activeStageScheduledExams.filter(e => (
-      e.stage === stage &&
-      e.grade === filterGrade &&
-      e.sectionId === filterSection &&
-      e.subjectId === filterSubject
-    ));
-  }, [activeStageScheduledExams, filterSubject, filterSection, filterGrade, stage]);
-
-  const selectedExam = useMemo(() => examsForSubject.find(e => e.id === filterExam), [examsForSubject, filterExam]);
-  const studentsInSection = useMemo(() => activeStageStudents.filter(s => (
-    s.stage === stage &&
-    s.grade === filterGrade &&
-    s.sectionId === filterSection
-  )), [activeStageStudents, stage, filterGrade, filterSection]);
+    // get enrollments
+    const enrollments = allStudentEnrollments.filter(e => e.academicYearId === currentAcademicYearId && e.sectionId === selectedSection.id);
+    return enrollments.map(enr => {
+      const student = activeStageStudents.find(s => s.id === enr.studentId);
+      return student ? { student, enrollment: enr } : null;
+    }).filter(Boolean) as {student: any, enrollment: any}[];
+  }, [selectedSection, allStudentEnrollments, currentAcademicYearId, activeStageStudents]);
 
   const visibleStudents = useMemo(() => {
     const query = studentSearch.trim();
     if (!query) return studentsInSection;
-    return studentsInSection.filter(student => (
-      student.name.includes(query) ||
-      student.nationalId.includes(query)
+    return studentsInSection.filter(s => (
+      s.student.name.includes(query) ||
+      s.student.nationalId.includes(query)
     ));
   }, [studentSearch, studentsInSection]);
 
-  // Load existing grades when exam changes
+  // Load existing results when selected section/subject changes
   useEffect(() => {
-    if (selectedExam && studentsInSection.length > 0) {
-      const existingMap: Record<string, Partial<ExamGrade>> = {};
-      studentsInSection.forEach(student => {
-        const existing = activeStageExamGrades.find(g => g.examId === selectedExam.id && g.studentId === student.id);
-        existingMap[student.id] = {
+    if (selectedExamSubject && studentsInSection.length > 0) {
+      const existingMap: Record<string, Partial<ExamResult>> = {};
+      studentsInSection.forEach(item => {
+        const existing = allExamResults.find(r => r.examSubjectId === selectedExamSubject.id && r.studentEnrollmentId === item.enrollment.id);
+        existingMap[item.enrollment.id] = {
           mark: existing?.mark ?? 0,
-          descriptiveGrade: existing?.descriptiveGrade || "",
           notes: existing?.notes || "",
+          status: existing?.status || "draft"
         };
       });
-      setStudentGrades(existingMap);
+      setStudentResults(existingMap);
     } else {
-      setStudentGrades({});
+      setStudentResults({});
     }
-  }, [selectedExam, studentsInSection, activeStageExamGrades]);
+  }, [selectedExamSubject, studentsInSection, allExamResults]);
 
   // Reset downstream filters
-  useEffect(() => { setFilterSection(""); setFilterSubject(""); setFilterExam(""); setStudentSearch(""); }, [filterGrade]);
-  useEffect(() => { setFilterSubject(""); setFilterExam(""); }, [filterSection]);
-  useEffect(() => { setFilterExam(""); }, [filterSubject]);
+  useEffect(() => { setFilterSubjectId(""); setFilterSectionId(""); setStudentSearch(""); }, [filterExamId]);
+  useEffect(() => { setFilterSectionId(""); }, [filterSubjectId]);
 
-  const handleMarkChange = (studentId: string, mark: string) => {
-    let numMark = Number(mark);
-    if (selectedExam && numMark > selectedExam.totalMarks) {
-      numMark = selectedExam.totalMarks;
+  const handleMarkChange = (enrollmentId: string, markStr: string) => {
+    let numMark = Number(markStr);
+    if (selectedExamSubject && numMark > selectedExamSubject.maxScore) {
+      numMark = selectedExamSubject.maxScore;
     }
     if (numMark < 0) numMark = 0;
     
-    setStudentGrades(prev => ({
+    setStudentResults(prev => ({
       ...prev,
-      [studentId]: { ...prev[studentId], mark: numMark }
+      [enrollmentId]: { ...prev[enrollmentId], mark: numMark }
     }));
   };
 
-  const handleDescriptiveChange = (studentId: string, value: string) => {
-    setStudentGrades(prev => ({
+  const handleNotesChange = (enrollmentId: string, value: string) => {
+    setStudentResults(prev => ({
       ...prev,
-      [studentId]: { ...prev[studentId], descriptiveGrade: value }
-    }));
-  };
-
-  const handleNotesChange = (studentId: string, value: string) => {
-    setStudentGrades(prev => ({
-      ...prev,
-      [studentId]: { ...prev[studentId], notes: value }
+      [enrollmentId]: { ...prev[enrollmentId], notes: value }
     }));
   };
 
   const handleSave = () => {
-    if (!selectedExam) return;
+    if (!selectedExamSubject) return;
     setIsSaving(true);
     
-    const gradesToSave: Omit<ExamGrade, "id" | "enteredAt" | "lastModifiedAt">[] = studentsInSection.map(student => ({
-      examId: selectedExam.id,
-      studentId: student.id,
-      subjectId: selectedExam.subjectId,
-      classId: selectedExam.classId,
-      sectionId: selectedExam.sectionId,
-      grade: selectedExam.grade,
-      stage: selectedExam.stage,
-      mark: studentGrades[student.id]?.mark || 0,
-      descriptiveGrade: studentGrades[student.id]?.descriptiveGrade,
-      notes: studentGrades[student.id]?.notes,
-      enteredBy: "Current User",
+    const resultsToSave: Omit<ExamResult, "id">[] = studentsInSection.map(item => ({
+      examSubjectId: selectedExamSubject.id,
+      studentEnrollmentId: item.enrollment.id,
+      mark: studentResults[item.enrollment.id]?.mark || 0,
+      notes: studentResults[item.enrollment.id]?.notes,
+      status: "submitted",
     }));
 
     setTimeout(() => {
       try {
-        saveExamGrades(gradesToSave);
+        saveExamResults(resultsToSave);
         toast.success("تم حفظ الدرجات بنجاح");
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "تعذر حفظ الدرجات بسبب عدم تطابق البيانات");
+        toast.error(error instanceof Error ? error.message : "تعذر حفظ الدرجات");
       } finally {
         setIsSaving(false);
       }
@@ -154,68 +137,61 @@ function ExamGradesPage() {
 
   // Stats
   const stats = useMemo(() => {
-    if (!selectedExam || studentsInSection.length === 0) return null;
-    const marks = Object.values(studentGrades).map(g => g.mark || 0);
+    if (!selectedExamSubject || studentsInSection.length === 0) return null;
+    const marks = Object.values(studentResults).map(r => r.mark || 0);
     const sum = marks.reduce((a,b) => a+b, 0);
-    const avg = sum / marks.length;
-    const max = Math.max(...marks);
-    const min = Math.min(...marks);
-    const passed = marks.filter(m => m >= (selectedExam.totalMarks / 2)).length;
-    const entered = Object.values(studentGrades).filter(g => (g.mark || 0) > 0 || Boolean(g.descriptiveGrade)).length;
+    const avg = sum / (marks.length || 1);
+    const max = Math.max(...marks, 0);
+    const min = Math.min(...marks, selectedExamSubject.maxScore);
+    const passed = marks.filter(m => m >= selectedExamSubject.passScore).length;
+    const entered = Object.values(studentResults).filter(r => (r.mark || 0) > 0).length;
     
     return { avg, max, min, passed, total: marks.length, entered };
-  }, [studentGrades, selectedExam, studentsInSection]);
+  }, [studentResults, selectedExamSubject, studentsInSection]);
 
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الاختبارات", to: "/exams" }, { label: "إدخال الدرجات" }]}>
       <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
-        <PageCard title="إدخال الدرجات والنتائج" description="يرجى تحديد الاختبار من القوائم التالية للبدء في الرصد">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <PageCard title="إدخال الدرجات والنتائج" description="يرجى تحديد الاختبار والمادة والشعبة للبدء في الرصد">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="mb-2 block text-sm font-bold text-muted-foreground">المرحلة</label>
-              <select value={stage} onChange={e => { setStage(e.target.value as any); setFilterGrade(""); setFilterSection(""); setFilterSubject(""); setFilterExam(""); setStudentSearch(""); }} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary">
+              <select value={stage} onChange={e => { setStage(e.target.value as any); setFilterExamId(""); }} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary">
                 {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold text-muted-foreground">الفصل</label>
-              <select value={filterGrade} onChange={e => setFilterGrade(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary">
-                <option value="">-- اختر الفصل --</option>
-                {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">الاختبار</label>
+              <select value={filterExamId} onChange={e => setFilterExamId(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary">
+                <option value="">-- اختر الاختبار --</option>
+                {activeStageExams.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-muted-foreground">مادة الاختبار</label>
+              <select disabled={!filterExamId} value={filterSubjectId} onChange={e => setFilterSubjectId(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary disabled:opacity-50">
+                <option value="">-- اختر المادة --</option>
+                {applicableExamSubjects.map(es => {
+                  const subjectName = activeStageSubjects.find(s => s.id === es.subjectId)?.name || es.subjectId;
+                  return <option key={es.id} value={es.id}>{subjectName} - {es.grade}</option>;
+                })}
               </select>
             </div>
             <div>
               <label className="mb-2 block text-sm font-bold text-muted-foreground">الشعبة</label>
-              <select disabled={!filterGrade} value={filterSection} onChange={e => setFilterSection(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary disabled:opacity-50">
+              <select disabled={!filterSubjectId} value={filterSectionId} onChange={e => setFilterSectionId(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary disabled:opacity-50">
                 <option value="">-- اختر الشعبة --</option>
-                {sectionsForGrade.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-bold text-muted-foreground">المادة</label>
-              <select disabled={!filterSection} value={filterSubject} onChange={e => setFilterSubject(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary disabled:opacity-50">
-                <option value="">-- اختر المادة --</option>
-                {subjectsForSection.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-bold text-muted-foreground">الاختبار</label>
-              <select disabled={!filterSubject} value={filterExam} onChange={e => setFilterExam(e.target.value)} className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 font-bold shadow-sm focus:border-primary disabled:opacity-50">
-                <option value="">-- اختر الاختبار --</option>
-                {examsForSubject.map(e => {
-                  const cat = activeStageExamCategories.find(c => c.id === e.categoryId);
-                  return <option key={e.id} value={e.id}>{e.name} - {cat?.name || "يدوي"} - {e.date}</option>
-                })}
+                {applicableSections.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
               </select>
             </div>
           </div>
         </PageCard>
 
-        {selectedExam && (
+        {selectedExamSubject && selectedSection && (
           <div className="space-y-6 slide-in-from-bottom-4 animate-in">
             <PageCard
-              title={selectedExam.name}
-              description={`${filterGrade} / شعبة ${selectedSection?.name || "-"} / ${activeStageSubjects.find(s => s.id === selectedExam.subjectId)?.name || ""}`}
+              title={activeStageSubjects.find(s => s.id === selectedExamSubject.subjectId)?.name || "المادة"}
+              description={`${selectedExamSubject.grade} / شعبة ${selectedSection.name}`}
               actions={
                 <div className="flex items-center gap-3">
                   {stats && <span className="rounded-xl bg-accent px-3 py-2 text-sm font-bold text-muted-foreground">تم الرصد: {stats.entered}/{stats.total}</span>}
@@ -241,113 +217,87 @@ function ExamGradesPage() {
               </div>
             </PageCard>
 
-            {/* Quick Stats */}
-            {stats && selectedExam.gradingSystem !== 'descriptive' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {stats && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-card rounded-2xl border border-border/50 p-4 shadow-sm text-center">
                   <p className="text-sm text-muted-foreground font-bold mb-1">المتوسط</p>
-                  <p className="text-xl font-black text-primary">{stats.avg.toFixed(1)} / {selectedExam.totalMarks}</p>
+                  <p className="text-xl font-black text-primary">{stats.avg.toFixed(1)} / {selectedExamSubject.maxScore}</p>
                 </div>
                 <div className="bg-card rounded-2xl border border-border/50 p-4 shadow-sm text-center">
-                  <p className="text-sm text-muted-foreground font-bold mb-1">أعلى درجة</p>
+                  <p className="text-sm text-muted-foreground font-bold mb-1">الأعلى</p>
                   <p className="text-xl font-black text-success">{stats.max}</p>
                 </div>
                 <div className="bg-card rounded-2xl border border-border/50 p-4 shadow-sm text-center">
+                  <p className="text-sm text-muted-foreground font-bold mb-1">الأدنى</p>
+                  <p className="text-xl font-black text-danger">{stats.min === selectedExamSubject.maxScore ? 0 : stats.min}</p>
+                </div>
+                <div className="bg-card rounded-2xl border border-border/50 p-4 shadow-sm text-center">
                   <p className="text-sm text-muted-foreground font-bold mb-1">نسبة النجاح</p>
-                  <p className="text-xl font-black text-warning">{Math.round((stats.passed/stats.total)*100)}%</p>
+                  <p className="text-xl font-black text-warning">
+                    {stats.total > 0 ? Math.round((stats.passed / stats.total) * 100) : 0}%
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* Grading Table */}
-            <div className="bg-card rounded-3xl shadow-sm border border-border/50 overflow-hidden">
+            <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-right">
-                  <thead>
-                    <tr className="border-b border-border/50 bg-muted/30">
-                      <th className="py-4 px-6 font-bold text-muted-foreground w-16 text-center">#</th>
-                      <th className="py-4 px-6 font-bold text-muted-foreground">اسم الطالب</th>
-                      
-                      {selectedExam.gradingSystem !== 'descriptive' ? (
-                        <>
-                          <th className="py-4 px-6 font-bold text-muted-foreground w-48 text-center">الدرجة (من {selectedExam.totalMarks})</th>
-                          <th className="py-4 px-6 font-bold text-muted-foreground w-32 text-center">الحالة</th>
-                        </>
-                      ) : (
-                        <th className="py-4 px-6 font-bold text-muted-foreground w-64 text-center">التقييم الوصفي</th>
-                      )}
-                      
-                      <th className="py-4 px-6 font-bold text-muted-foreground">ملاحظات</th>
+                <table className="w-full text-right text-sm">
+                  <thead className="bg-accent/50 text-muted-foreground border-b border-border/50">
+                    <tr>
+                      <th className="p-4 font-bold w-16 text-center">#</th>
+                      <th className="p-4 font-bold">اسم الطالب</th>
+                      <th className="p-4 font-bold">الرقم الوطني</th>
+                      <th className="p-4 font-bold w-48 text-center">الدرجة (من {selectedExamSubject.maxScore})</th>
+                      <th className="p-4 font-bold">ملاحظات (اختياري)</th>
+                      <th className="p-4 font-bold w-24 text-center">الحالة</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {visibleStudents.map((student, idx) => {
-                      const grade = studentGrades[student.id];
-                      const mark = grade?.mark || 0;
-                      const isPassing = mark >= (selectedExam.totalMarks / 2);
-                      const isFull = mark === selectedExam.totalMarks;
-
+                  <tbody className="divide-y divide-border/50">
+                    {visibleStudents.map((item, idx) => {
+                      const studentId = item.enrollment.id;
+                      const mark = studentResults[studentId]?.mark || 0;
+                      const isPassing = mark >= selectedExamSubject.passScore;
                       return (
-                        <tr key={student.id} className="border-b border-border/50 last:border-0 hover:bg-accent/10 transition-colors">
-                          <td className="py-3 px-6 text-center text-muted-foreground">{idx + 1}</td>
-                          <td className="py-3 px-6 font-bold">{student.name}</td>
-                          
-                          {selectedExam.gradingSystem !== 'descriptive' ? (
-                            <>
-                              <td className="py-3 px-6">
-                                <div className="relative flex items-center justify-center">
-                                  <input 
-                                    type="number" 
-                                    min="0" 
-                                    max={selectedExam.totalMarks}
-                                    value={mark}
-                                    onChange={e => handleMarkChange(student.id, e.target.value)}
-                                    className={`w-24 h-12 text-center font-black text-lg rounded-xl border ${isFull ? 'border-success text-success bg-success/5' : isPassing ? 'border-border/50 focus:border-primary' : 'border-danger/50 text-danger bg-danger/5'} focus:ring-1 focus:ring-primary`}
-                                    dir="ltr"
-                                  />
-                                </div>
-                              </td>
-                              <td className="py-3 px-6 text-center">
-                                {isFull ? (
-                                  <span className="inline-flex items-center gap-1 text-xs font-bold bg-success/10 text-success px-3 py-1.5 rounded-lg"><CheckCircle2 className="w-4 h-4"/> ممتاز</span>
-                                ) : isPassing ? (
-                                  <span className="inline-flex items-center gap-1 text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-lg">ناجح</span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-xs font-bold bg-danger/10 text-danger px-3 py-1.5 rounded-lg"><AlertCircle className="w-4 h-4"/> دون المستوى</span>
-                                )}
-                              </td>
-                            </>
-                          ) : (
-                            <td className="py-3 px-6">
-                              <select 
-                                value={grade?.descriptiveGrade || ""}
-                                onChange={e => handleDescriptiveChange(student.id, e.target.value)}
-                                className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold text-center focus:border-primary focus:ring-1 focus:ring-primary"
-                              >
-                                <option value="">-- اختر التقييم --</option>
-                                <option value="أتقن المعيار">أتقن المعيار (ممتاز)</option>
-                                <option value="أتقن إلى حد ما">أتقن إلى حد ما (جيد جداً)</option>
-                                <option value="في طريقه للاتقان">في طريقه للاتقان (جيد)</option>
-                                <option value="لم يتقن المعيار">لم يتقن المعيار (يحتاج دعم)</option>
-                              </select>
-                            </td>
-                          )}
-
-                          <td className="py-3 px-6">
+                        <tr key={studentId} className="hover:bg-accent/20 transition-colors">
+                          <td className="p-4 font-bold text-center text-muted-foreground">{idx + 1}</td>
+                          <td className="p-4 font-black">{item.student.name}</td>
+                          <td className="p-4 font-bold text-muted-foreground tabular-nums">{item.student.nationalId}</td>
+                          <td className="p-4">
                             <input 
-                              type="text" 
-                              value={grade?.notes || ""}
-                              onChange={e => handleNotesChange(student.id, e.target.value)}
-                              placeholder="ملاحظات اختيارية..."
-                              className="w-full h-11 rounded-xl border border-border/50 bg-transparent px-4 text-sm focus:border-primary focus:bg-background transition-colors"
+                              type="number"
+                              min="0"
+                              max={selectedExamSubject.maxScore}
+                              value={studentResults[studentId]?.mark || ""}
+                              onChange={e => handleMarkChange(studentId, e.target.value)}
+                              className={`w-full h-11 text-center font-black text-lg rounded-xl border ${mark > 0 ? (isPassing ? 'border-success/50 text-success bg-success/5 focus:border-success focus:ring-success' : 'border-danger/50 text-danger bg-danger/5 focus:border-danger focus:ring-danger') : 'border-border/50 bg-background focus:border-primary focus:ring-primary'} shadow-sm focus:outline-none focus:ring-1`}
+                              dir="ltr"
                             />
+                          </td>
+                          <td className="p-4">
+                            <input
+                              type="text"
+                              value={studentResults[studentId]?.notes || ""}
+                              onChange={e => handleNotesChange(studentId, e.target.value)}
+                              placeholder="أضف ملاحظة..."
+                              className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </td>
+                          <td className="p-4 text-center">
+                            {mark > 0 ? (
+                              <CheckCircle2 className="w-5 h-5 text-success mx-auto" />
+                            ) : (
+                              <AlertCircle className="w-5 h-5 text-muted-foreground/30 mx-auto" />
+                            )}
                           </td>
                         </tr>
                       );
                     })}
                     {visibleStudents.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-12 text-center text-muted-foreground font-bold">لا يوجد طلاب مطابقون في هذه الشعبة.</td>
+                        <td colSpan={6} className="p-12 text-center text-muted-foreground font-bold">
+                          لا يوجد طلاب لعرضهم
+                        </td>
                       </tr>
                     )}
                   </tbody>

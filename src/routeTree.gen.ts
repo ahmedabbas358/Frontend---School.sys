@@ -31,6 +31,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TeachersIndexRouteImport } from './routes/teachers.index'
 import { Route as StudentsIndexRouteImport } from './routes/students.index'
 import { Route as GuardiansIndexRouteImport } from './routes/guardians.index'
+import { Route as FinanceIndexRouteImport } from './routes/finance.index'
 import { Route as ExamsIndexRouteImport } from './routes/exams.index'
 import { Route as TransportStudentsRouteImport } from './routes/transport.students'
 import { Route as TransportRoutesRouteImport } from './routes/transport.routes'
@@ -50,12 +51,15 @@ import { Route as HrDashboardRouteImport } from './routes/hr.dashboard'
 import { Route as HrContractsRouteImport } from './routes/hr.contracts'
 import { Route as HrAttendanceRouteImport } from './routes/hr.attendance'
 import { Route as GuardiansIdRouteImport } from './routes/guardians.$id'
+import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
 import { Route as FinancePaymentsRouteImport } from './routes/finance.payments'
+import { Route as FinanceLedgerRouteImport } from './routes/finance.ledger'
 import { Route as FinanceInvoicesRouteImport } from './routes/finance.invoices'
 import { Route as FinanceFeesRouteImport } from './routes/finance.fees'
 import { Route as FinanceExpensesRouteImport } from './routes/finance.expenses'
 import { Route as FinanceDiscountsRouteImport } from './routes/finance.discounts'
 import { Route as FinanceDashboardRouteImport } from './routes/finance.dashboard'
+import { Route as FinanceAccountsRouteImport } from './routes/finance.accounts'
 import { Route as FacilitiesRoomsRouteImport } from './routes/facilities.rooms'
 import { Route as FacilitiesMaintenanceRouteImport } from './routes/facilities.maintenance'
 import { Route as FacilitiesDashboardRouteImport } from './routes/facilities.dashboard'
@@ -76,7 +80,6 @@ import { Route as AdminBackupRouteImport } from './routes/admin.backup'
 import { Route as AdminActivityLogRouteImport } from './routes/admin.activity-log'
 import { Route as AcademicYearsRouteImport } from './routes/academic.years'
 import { Route as AcademicSubjectsRouteImport } from './routes/academic.subjects'
-import { Route as AcademicPromotionRouteImport } from './routes/academic.promotion'
 import { Route as AcademicClassesRouteImport } from './routes/academic.classes'
 import { Route as AcademicAssignmentsRouteImport } from './routes/academic.assignments'
 import { Route as HrStaffIndexRouteImport } from './routes/hr.staff.index'
@@ -192,6 +195,11 @@ const GuardiansIndexRoute = GuardiansIndexRouteImport.update({
   path: '/',
   getParentRoute: () => GuardiansRoute,
 } as any)
+const FinanceIndexRoute = FinanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const ExamsIndexRoute = ExamsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -287,9 +295,19 @@ const GuardiansIdRoute = GuardiansIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => GuardiansRoute,
 } as any)
+const FinanceReportsRoute = FinanceReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const FinancePaymentsRoute = FinancePaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceLedgerRoute = FinanceLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
   getParentRoute: () => FinanceRoute,
 } as any)
 const FinanceInvoicesRoute = FinanceInvoicesRouteImport.update({
@@ -315,6 +333,11 @@ const FinanceDiscountsRoute = FinanceDiscountsRouteImport.update({
 const FinanceDashboardRoute = FinanceDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceAccountsRoute = FinanceAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
   getParentRoute: () => FinanceRoute,
 } as any)
 const FacilitiesRoomsRoute = FacilitiesRoomsRouteImport.update({
@@ -417,11 +440,6 @@ const AcademicSubjectsRoute = AcademicSubjectsRouteImport.update({
   path: '/subjects',
   getParentRoute: () => AcademicRoute,
 } as any)
-const AcademicPromotionRoute = AcademicPromotionRouteImport.update({
-  id: '/promotion',
-  path: '/promotion',
-  getParentRoute: () => AcademicRoute,
-} as any)
 const AcademicClassesRoute = AcademicClassesRouteImport.update({
   id: '/classes',
   path: '/classes',
@@ -465,7 +483,6 @@ export interface FileRoutesByFullPath {
   '/transport': typeof TransportRouteWithChildren
   '/academic/assignments': typeof AcademicAssignmentsRoute
   '/academic/classes': typeof AcademicClassesRoute
-  '/academic/promotion': typeof AcademicPromotionRoute
   '/academic/subjects': typeof AcademicSubjectsRoute
   '/academic/years': typeof AcademicYearsRoute
   '/admin/activity-log': typeof AdminActivityLogRoute
@@ -486,12 +503,15 @@ export interface FileRoutesByFullPath {
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
+  '/finance/accounts': typeof FinanceAccountsRoute
   '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
   '/finance/invoices': typeof FinanceInvoicesRoute
+  '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
+  '/finance/reports': typeof FinanceReportsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
   '/hr/contracts': typeof HrContractsRoute
@@ -511,6 +531,7 @@ export interface FileRoutesByFullPath {
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
   '/exams/': typeof ExamsIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
   '/students/': typeof StudentsIndexRoute
   '/teachers/': typeof TeachersIndexRoute
@@ -525,7 +546,6 @@ export interface FileRoutesByTo {
   '/clinic': typeof ClinicRouteWithChildren
   '/discipline': typeof DisciplineRouteWithChildren
   '/facilities': typeof FacilitiesRouteWithChildren
-  '/finance': typeof FinanceRouteWithChildren
   '/hr': typeof HrRouteWithChildren
   '/inventory': typeof InventoryRouteWithChildren
   '/library': typeof LibraryRouteWithChildren
@@ -535,7 +555,6 @@ export interface FileRoutesByTo {
   '/transport': typeof TransportRouteWithChildren
   '/academic/assignments': typeof AcademicAssignmentsRoute
   '/academic/classes': typeof AcademicClassesRoute
-  '/academic/promotion': typeof AcademicPromotionRoute
   '/academic/subjects': typeof AcademicSubjectsRoute
   '/academic/years': typeof AcademicYearsRoute
   '/admin/activity-log': typeof AdminActivityLogRoute
@@ -556,12 +575,15 @@ export interface FileRoutesByTo {
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
+  '/finance/accounts': typeof FinanceAccountsRoute
   '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
   '/finance/invoices': typeof FinanceInvoicesRoute
+  '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
+  '/finance/reports': typeof FinanceReportsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
   '/hr/contracts': typeof HrContractsRoute
@@ -581,6 +603,7 @@ export interface FileRoutesByTo {
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
   '/exams': typeof ExamsIndexRoute
+  '/finance': typeof FinanceIndexRoute
   '/guardians': typeof GuardiansIndexRoute
   '/students': typeof StudentsIndexRoute
   '/teachers': typeof TeachersIndexRoute
@@ -610,7 +633,6 @@ export interface FileRoutesById {
   '/transport': typeof TransportRouteWithChildren
   '/academic/assignments': typeof AcademicAssignmentsRoute
   '/academic/classes': typeof AcademicClassesRoute
-  '/academic/promotion': typeof AcademicPromotionRoute
   '/academic/subjects': typeof AcademicSubjectsRoute
   '/academic/years': typeof AcademicYearsRoute
   '/admin/activity-log': typeof AdminActivityLogRoute
@@ -631,12 +653,15 @@ export interface FileRoutesById {
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
+  '/finance/accounts': typeof FinanceAccountsRoute
   '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
   '/finance/invoices': typeof FinanceInvoicesRoute
+  '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
+  '/finance/reports': typeof FinanceReportsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
   '/hr/contracts': typeof HrContractsRoute
@@ -656,6 +681,7 @@ export interface FileRoutesById {
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
   '/exams/': typeof ExamsIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
   '/students/': typeof StudentsIndexRoute
   '/teachers/': typeof TeachersIndexRoute
@@ -686,7 +712,6 @@ export interface FileRouteTypes {
     | '/transport'
     | '/academic/assignments'
     | '/academic/classes'
-    | '/academic/promotion'
     | '/academic/subjects'
     | '/academic/years'
     | '/admin/activity-log'
@@ -707,12 +732,15 @@ export interface FileRouteTypes {
     | '/facilities/dashboard'
     | '/facilities/maintenance'
     | '/facilities/rooms'
+    | '/finance/accounts'
     | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
     | '/finance/invoices'
+    | '/finance/ledger'
     | '/finance/payments'
+    | '/finance/reports'
     | '/guardians/$id'
     | '/hr/attendance'
     | '/hr/contracts'
@@ -732,6 +760,7 @@ export interface FileRouteTypes {
     | '/transport/routes'
     | '/transport/students'
     | '/exams/'
+    | '/finance/'
     | '/guardians/'
     | '/students/'
     | '/teachers/'
@@ -746,7 +775,6 @@ export interface FileRouteTypes {
     | '/clinic'
     | '/discipline'
     | '/facilities'
-    | '/finance'
     | '/hr'
     | '/inventory'
     | '/library'
@@ -756,7 +784,6 @@ export interface FileRouteTypes {
     | '/transport'
     | '/academic/assignments'
     | '/academic/classes'
-    | '/academic/promotion'
     | '/academic/subjects'
     | '/academic/years'
     | '/admin/activity-log'
@@ -777,12 +804,15 @@ export interface FileRouteTypes {
     | '/facilities/dashboard'
     | '/facilities/maintenance'
     | '/facilities/rooms'
+    | '/finance/accounts'
     | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
     | '/finance/invoices'
+    | '/finance/ledger'
     | '/finance/payments'
+    | '/finance/reports'
     | '/guardians/$id'
     | '/hr/attendance'
     | '/hr/contracts'
@@ -802,6 +832,7 @@ export interface FileRouteTypes {
     | '/transport/routes'
     | '/transport/students'
     | '/exams'
+    | '/finance'
     | '/guardians'
     | '/students'
     | '/teachers'
@@ -830,7 +861,6 @@ export interface FileRouteTypes {
     | '/transport'
     | '/academic/assignments'
     | '/academic/classes'
-    | '/academic/promotion'
     | '/academic/subjects'
     | '/academic/years'
     | '/admin/activity-log'
@@ -851,12 +881,15 @@ export interface FileRouteTypes {
     | '/facilities/dashboard'
     | '/facilities/maintenance'
     | '/facilities/rooms'
+    | '/finance/accounts'
     | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
     | '/finance/invoices'
+    | '/finance/ledger'
     | '/finance/payments'
+    | '/finance/reports'
     | '/guardians/$id'
     | '/hr/attendance'
     | '/hr/contracts'
@@ -876,6 +909,7 @@ export interface FileRouteTypes {
     | '/transport/routes'
     | '/transport/students'
     | '/exams/'
+    | '/finance/'
     | '/guardians/'
     | '/students/'
     | '/teachers/'
@@ -1062,6 +1096,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuardiansIndexRouteImport
       parentRoute: typeof GuardiansRoute
     }
+    '/finance/': {
+      id: '/finance/'
+      path: '/'
+      fullPath: '/finance/'
+      preLoaderRoute: typeof FinanceIndexRouteImport
+      parentRoute: typeof FinanceRoute
+    }
     '/exams/': {
       id: '/exams/'
       path: '/'
@@ -1195,11 +1236,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuardiansIdRouteImport
       parentRoute: typeof GuardiansRoute
     }
+    '/finance/reports': {
+      id: '/finance/reports'
+      path: '/reports'
+      fullPath: '/finance/reports'
+      preLoaderRoute: typeof FinanceReportsRouteImport
+      parentRoute: typeof FinanceRoute
+    }
     '/finance/payments': {
       id: '/finance/payments'
       path: '/payments'
       fullPath: '/finance/payments'
       preLoaderRoute: typeof FinancePaymentsRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/ledger': {
+      id: '/finance/ledger'
+      path: '/ledger'
+      fullPath: '/finance/ledger'
+      preLoaderRoute: typeof FinanceLedgerRouteImport
       parentRoute: typeof FinanceRoute
     }
     '/finance/invoices': {
@@ -1235,6 +1290,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/finance/dashboard'
       preLoaderRoute: typeof FinanceDashboardRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/accounts': {
+      id: '/finance/accounts'
+      path: '/accounts'
+      fullPath: '/finance/accounts'
+      preLoaderRoute: typeof FinanceAccountsRouteImport
       parentRoute: typeof FinanceRoute
     }
     '/facilities/rooms': {
@@ -1377,13 +1439,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcademicSubjectsRouteImport
       parentRoute: typeof AcademicRoute
     }
-    '/academic/promotion': {
-      id: '/academic/promotion'
-      path: '/promotion'
-      fullPath: '/academic/promotion'
-      preLoaderRoute: typeof AcademicPromotionRouteImport
-      parentRoute: typeof AcademicRoute
-    }
     '/academic/classes': {
       id: '/academic/classes'
       path: '/classes'
@@ -1418,7 +1473,6 @@ declare module '@tanstack/react-router' {
 interface AcademicRouteChildren {
   AcademicAssignmentsRoute: typeof AcademicAssignmentsRoute
   AcademicClassesRoute: typeof AcademicClassesRoute
-  AcademicPromotionRoute: typeof AcademicPromotionRoute
   AcademicSubjectsRoute: typeof AcademicSubjectsRoute
   AcademicYearsRoute: typeof AcademicYearsRoute
 }
@@ -1426,7 +1480,6 @@ interface AcademicRouteChildren {
 const AcademicRouteChildren: AcademicRouteChildren = {
   AcademicAssignmentsRoute: AcademicAssignmentsRoute,
   AcademicClassesRoute: AcademicClassesRoute,
-  AcademicPromotionRoute: AcademicPromotionRoute,
   AcademicSubjectsRoute: AcademicSubjectsRoute,
   AcademicYearsRoute: AcademicYearsRoute,
 }
@@ -1527,21 +1580,29 @@ const FacilitiesRouteWithChildren = FacilitiesRoute._addFileChildren(
 )
 
 interface FinanceRouteChildren {
+  FinanceAccountsRoute: typeof FinanceAccountsRoute
   FinanceDashboardRoute: typeof FinanceDashboardRoute
   FinanceDiscountsRoute: typeof FinanceDiscountsRoute
   FinanceExpensesRoute: typeof FinanceExpensesRoute
   FinanceFeesRoute: typeof FinanceFeesRoute
   FinanceInvoicesRoute: typeof FinanceInvoicesRoute
+  FinanceLedgerRoute: typeof FinanceLedgerRoute
   FinancePaymentsRoute: typeof FinancePaymentsRoute
+  FinanceReportsRoute: typeof FinanceReportsRoute
+  FinanceIndexRoute: typeof FinanceIndexRoute
 }
 
 const FinanceRouteChildren: FinanceRouteChildren = {
+  FinanceAccountsRoute: FinanceAccountsRoute,
   FinanceDashboardRoute: FinanceDashboardRoute,
   FinanceDiscountsRoute: FinanceDiscountsRoute,
   FinanceExpensesRoute: FinanceExpensesRoute,
   FinanceFeesRoute: FinanceFeesRoute,
   FinanceInvoicesRoute: FinanceInvoicesRoute,
+  FinanceLedgerRoute: FinanceLedgerRoute,
   FinancePaymentsRoute: FinancePaymentsRoute,
+  FinanceReportsRoute: FinanceReportsRoute,
+  FinanceIndexRoute: FinanceIndexRoute,
 }
 
 const FinanceRouteWithChildren =

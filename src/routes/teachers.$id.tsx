@@ -7,13 +7,14 @@ export const Route = createFileRoute("/teachers/$id")({
   component: TeacherProfile,
 });
 
-const TABS = ["personal", "subjects", "sections", "schedule", "stats"] as const;
+const TABS = ["personal", "subjects", "sections", "schedule", "stats", "history"] as const;
 const TL: Record<(typeof TABS)[number], string> = {
   personal: "البيانات الشخصية",
   subjects: "المواد",
   sections: "الشُعب",
   schedule: "الجدول",
   stats: "إحصائيات",
+  history: "السجل التاريخي",
 };
 
 const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
@@ -21,7 +22,7 @@ const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 function TeacherProfile() {
   const { id } = Route.useParams();
-  const { activeStageStaff, activeStageSubjects, activeStageSections } = useGlobalStore();
+  const { activeStageStaff, activeStageSubjects, activeStageSections, allStaff, allAcademicYears, activeStageTeachingAssignments, activeStageScheduleSlots, allEmployeeAssignments, currentAcademicYearId } = useGlobalStore();
   
   const [tab, setTab] = useState<(typeof TABS)[number]>("personal");
 
@@ -39,8 +40,31 @@ function TeacherProfile() {
     );
   }
 
-  const assignedSubjects = (t.subjects || []).map(sid => activeStageSubjects.find(s => s.id === sid)).filter(Boolean);
-  const assignedSections = (t.sections || []).map(sid => activeStageSections.find(s => s.id === sid)).filter(Boolean);
+  // Get Real Assignments from Store
+  const teacherAssignments = useMemo(() => activeStageTeachingAssignments.filter(a => a.teacherId === id), [activeStageTeachingAssignments, id]);
+  
+  // Extract unique subjects and sections from assignments
+  const assignedSubjects = useMemo(() => {
+    const subjectIds = Array.from(new Set(teacherAssignments.map(a => a.subjectId)));
+    return subjectIds.map(sid => activeStageSubjects.find(s => s.id === sid)).filter(Boolean);
+  }, [teacherAssignments, activeStageSubjects]);
+
+  const assignedSections = useMemo(() => {
+    const sectionIds = Array.from(new Set(teacherAssignments.map(a => a.sectionId)));
+    return sectionIds.map(sid => activeStageSections.find(s => s.id === sid)).filter(Boolean);
+  }, [teacherAssignments, activeStageSections]);
+
+  // Get Real Schedule Slots
+  const teacherSlots = useMemo(() => activeStageScheduleSlots.filter(s => s.teacherId === id), [activeStageScheduleSlots, id]);
+
+  const staffHistory = useMemo(() => {
+    if (!t) return [];
+    return allEmployeeAssignments
+      .filter((a: any) => a.employeeId === t.id)
+      .sort((a: any, b: any) => {
+        return 0;
+      });
+  }, [t, allEmployeeAssignments]);
 
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "المعلمون", to: "/teachers" }, { label: t.name }]}>
@@ -131,30 +155,34 @@ function TeacherProfile() {
         )}
 
         {tab === "schedule" && (
-          <PageCard title="الجدول الأسبوعي (تجريبي)">
+          <PageCard title="الجدول الأسبوعي الفعلي">
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full min-w-[800px] text-center text-sm border-collapse">
+              <table className="w-full min-w-[900px] text-center text-sm border-collapse bg-card rounded-xl overflow-hidden shadow-sm">
                 <thead>
-                  <tr className="bg-muted/50 text-muted-foreground">
-                    <th className="px-3 py-4 font-bold border border-border/50 rounded-tr-xl">اليوم / الحصة</th>
-                    {PERIODS.map((p) => <th key={p} className="px-3 py-4 font-bold border border-border/50">الحصة {p}</th>)}
+                  <tr className="bg-primary/5 text-primary">
+                    <th className="px-3 py-4 font-black border-b border-l border-primary/10">اليوم / الحصة</th>
+                    {PERIODS.map((p) => <th key={p} className="px-3 py-4 font-black border-b border-l border-primary/10 last:border-l-0">الحصة {p}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {DAYS.map((d, di) => (
-                    <tr key={d} className="border-t border-border group hover:bg-muted/20 transition-colors">
-                      <th className="bg-muted/30 px-3 py-4 font-black border border-border/50">{d}</th>
+                  {DAYS.map((d) => (
+                    <tr key={d} className="border-b border-border group hover:bg-muted/10 transition-colors last:border-b-0">
+                      <th className="bg-muted/30 px-3 py-4 font-black border-l border-border/50">{d}</th>
                       {PERIODS.map((p) => {
-                        const has = (di + p) % 4 === 0 && assignedSubjects.length > 0;
-                        const subj = has ? assignedSubjects[0] : null;
+                        const slot = teacherSlots.find(s => s.day === d && s.period === p);
+                        const subj = slot ? activeStageSubjects.find(s => s.id === slot.subjectId) : null;
+                        const sec = slot ? activeStageSections.find(s => s.id === slot.sectionId) : null;
                         return (
-                          <td key={p} className="px-2 py-3 border border-border/50 transition-colors">
-                            {has ? (
-                              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-all">
-                                <span className="font-bold text-xs">{subj?.name || "مادة"}</span>
+                          <td key={p} className="p-2 border-l border-border/50 transition-colors last:border-l-0">
+                            {slot ? (
+                              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-primary/10 border border-primary/20 shadow-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-all group-hover:scale-105 duration-200">
+                                <span className="font-black text-sm mb-1">{subj?.name || "مادة"}</span>
+                                <Badge tone="primary" className="text-[10px] py-0">{sec?.grade} / {sec?.name}</Badge>
                               </div>
                             ) : (
-                              <span className="text-muted-foreground/30 font-bold">—</span>
+                              <div className="h-full w-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-muted-foreground/30 font-bold text-xs">— فارغ —</span>
+                              </div>
                             )}
                           </td>
                         );
@@ -164,24 +192,70 @@ function TeacherProfile() {
                 </tbody>
               </table>
             </div>
+            <div className="mt-4 flex gap-4 text-xs font-bold text-muted-foreground justify-center">
+              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-primary/20 block"></span> حصة مسندة</div>
+              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-muted block"></span> وقت فراغ</div>
+            </div>
           </PageCard>
         )}
 
         {tab === "stats" && (
-          <div className="grid gap-5 md:grid-cols-3">
-            <PageCard title="معدل الحضور" className="text-center hover:shadow-lg transition-shadow">
-              <div className="text-4xl font-black tabular-nums text-success mt-2 mb-1">٩٨٪</div>
-              <div className="text-xs text-muted-foreground font-bold">خلال الفصل الدراسي الحالي</div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <PageCard title="معدل الحضور" className="text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-5xl font-black tabular-nums text-success mt-4 mb-2 relative z-10">٩٨٪</div>
+              <div className="text-sm text-muted-foreground font-bold relative z-10">خلال الفصل الدراسي الحالي</div>
             </PageCard>
-            <PageCard title="الحصص الأسبوعية" className="text-center hover:shadow-lg transition-shadow">
-              <div className="text-4xl font-black tabular-nums text-primary mt-2 mb-1">١٨</div>
-              <div className="text-xs text-muted-foreground font-bold">من أصل ٢٤ حصة (الحد الأقصى)</div>
+            <PageCard title="النصاب الأسبوعي" className="text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-5xl font-black tabular-nums text-primary mt-4 mb-2 relative z-10">{teacherSlots.length}</div>
+              <div className="text-sm text-muted-foreground font-bold relative z-10">حصة من أصل ٢٤ (الحد الأقصى)</div>
+              <div className="w-full bg-muted rounded-full h-2 mt-4 relative z-10">
+                <div className="bg-primary h-2 rounded-full" style={{ width: `${(teacherSlots.length / 24) * 100}%` }}></div>
+              </div>
             </PageCard>
-            <PageCard title="نسبة إنجاز المنهج" className="text-center hover:shadow-lg transition-shadow">
-              <div className="text-4xl font-black tabular-nums text-warning mt-2 mb-1">٧٢٪</div>
-              <div className="text-xs text-muted-foreground font-bold">حسب الخطة الزمنية المعتمدة</div>
+            <PageCard title="نسبة إنجاز المنهج" className="text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-warning/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-5xl font-black tabular-nums text-warning mt-4 mb-2 relative z-10">٧٢٪</div>
+              <div className="text-sm text-muted-foreground font-bold relative z-10">متوسط الإنجاز عبر الشعب</div>
             </PageCard>
           </div>
+        )}
+
+        {tab === "history" && (
+          <PageCard title="السجل التاريخي والأرشيف">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-right">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="p-4 font-bold rounded-tr-lg">العام الدراسي</th>
+                    <th className="p-4 font-bold">المسمى الوظيفي</th>
+                    <th className="p-4 font-bold">القسم</th>
+                    <th className="p-4 font-bold rounded-tl-lg">حالة العمل</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffHistory.map((hist: any) => {
+                    const yearName = allAcademicYears.find(y => y.id === hist.academicYearId)?.name || "غير محدد";
+                    const isCurrentRecord = hist.academicYearId === currentAcademicYearId;
+                    return (
+                      <tr key={hist.id} className={`border-b border-border transition-colors ${isCurrentRecord ? 'bg-primary/5 font-bold' : 'hover:bg-accent/30'}`}>
+                        <td className="p-4 font-bold text-primary">{yearName} {isCurrentRecord && <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full mr-2">الحالي</span>}</td>
+                        <td className="p-4">{hist.role}</td>
+                        <td className="p-4">{hist.department}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-1 rounded-md text-xs font-bold ${hist.status === "active" ? "bg-success/10 text-success" : hist.status === "on_leave" ? "bg-warning/10 text-warning" : "bg-danger/10 text-danger"}`}>
+                            {hist.status === "active" ? "على رأس العمل" : hist.status === "on_leave" ? "إجازة" : "منتهي الخدمات"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4 text-center">يتم تجميع هذا السجل آلياً بناءً على الرقم الوظيفي للمعلم عبر جميع السنوات الدراسية.</p>
+          </PageCard>
         )}
       </div>
     </AppShell>

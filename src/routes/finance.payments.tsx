@@ -3,6 +3,7 @@ import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { CreditCard, Plus, Search, Filter, Printer, Receipt, DollarSign, CheckCircle2, X } from "lucide-react";
 import { useState, useMemo } from "react";
+import { FinancialCard, FilterBar } from "@/components/financial-components";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
@@ -170,39 +171,36 @@ function FinancePayments() {
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-6 pb-10">
         {/* Summary Stats */}
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-muted-foreground">إجمالي المحصلات</p>
-                <p className="mt-1 text-xl font-black text-success tabular-nums">{summaryStats.totalCollected.toLocaleString()} <span className="text-sm font-bold">{currency}</span></p>
-              </div>
-              <div className="rounded-full bg-success/10 p-2 text-success"><DollarSign className="h-4 w-4" /></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+          <FinancialCard 
+            title="إجمالي المحصلات" 
+            value={summaryStats.totalCollected} 
+            currency={currency} 
+            icon={DollarSign} 
+            colorClass="text-success bg-success" 
+          />
+          <FinancialCard 
+            title="عدد سندات القبض" 
+            value={summaryStats.total} 
+            currency="" 
+            icon={Receipt} 
+            colorClass="text-primary bg-primary" 
+          />
+          <FinancialCard 
+            title="طرق الدفع" 
+            value={0} 
+            currency="" 
+            icon={CreditCard} 
+            colorClass="text-foreground bg-muted" 
+          >
+            <div className="flex items-center gap-3 text-xs font-bold mt-2">
+              <span className="flex items-center gap-1 text-success"><span className="h-2 w-2 rounded-full bg-success" /> {summaryStats.cashCount} نقدي</span>
+              <span className="flex items-center gap-1 text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> {summaryStats.transferCount} تحويل</span>
+              <span className="flex items-center gap-1 text-warning"><span className="h-2 w-2 rounded-full bg-warning" /> {summaryStats.cardCount} بطاقة/شيك</span>
             </div>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-muted-foreground">عدد سندات القبض</p>
-                <p className="mt-1 text-xl font-black text-primary tabular-nums">{summaryStats.total}</p>
-              </div>
-              <div className="rounded-full bg-primary/10 p-2 text-primary"><Receipt className="h-4 w-4" /></div>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <p className="text-xs font-bold text-muted-foreground mb-2">طرق الدفع</p>
-                <div className="flex items-center gap-3 text-xs font-bold">
-                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" /> {summaryStats.cashCount} نقدي</span>
-                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> {summaryStats.transferCount} تحويل</span>
-                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" /> {summaryStats.cardCount} بطاقة/شيك</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          </FinancialCard>
         </div>
 
         {/* Payment Modal */}
@@ -277,26 +275,26 @@ function FinancePayments() {
         )}
 
         {/* Filters */}
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold text-primary">فلاتر التصفية</span>
+        <FilterBar>
+          <div className="flex items-center gap-2">
+            <Filter className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-bold">إدارة المقبوضات</h2>
             {(gradeFilter || sectionFilter || q) && (
               <button 
                 onClick={() => { setQ(""); setGradeFilter(""); setSectionFilter(""); }}
-                className="mr-auto text-xs font-bold text-danger hover:text-danger/80 transition-colors bg-danger/10 px-3 py-1 rounded-full"
+                className="text-xs font-bold text-danger hover:text-danger/80 transition-colors bg-danger/10 px-3 py-1 rounded-full mr-2"
               >
-                مسح الكل ✕
+                مسح الفلاتر ✕
               </button>
             )}
           </div>
-          <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder={`البحث برقم السند أو الفاتورة أو اسم الطالب...`}
+                placeholder={`البحث برقم السند أو الفاتورة...`}
                 className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
               />
             </div>
@@ -318,7 +316,7 @@ function FinancePayments() {
               {availableSections.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
             </select>
           </div>
-        </div>
+        </FilterBar>
 
         <PageCard>
           <div className="mb-4 flex flex-col gap-1 border-b border-border pb-4">

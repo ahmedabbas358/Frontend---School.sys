@@ -43,7 +43,7 @@ const highSchoolSchema = baseSchema.extend({
 
 function StudentRegistrationWizard() {
   const { stage, getStageLabel } = useStage();
-  const { addStudent, allSections, activeStageStudents } = useGlobalStore();
+  const { addStudent, allSections, activeStageStudents, allGuardians, allStudents, currentAcademicYearId } = useGlobalStore();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -62,6 +62,7 @@ function StudentRegistrationWizard() {
     handleSubmit,
     trigger,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(currentSchema),
@@ -75,11 +76,19 @@ function StudentRegistrationWizard() {
   const availableSections = allSections.filter(sec => sec.stage === stage && sec.grade === selectedGrade);
 
   const onSubmit = (data: FormValues) => {
+    // Check for strict duplicate constraint in the CURRENT academic year
+    const isDuplicateInCurrentYear = activeStageStudents.some(s => s.nationalId === data.nationalId);
+    if (isDuplicateInCurrentYear) {
+      toast.error("هذا الطالب مسجل مسبقاً في العام الدراسي الحالي! لا يمكن تسجيل الطالب في فصلين مختلفين لنفس العام.");
+      return;
+    }
+
     const studentData: any = {
       ...data,
       stage,
       status: "نشط",
       enrollmentDate: new Date().toISOString().split("T")[0],
+      academicYearId: currentAcademicYearId,
     };
     
     // Add student to the store
@@ -89,6 +98,24 @@ function StudentRegistrationWizard() {
     
     // Redirect to students list
     navigate({ to: "/students" });
+  };
+
+  const handleSmartRegistrationCheck = (nationalIdToCheck: string) => {
+    if (!nationalIdToCheck || nationalIdToCheck.length < 5) return;
+    
+    // Search history for this student
+    const existingStudent = allStudents.find(s => s.nationalId === nationalIdToCheck && s.stage === stage);
+    if (existingStudent) {
+      toast.success("تم العثور على سجل سابق لهذا الطالب! جاري استيراد البيانات التاريخية...");
+      setValue("name", existingStudent.name);
+      setValue("dob", existingStudent.dob);
+      setValue("gender", existingStudent.gender || "ذكر");
+      setValue("guardianName", existingStudent.guardianName);
+      setValue("guardianPhone", existingStudent.guardianPhone || "");
+      setValue("address", existingStudent.address || "");
+      setValue("bloodType", existingStudent.bloodType || "");
+      setValue("medicalNotes", existingStudent.medicalNotes || "");
+    }
   };
 
   const steps = [
@@ -215,8 +242,9 @@ function StudentRegistrationWizard() {
                   <label className="mb-2 block text-sm font-bold text-muted-foreground">الرقم الوطني <span className="text-danger">*</span></label>
                   <input
                     {...register("nationalId")}
+                    onBlur={(e) => handleSmartRegistrationCheck(e.target.value)}
                     className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium tabular-nums"
-                    placeholder="أدخل الرقم الوطني"
+                    placeholder="أدخل الرقم الوطني (سيبحث النظام في الأرشيف تلقائياً)"
                   />
                   {errors.nationalId && <p className="mt-1.5 text-xs text-danger font-bold flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-danger"></span> {errors.nationalId.message as string}</p>}
                 </div>
@@ -283,6 +311,30 @@ function StudentRegistrationWizard() {
                 <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">2</span>
                 معلومات التواصل وولي الأمر
               </h2>
+
+              <div className="md:col-span-2 lg:col-span-3 bg-primary/5 p-5 rounded-2xl border border-primary/20 mb-6">
+                <label className="mb-2 block text-sm font-bold text-primary flex items-center gap-2">
+                  <UserPlus className="h-4 w-4"/> اختيار من أولياء الأمور المسجلين مسبقاً (مزامنة ذكية)
+                </label>
+                <select
+                  className="w-full rounded-xl border border-primary/30 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer"
+                  onChange={(e) => {
+                    const g = allGuardians.find(g => g.id === e.target.value);
+                    if(g) {
+                      setValue("guardianName", g.name);
+                      setValue("guardianPhone", g.phone);
+                      setValue("guardianRelation", g.relation);
+                      toast.success("تم مزامنة بيانات ولي الأمر بنجاح");
+                    }
+                  }}
+                >
+                  <option value="">-- أدخل بيانات ولي أمر جديد --</option>
+                  {allGuardians.map(g => (
+                    <option key={g.id} value={g.id}>{g.name} | رقم الجوال: {g.phone} | صلة القرابة: {g.relation}</option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-muted-foreground">اختيار ولي أمر مسجل مسبقاً سيقوم بتعبئة البيانات تلقائياً وربط الطالب بحسابه.</p>
+              </div>
               
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <div className="lg:col-span-2">

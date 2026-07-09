@@ -48,8 +48,10 @@ function HrAttendance() {
   const { getStageLabel, stage } = useStage();
   const { currency, activeStageStaff, activeStageStaffAttendance, upsertStaffAttendance } = useGlobalStore();
   const defaultDate = activeStageStaffAttendance[0]?.date || isoToday();
-  const [activeTab, setActiveTab] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [activeTab, setActiveTab] = useState<"daily" | "weekly" | "monthly" | "lessons">("daily");
   const [dailyDate, setDailyDate] = useState(defaultDate);
+  const [lessonDate, setLessonDate] = useState(defaultDate);
+  const [lessonNumber, setLessonNumber] = useState("1");
   const [dateRange, setDateRange] = useState({ start: defaultDate, end: defaultDate });
   const [month, setMonth] = useState(defaultDate.slice(0, 7));
   const [q, setQ] = useState("");
@@ -73,7 +75,7 @@ function HrAttendance() {
   }, [q, staffInScope]);
 
   const dailyRows = useMemo(() => {
-    return filteredStaff.map(staff => {
+    return filteredStaff.filter(s => s.paymentType !== "PerLesson").map(staff => {
       const record = recordsByDay.get(`${staff.id}-${dailyDate}`);
       const status: Status = record?.status || "absent";
       return {
@@ -87,6 +89,20 @@ function HrAttendance() {
       };
     });
   }, [dailyDate, filteredStaff, recordsByDay]);
+
+  const lessonRows = useMemo(() => {
+    return filteredStaff.filter(s => s.paymentType === "PerLesson").map(staff => {
+      // In a real app, this would use a dedicated lesson attendance store.
+      // Here we mock it by parsing a unique string or just keeping it simple.
+      const recordKey = `${staff.id}-${lessonDate}-lesson${lessonNumber}`;
+      const isAttended = recordsByDay.has(recordKey);
+      return {
+        ...staff,
+        isAttended,
+        recordKey,
+      };
+    });
+  }, [lessonDate, lessonNumber, filteredStaff, recordsByDay]);
 
   const markAttendance = (staffId: string, status: Status) => {
     const staff = staffInScope.find(item => item.id === staffId);
@@ -170,6 +186,7 @@ function HrAttendance() {
           <div className="flex rounded-xl border border-border bg-card p-1 shadow-sm">
             {[
               { id: "daily", label: "يومي" },
+              { id: "lessons", label: "حضور الحصص" },
               { id: "weekly", label: "أسبوعي" },
               { id: "monthly", label: "شهري وخصومات" },
             ].map(tab => (
@@ -236,6 +253,60 @@ function HrAttendance() {
                 },
               ]}
               empty={`لا يوجد موظفون في ${getStageLabel(stage)}.`}
+            />
+          </PageCard>
+        )}
+
+        {activeTab === "lessons" && (
+          <PageCard>
+            <div className="mb-4 flex flex-col items-start justify-between gap-4 border-b border-border pb-4 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2 text-primary">
+                <Clock className="h-5 w-5" />
+                <h2 className="text-lg font-bold">رصد حصص المعلمين</h2>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={lessonDate}
+                  onChange={event => setLessonDate(event.target.value)}
+                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none focus:border-primary"
+                />
+                <select
+                  value={lessonNumber}
+                  onChange={event => setLessonNumber(event.target.value)}
+                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none focus:border-primary"
+                >
+                  {[1,2,3,4,5,6,7].map(num => (
+                    <option key={num} value={num.toString()}>الحصة {num}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <DataTable
+              rows={lessonRows}
+              columns={[
+                { key: "id", header: "الرقم الوظيفي", cell: (r) => <span className="font-bold text-muted-foreground">{r.employeeNo || r.id}</span> },
+                { key: "name", header: "المعلم", cell: (r) => <div><span className="font-bold">{r.name}</span><div className="text-xs text-muted-foreground">{r.role}</div></div> },
+                { key: "status", header: "الحالة", cell: (r) => r.isAttended ? <Badge tone="success">حاضر</Badge> : <Badge tone="neutral">غير مسجل</Badge> },
+                {
+                  key: "actions",
+                  header: "رصد الحصة",
+                  cell: (r) => (
+                    <button 
+                      onClick={() => {
+                        upsertStaffAttendance({ staffId: r.id, date: `${lessonDate}-lesson${lessonNumber}`, status: "present" });
+                        toast.success("تم تسجيل حضور الحصة");
+                      }} 
+                      disabled={r.isAttended}
+                      className="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 disabled:opacity-50"
+                    >
+                      {r.isAttended ? "تم الرصد" : "رصد حضور"}
+                    </button>
+                  ),
+                },
+              ]}
+              empty={`لا يوجد معلمون بنظام الحصص في ${getStageLabel(stage)}.`}
             />
           </PageCard>
         )}

@@ -28,12 +28,13 @@ const staffSchema = z.object({
   basicSalary: z.coerce.number().min(0).optional(),
   allowance: z.coerce.number().min(0).optional(),
   deduction: z.coerce.number().min(0).optional(),
+  paymentType: z.enum(["Monthly", "PerLesson", "Daily"]).optional(),
 });
 
 type StaffForm = z.infer<typeof staffSchema>;
 
 function HrStaffIndex() {
-  const { currency, activeStageStaff, activeStageTeachingAssignments, activeStageSubjects, activeStageSections, addStaff } = useGlobalStore();
+  const { currency, allStaff, activeStageStaff, activeStageTeachingAssignments, activeStageSubjects, activeStageSections, addStaff, currentAcademicYearId } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -41,16 +42,48 @@ function HrStaffIndex() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<StaffForm>({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<StaffForm>({
     resolver: zodResolver(staffSchema),
-    defaultValues: { status: "active", stage: "all" },
+    defaultValues: { status: "active", stage: "all", paymentType: "Monthly" },
   });
 
+  const selectedPaymentType = watch("paymentType") || "Monthly";
+
   const onSubmit = (data: StaffForm) => {
-    addStaff(data);
+    if (data.employeeNo) {
+      const isDuplicateInCurrentYear = activeStageStaff.some((s: any) => s.employeeNo === data.employeeNo);
+      if (isDuplicateInCurrentYear) {
+        toast.error("هذا الموظف مسجل مسبقاً في العام الدراسي الحالي! لا يمكن تسجيله مرة أخرى.");
+        return;
+      }
+    }
+
+    addStaff({ ...data, academicYearId: currentAcademicYearId } as any);
     toast.success("تم إضافة الموظف الجديد بنجاح");
     setIsModalOpen(false);
     reset();
+  };
+
+  const handleSmartRegistrationCheck = (empNoToCheck: string) => {
+    if (!empNoToCheck || empNoToCheck.length < 3) return;
+    const existingStaff = allStaff.find((s: any) => s.employeeNo === empNoToCheck);
+    if (existingStaff) {
+      toast.success("تم العثور على سجل سابق للموظف! جاري استيراد البيانات التاريخية...");
+      reset({
+        ...watch(),
+        name: existingStaff.name,
+        role: existingStaff.role,
+        department: existingStaff.department,
+        status: existingStaff.status,
+        phone: existingStaff.phone,
+        email: existingStaff.email,
+        basicSalary: existingStaff.basicSalary,
+        allowance: existingStaff.allowance,
+        deduction: existingStaff.deduction,
+        paymentType: existingStaff.paymentType,
+        stage: existingStaff.stage as any,
+      });
+    }
   };
 
   const filtered = useMemo(() => {
@@ -149,8 +182,9 @@ function HrStaffIndex() {
                   <label className="mb-1 block text-sm font-medium">الرقم الوظيفي</label>
                   <input
                     {...register("employeeNo")}
+                    onBlur={(e) => handleSmartRegistrationCheck(e.target.value)}
                     className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                    placeholder="يولد تلقائياً إذا ترك فارغاً"
+                    placeholder="أدخل الرقم الوظيفي للبحث في الأرشيف"
                   />
                 </div>
                 <div>
@@ -184,9 +218,19 @@ function HrStaffIndex() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-4">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">الراتب الأساسي</label>
+                    <label className="mb-1 block text-sm font-medium">نظام الدفع</label>
+                    <select {...register("paymentType")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring">
+                      <option value="Monthly">راتب شهري</option>
+                      <option value="PerLesson">نظام الحصص</option>
+                      <option value="Daily">أجر يومي</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      {selectedPaymentType === "Monthly" ? "الراتب الشهري الثابت" : selectedPaymentType === "PerLesson" ? "أجر الحصة الواحدة" : "الأجر اليومي"}
+                    </label>
                     <input type="number" {...register("basicSalary")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring" />
                   </div>
                   <div>

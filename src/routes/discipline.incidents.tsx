@@ -19,16 +19,16 @@ export const Route = createFileRoute("/discipline/incidents")({
 
 const incidentSchema = z.object({
   studentId: z.string().min(1, "الرجاء اختيار الطالب"),
-  type: z.enum(["positive", "negative"], { required_error: "يجب تحديد نوع السلوك" }),
-  category: z.string().min(3, "الرجاء تحديد تصنيف السلوك"),
-  points: z.coerce.number(),
+  categoryId: z.string().min(1, "الرجاء تحديد تصنيف السلوك"),
   description: z.string().min(5, "الرجاء وصف الحالة بالتفصيل"),
+  location: z.string().optional(),
+  actionTaken: z.string().optional(),
 });
 
 type IncidentForm = z.infer<typeof incidentSchema>;
 
 function DisciplineIncidents() {
-  const { activeStageDisciplineIncidents, activeStageStudents, activeStageSections, addDisciplineIncident } = useGlobalStore();
+  const { allBehaviorTransactions, allDisciplineCategories, activeStageStudents, activeStageSections, addDisciplineIncident, addBehaviorTransaction, currentAcademicYearId, allStudentEnrollments } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   
   const [q, setQ] = useState("");
@@ -42,19 +42,47 @@ function DisciplineIncidents() {
 
   const { register, handleSubmit, reset, watch, control, formState: { errors } } = useForm<IncidentForm>({
     resolver: zodResolver(incidentSchema),
-    defaultValues: { type: "negative", points: -1, studentId: "" },
+    defaultValues: { studentId: "", categoryId: "", description: "" },
   });
 
-  const selectedType = watch("type");
-
   const onSubmit = (data: IncidentForm) => {
-    const points = data.type === "positive" ? Math.abs(data.points) : -Math.abs(data.points);
+    if (!currentAcademicYearId) {
+      toast.error("لا يوجد عام دراسي نشط");
+      return;
+    }
+
+    const enrollment = allStudentEnrollments.find(e => e.studentId === data.studentId && e.academicYearId === currentAcademicYearId);
+    if (!enrollment) {
+      toast.error("الطالب غير مسجل في العام الحالي");
+      return;
+    }
+
+    const category = allDisciplineCategories.find(c => c.id === data.categoryId);
+    if (!category) return;
+
+    // 1. Create the Incident
+    const incidentId = `DI-${Math.floor(1000 + Math.random() * 9000)}`;
     addDisciplineIncident({
-      ...data,
-      points,
+      studentEnrollmentId: enrollment.id,
+      date: new Date().toISOString().split("T")[0],
+      location: data.location,
+      description: data.description,
+      responsiblePerson: "current_user",
+      actionTaken: data.actionTaken
+    });
+
+    // 2. Create the Ledger Transaction (Negative Points)
+    addBehaviorTransaction({
+      studentEnrollmentId: enrollment.id,
+      type: "negative",
+      points: category.defaultPoints, // Negative by default for these categories
+      categoryId: category.id,
+      reason: data.description,
+      createdBy: "current_user",
       date: new Date().toISOString().split("T")[0],
     });
-    toast.success("تم تسجيل الواقعة السلوكية بنجاح");
+
+    toast.success("تم تسجيل الواقعة السلوكية وخصم النقاط بنجاح");
     setIsModalOpen(false);
     reset();
   };
@@ -68,27 +96,33 @@ function DisciplineIncidents() {
   const uniqueGrades = useMemo(() => Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean), [activeStageSections]);
 
   const filtered = useMemo(() => {
-    return activeStageDisciplineIncidents.filter((i) => {
-      // Name/ID Filter
-      if (q && !i.studentName.includes(q) && !i.id.includes(q)) return false;
-      
-      // Date Filters
-      if (filterDateFrom && i.date < filterDateFrom) return false;
-      if (filterDateTo && i.date > filterDateTo) return false;
+    return allBehaviorTransactions.filter((tx) => {
+      if (tx.type !== "negative") return false;
 
-      // Grade & Section Filters (Assuming we can link studentId to Student)
-      const student = activeStageStudents.find(s => s.id === i.studentId);
-      if (student) {
-        if (filterGrade && student.grade !== filterGrade) return false;
-        if (filterSection && student.sectionId !== filterSection) return false;
-      } else {
-        // If student not found but filters are active, we might exclude them
-        if (filterGrade || filterSection) return false;
-      }
+      const enrollment = allStudentEnrollments.find(e => e.id === tx.studentEnrollmentId);
+      if (!enrollment) return false;
+      const student = activeStageStudents.find(s => s.id === enrollment.studentId);
+      if (!student) return false;
+
+      if (q && !student.name.includes(q) && !tx.id.includes(q)) return false;
+      if (filterDateFrom && tx.date < filterDateFrom) return false;
+      if (filterDateTo && tx.date > filterDateTo) return false;
+      if (filterGrade && student.grade !== filterGrade) return false;
+      if (filterSection && student.sectionId !== filterSection) return false;
 
       return true;
+    }).map(tx => {
+      const enrollment = allStudentEnrollments.find(e => e.id === tx.studentEnrollmentId)!;
+      const student = activeStageStudents.find(s => s.id === enrollment.studentId)!;
+      const category = allDisciplineCategories.find(c => c.id === tx.categoryId);
+      return {
+        ...tx,
+        studentName: student.name,
+        categoryName: category?.name || "غير محدد",
+        grade: student.grade
+      };
     });
-  }, [q, filterDateFrom, filterDateTo, filterGrade, filterSection, activeStageDisciplineIncidents, activeStageStudents]);
+  }, [q, filterDateFrom, filterDateTo, filterGrade, filterSection, allBehaviorTransactions, activeStageStudents, allStudentEnrollments, allDisciplineCategories]);
 
   const printTemplates: PrintTemplate[] = [
     {
@@ -206,7 +240,7 @@ function DisciplineIncidents() {
                   </Badge>
                 ),
               },
-              { key: "category", header: "التصنيف", cell: (r) => r.category },
+              { key: "category", header: "التصنيف", cell: (r) => r.categoryName },
               { 
                 key: "points", 
                 header: "النقاط", 
@@ -216,7 +250,7 @@ function DisciplineIncidents() {
                   </span>
                 ) 
               },
-              { key: "desc", header: "التفاصيل", cell: (r) => <span className="text-sm font-medium">{r.description}</span> },
+              { key: "desc", header: "التفاصيل", cell: (r) => <span className="text-sm font-medium">{r.reason}</span> },
             ]}
             empty={`لا توجد حوادث سلوكية مطابقة لخيارات الفلترة.`}
           />
@@ -253,38 +287,35 @@ function DisciplineIncidents() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">نوع السلوك <span className="text-danger">*</span></label>
+                    <label className="mb-2 block text-sm font-bold text-muted-foreground">تصنيف الواقعة (مخالفة) <span className="text-danger">*</span></label>
                     <select
-                      {...register("type")}
+                      {...register("categoryId")}
                       className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
                     >
-                      <option value="positive">إيجابي (مكافأة)</option>
-                      <option value="negative">سلبي (مخالفة)</option>
+                      <option value="">-- اختر التصنيف --</option>
+                      {allDisciplineCategories.filter(c => c.type === "behavioral" && c.defaultPoints < 0).map(c => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.defaultPoints} نقطة)</option>
+                      ))}
                     </select>
-                    {errors.type && <p className="mt-1.5 text-xs font-bold text-danger">{errors.type.message}</p>}
+                    {errors.categoryId && <p className="mt-1.5 text-xs font-bold text-danger">{errors.categoryId.message}</p>}
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">
-                      النقاط ({selectedType === "positive" ? "+" : "-"}) <span className="text-danger">*</span>
-                    </label>
+                    <label className="mb-2 block text-sm font-bold text-muted-foreground">المكان</label>
                     <input
-                      type="number"
-                      {...register("points")}
-                      className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold tabular-nums outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-left"
-                      dir="ltr"
+                      {...register("location")}
+                      className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      placeholder="الفصل، الساحة، المعمل..."
                     />
-                    {errors.points && <p className="mt-1.5 text-xs font-bold text-danger">{errors.points.message}</p>}
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">تصنيف الواقعة <span className="text-danger">*</span></label>
+                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الإجراء المتخذ</label>
                   <input
-                    {...register("category")}
+                    {...register("actionTaken")}
                     className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                    placeholder={selectedType === "positive" ? "مشاركة، تميز علمي..." : "غياب بدون عذر، إزعاج..."}
+                    placeholder="إنذار شفوي، استدعاء..."
                   />
-                  {errors.category && <p className="mt-1.5 text-xs font-bold text-danger">{errors.category.message}</p>}
                 </div>
 
                 <div>

@@ -4,6 +4,7 @@ import { DataTable } from "@/components/data-table";
 import { Plus, DollarSign, Printer, Trash2, X, Building, GraduationCap, CheckSquare } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { FinancialCard, FilterBar } from "@/components/financial-components";
 import { useGlobalStore, FeeStructure } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
@@ -114,7 +115,7 @@ function FinanceFees() {
     <AppShell
       breadcrumb={[
         { label: "الرئيسية", to: "/" },
-        { label: "المالية والمحاسبة" },
+        { label: "المركز المالي" },
         { label: "إعداد الرسوم" },
       ]}
       actions={
@@ -134,7 +135,36 @@ function FinanceFees() {
         </div>
       }
     >
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FinancialCard 
+            title="إجمالي بنود الرسوم" 
+            value={activeStageFeeStructures.length} 
+            icon={DollarSign} 
+            colorClass="text-primary bg-primary" 
+          />
+          <FinancialCard 
+            title="البنود الإلزامية" 
+            value={activeStageFeeStructures.filter(f => f.isMandatory).length} 
+            icon={CheckSquare} 
+            colorClass="text-warning bg-warning" 
+          />
+          <FinancialCard 
+            title="إجمالي قيمة الرسوم (الأساسية)" 
+            value={activeStageFeeStructures.filter(f => f.isMandatory && f.grades?.length === 0 && f.sections?.length === 0).reduce((sum, f) => sum + f.amount, 0)} 
+            currency={currency}
+            icon={Building} 
+            colorClass="text-success bg-success" 
+          />
+        </div>
+
+        <FilterBar>
+          <div className="flex-1" />
+          <div className="text-sm text-muted-foreground font-bold">المرحلة الحالية: {getStageLabel(stage)}</div>
+        </FilterBar>
+
         <PageCard>
           <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
             <DollarSign className="h-5 w-5 text-primary" />

@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { DollarSign, Printer, Download, Save, Calculator } from "lucide-react";
+import { DollarSign, Printer, Download, Save, Calculator, Wallet, TrendingUp, TrendingDown, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { FinancialCard, SmartAlert, FilterBar, FinancialWorkflowBadge } from "@/components/financial-components";
 
 export const Route = createFileRoute("/hr/payroll")({
   component: HrPayroll,
@@ -36,27 +37,52 @@ function HrPayroll() {
 
   const payrollData = useMemo(() => {
     return activeStageStaff.filter(staff => !staff.isDeleted && staff.status !== "terminated").map(staff => {
-      const basic = staff.basicSalary || 0;
-      const allowance = staff.allowance || 0;
-      const manualDeduction = staff.deduction || 0;
-      const dailyRate = Math.round(basic / 30);
-      const attendanceDeduction = activeStageStaffAttendance
-        .filter(record => record.staffId === staff.id && record.date.startsWith(payrollMonth))
-        .reduce((sum, record) => sum + (record.deductionAmount || 0), 0);
-      const unpaidLeaveDays = allStaffLeaves
-        .filter(leave => leave.staffId === staff.id && leave.status === "approved" && leave.type === "unpaid")
-        .reduce((sum, leave) => sum + getOverlapDaysInMonth(leave.startDate, leave.endDate, payrollMonth), 0);
-      const leaveDeduction = unpaidLeaveDays * dailyRate;
+      const rate = (staff as any).basicSalary || 0;
+      const allowance = (staff as any).allowance || 0;
+      const manualDeduction = (staff as any).deduction || 0;
+      
+      const attendanceRecords = activeStageStaffAttendance.filter(record => record.staffId === staff.id && record.date.startsWith(payrollMonth));
+      
+      let calculatedBasic = 0;
+      let attendanceDeduction = 0;
+      let unpaidLeaveDays = 0;
+      let leaveDeduction = 0;
+      let details = "";
+
+      if (staff.paymentType === "PerLesson") {
+        const attendedLessons = attendanceRecords.filter(r => r.status === "present").length;
+        calculatedBasic = attendedLessons * rate;
+        details = `${attendedLessons} حصة × ${rate}`;
+      } else if (staff.paymentType === "Daily") {
+        const attendedDays = attendanceRecords.filter(r => r.status === "present" || r.status === "late").length;
+        calculatedBasic = attendedDays * rate;
+        attendanceDeduction = attendanceRecords.reduce((sum, record) => sum + (record.deductionAmount || 0), 0);
+        details = `${attendedDays} يوم × ${rate}`;
+      } else {
+        // Default Monthly
+        calculatedBasic = rate;
+        attendanceDeduction = attendanceRecords.reduce((sum, record) => sum + (record.deductionAmount || 0), 0);
+        unpaidLeaveDays = allStaffLeaves
+          .filter(leave => leave.staffId === staff.id && leave.status === "approved" && leave.type === "issued")
+          .reduce((sum, leave) => sum + getOverlapDaysInMonth(leave.startDate, leave.endDate, payrollMonth), 0);
+        const dailyRate = Math.round(rate / 30);
+        leaveDeduction = unpaidLeaveDays * dailyRate;
+        details = "راتب شهري ثابت";
+      }
+
       const advanceDeduction = allStaffAdvances
         .filter((advance: any) => advance.staffId === staff.id && advance.deductionMonth === payrollMonth && advance.status === "paid")
         .reduce((sum: number, advance: any) => sum + (advance.amount || 0), 0);
+        
       const totalDeduction = manualDeduction + attendanceDeduction + leaveDeduction + advanceDeduction;
       return {
         id: staff.id,
         name: staff.name,
         role: staff.role,
         department: staff.department,
-        basic,
+        paymentType: staff.paymentType || "Monthly",
+        details,
+        basic: calculatedBasic,
         allowance,
         manualDeduction,
         attendanceDeduction,
@@ -64,7 +90,7 @@ function HrPayroll() {
         leaveDeduction,
         advanceDeduction,
         deduction: totalDeduction,
-        net: Math.max(0, basic + allowance - totalDeduction),
+        net: Math.max(0, calculatedBasic + allowance - totalDeduction),
       };
     });
   }, [activeStageStaff, activeStageStaffAttendance, allStaffAdvances, allStaffLeaves, payrollMonth]);
@@ -107,11 +133,9 @@ function HrPayroll() {
       type: "table",
       columns: [
         { label: "الموظف", key: "name" },
-        { label: "الأساسي", key: "basic" },
-        { label: "البدلات", key: "allowance" },
-        { label: "خصومات الحضور", key: "attendanceDeduction" },
-        { label: "خصومات الإجازات", key: "leaveDeduction" },
-        { label: "السلف", key: "advanceDeduction" },
+        { label: "نظام الدفع", key: "paymentType" },
+        { label: "المستحق الأساسي", key: "basic" },
+        { label: "البدلات/المكافآت", key: "allowance" },
         { label: "إجمالي الخصومات", key: "deduction" },
         { label: "الصافي", key: "net" },
       ]
@@ -122,7 +146,11 @@ function HrPayroll() {
       category: "شؤون الموظفين",
       type: "receipt",
       columns: [
-        { label: "الصافي المستحق", key: "net" }
+        { label: "حساب الأساسي", key: "details" },
+        { label: "المبلغ الأساسي", key: "basic" },
+        { label: "المكافآت والبدلات", key: "allowance" },
+        { label: "إجمالي الخصومات", key: "deduction" },
+        { label: "صافي الراتب", key: "net" }
       ],
       customControls: [
         { key: "receiptReason", label: "البيان", type: "text", defaultValue: `مفردات راتب شهر ${payrollMonth}` }
@@ -146,7 +174,11 @@ function HrPayroll() {
             <Download className="h-4 w-4" /> تصدير للبنك
           </button>
           <button 
-            onClick={handleApprovePayroll} 
+            onClick={() => {
+              if (window.confirm(`هل أنت متأكد من اعتماد مسير الرواتب لشهر ${payrollMonth}؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+                handleApprovePayroll();
+              }
+            }}
             disabled={isApproved}
             className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-bold shadow-sm transition-colors ${isApproved ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
           >
@@ -155,37 +187,65 @@ function HrPayroll() {
         </div>
       }
     >
-      <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-bold text-muted-foreground">إجمالي الأساسي</p>
-            <p className="mt-1 text-2xl font-black">{totals.basic.toLocaleString()} {currency}</p>
+      <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        {!isApproved && (
+          <SmartAlert 
+            type="info"
+            title="التكامل المالي الآلي"
+            message="اعتماد مسير الرواتب سيقوم تلقائياً بتوليد سندات صرف لكل موظف في قسم المصروفات المالية وتحديث الرصيد المالي للمدرسة."
+          />
+        )}
+        {isApproved && (
+          <SmartAlert 
+            type="success"
+            title="تم اعتماد مسير الرواتب"
+            message="تم اعتماد هذا المسير وترحيل المصروفات آلياً إلى المركز المالي بنجاح. لا يمكن التعديل عليه."
+          />
+        )}
+
+        <FilterBar>
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-bold">مسير الرواتب</h2>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-bold text-muted-foreground">البدلات</p>
-            <p className="mt-1 text-2xl font-black text-success">{totals.allowance.toLocaleString()} {currency}</p>
+          <div className="flex items-center gap-3">
+            <input type="month" value={payrollMonth} onChange={event => setPayrollMonth(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold" />
+            <FinancialWorkflowBadge status={isApproved ? "approved" : "pending"} />
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-bold text-muted-foreground">الخصومات</p>
-            <p className="mt-1 text-2xl font-black text-danger">{totals.deduction.toLocaleString()} {currency}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-bold text-muted-foreground">الصافي المستحق</p>
-            <p className="mt-1 text-2xl font-black text-primary">{totals.net.toLocaleString()} {currency}</p>
-          </div>
+        </FilterBar>
+
+        <div className="grid gap-6 md:grid-cols-4">
+          <FinancialCard 
+            title="إجمالي الأساسي" 
+            value={totals.basic} 
+            currency={currency} 
+            icon={Wallet} 
+            colorClass="text-foreground bg-muted" 
+          />
+          <FinancialCard 
+            title="البدلات" 
+            value={totals.allowance} 
+            currency={currency} 
+            icon={TrendingUp} 
+            colorClass="text-success bg-success" 
+          />
+          <FinancialCard 
+            title="الخصومات" 
+            value={totals.deduction} 
+            currency={currency} 
+            icon={TrendingDown} 
+            colorClass="text-danger bg-danger" 
+          />
+          <FinancialCard 
+            title="الصافي المستحق" 
+            value={totals.net} 
+            currency={currency} 
+            icon={ArrowDown} 
+            colorClass="text-primary bg-primary" 
+          />
         </div>
 
         <PageCard>
-          <div className="mb-4 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-bold">مسير الرواتب - {payrollMonth}</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="month" value={payrollMonth} onChange={event => setPayrollMonth(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold" />
-              <Badge tone={isApproved ? "success" : "warning"}>{isApproved ? "معتمد ومرحل" : "مسودة"}</Badge>
-            </div>
-          </div>
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-bold text-primary">
             <Calculator className="h-4 w-4" />
             يتم احتساب الصافي من الراتب الأساسي + البدلات، ثم خصم الحسميات اليدوية والحضور والإجازات بدون راتب والسلف.

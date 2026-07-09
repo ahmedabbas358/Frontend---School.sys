@@ -18,15 +18,14 @@ export const Route = createFileRoute("/discipline/merits")({
 
 const meritSchema = z.object({
   studentId: z.string().min(1, "الرجاء اختيار الطالب"),
-  category: z.string().min(3, "الرجاء تحديد سبب التميز أو المكافأة"),
-  points: z.coerce.number().min(1, "يجب أن تكون النقاط قيمة موجبة أكبر من صفر"),
+  categoryId: z.string().min(1, "الرجاء تحديد سبب التميز أو المكافأة"),
   description: z.string().optional(),
 });
 
 type MeritForm = z.infer<typeof meritSchema>;
 
 function DisciplineMerits() {
-  const { activeStageDisciplineIncidents, activeStageStudents, activeStageSections, addDisciplineIncident } = useGlobalStore();
+  const { allBehaviorTransactions, allDisciplineCategories, activeStageStudents, activeStageSections, addBehaviorTransaction, currentAcademicYearId, allStudentEnrollments } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
 
   const [q, setQ] = useState("");
@@ -40,16 +39,34 @@ function DisciplineMerits() {
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<MeritForm>({
     resolver: zodResolver(meritSchema),
-    defaultValues: { points: 5, studentId: "" },
+    defaultValues: { studentId: "", categoryId: "", description: "" },
   });
 
   const onSubmit = (data: MeritForm) => {
-    addDisciplineIncident({
-      ...data,
+    if (!currentAcademicYearId) {
+      toast.error("لا يوجد عام دراسي نشط");
+      return;
+    }
+
+    const enrollment = allStudentEnrollments.find(e => e.studentId === data.studentId && e.academicYearId === currentAcademicYearId);
+    if (!enrollment) {
+      toast.error("الطالب غير مسجل في العام الحالي");
+      return;
+    }
+
+    const category = allDisciplineCategories.find(c => c.id === data.categoryId);
+    if (!category) return;
+
+    addBehaviorTransaction({
+      studentEnrollmentId: enrollment.id,
       type: "positive",
-      description: data.description || "منح نقاط تميز / مكافأة",
+      points: category.defaultPoints,
+      categoryId: category.id,
+      reason: data.description || "منح نقاط تميز / مكافأة",
+      createdBy: "current_user",
       date: new Date().toISOString().split("T")[0],
     });
+
     toast.success("تم منح المكافأة بنجاح");
     setIsModalOpen(false);
     reset();
@@ -64,29 +81,39 @@ function DisciplineMerits() {
   const uniqueGrades = useMemo(() => Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean), [activeStageSections]);
 
   const filtered = useMemo(() => {
-    return activeStageDisciplineIncidents.filter((i) => {
-      // ONLY positive incidents
-      if (i.type !== "positive") return false;
+    return allBehaviorTransactions.filter((tx) => {
+      // ONLY positive transactions
+      if (tx.type !== "positive") return false;
+
+      const enrollment = allStudentEnrollments.find(e => e.id === tx.studentEnrollmentId);
+      if (!enrollment) return false;
+      const student = activeStageStudents.find(s => s.id === enrollment.studentId);
+      if (!student) return false;
 
       // Name/ID Filter
-      if (q && !i.studentName.includes(q) && !i.id.includes(q)) return false;
+      if (q && !student.name.includes(q) && !tx.id.includes(q)) return false;
       
       // Date Filters
-      if (filterDateFrom && i.date < filterDateFrom) return false;
-      if (filterDateTo && i.date > filterDateTo) return false;
+      if (filterDateFrom && tx.date < filterDateFrom) return false;
+      if (filterDateTo && tx.date > filterDateTo) return false;
 
       // Grade & Section Filters
-      const student = activeStageStudents.find(s => s.id === i.studentId);
-      if (student) {
-        if (filterGrade && student.grade !== filterGrade) return false;
-        if (filterSection && student.sectionId !== filterSection) return false;
-      } else {
-        if (filterGrade || filterSection) return false;
-      }
+      if (filterGrade && student.grade !== filterGrade) return false;
+      if (filterSection && student.sectionId !== filterSection) return false;
 
       return true;
+    }).map(tx => {
+      const enrollment = allStudentEnrollments.find(e => e.id === tx.studentEnrollmentId)!;
+      const student = activeStageStudents.find(s => s.id === enrollment.studentId)!;
+      const category = allDisciplineCategories.find(c => c.id === tx.categoryId);
+      return {
+        ...tx,
+        studentName: student.name,
+        categoryName: category?.name || "غير محدد",
+        grade: student.grade
+      };
     });
-  }, [q, filterDateFrom, filterDateTo, filterGrade, filterSection, activeStageDisciplineIncidents, activeStageStudents]);
+  }, [q, filterDateFrom, filterDateTo, filterGrade, filterSection, allBehaviorTransactions, activeStageStudents, allStudentEnrollments, allDisciplineCategories]);
 
   const printTemplates: PrintTemplate[] = [
     {
@@ -193,7 +220,7 @@ function DisciplineMerits() {
               { key: "id", header: "الرقم", cell: (r) => <span className="font-bold tabular-nums text-muted-foreground">{r.id}</span> },
               { key: "date", header: "التاريخ", cell: (r) => <span className="tabular-nums font-medium">{r.date}</span> },
               { key: "student", header: "اسم الطالب", cell: (r) => <span className="font-bold text-foreground">{r.studentName}</span> },
-              { key: "category", header: "سبب التميز", cell: (r) => r.category },
+              { key: "category", header: "سبب التميز", cell: (r) => r.categoryName },
               { 
                 key: "points", 
                 header: "النقاط المكتسبة", 
@@ -237,27 +264,18 @@ function DisciplineMerits() {
                   {errors.studentId && <p className="mt-1.5 text-xs font-bold text-danger">{errors.studentId.message}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 md:col-span-1">
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">النقاط الممنوحة <span className="text-danger">*</span></label>
-                    <input
-                      type="number"
-                      {...register("points")}
-                      className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold tabular-nums outline-none focus:border-success focus:ring-1 focus:ring-success transition-all text-left text-success"
-                      dir="ltr"
-                    />
-                    {errors.points && <p className="mt-1.5 text-xs font-bold text-danger">{errors.points.message}</p>}
-                  </div>
-                </div>
-
                 <div>
                   <label className="mb-2 block text-sm font-bold text-muted-foreground">سبب التميز <span className="text-danger">*</span></label>
-                  <input
-                    {...register("category")}
-                    className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-success focus:ring-1 focus:ring-success transition-all"
-                    placeholder="مثال: المشاركة الفعالة، التميز العلمي، المبادرة..."
-                  />
-                  {errors.category && <p className="mt-1.5 text-xs font-bold text-danger">{errors.category.message}</p>}
+                  <select
+                    {...register("categoryId")}
+                    className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-success focus:ring-1 focus:ring-success transition-all cursor-pointer"
+                  >
+                    <option value="">-- اختر المكافأة --</option>
+                    {allDisciplineCategories.filter(c => c.defaultPoints > 0).map(c => (
+                      <option key={c.id} value={c.id}>{c.name} (+{c.defaultPoints} نقطة)</option>
+                    ))}
+                  </select>
+                  {errors.categoryId && <p className="mt-1.5 text-xs font-bold text-danger">{errors.categoryId.message}</p>}
                 </div>
 
                 <div>

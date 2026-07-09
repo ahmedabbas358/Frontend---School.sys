@@ -95,7 +95,7 @@ function Stat({
 }
 
 function DashboardPage() {
-  const { allStudents, allStaff, allSections, allSubjects, allExams, allExamTypes } = useGlobalStore();
+  const { allStudents, allStaff, allSections, allSubjects, allExams } = useGlobalStore();
   const teachers = allStaff.filter(s => s.role === "Teacher");
 
   const gradeDist = Array.from(
@@ -242,12 +242,12 @@ function DashboardPage() {
               {allExams.slice(0, 5).map((e: any) => (
                 <li key={e.id} className="flex items-center justify-between py-3">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-bold">{allSubjects.find((s: any) => s.id === e.subjectId)?.name || 'غير معروف'}</div>
+                    <div className="truncate text-sm font-bold">{e.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {allExamTypes.find((t: any) => t.id === e.typeId)?.name || 'غير محدد'} — {e.totalMarks || 100} درجة
+                      {e.term} — {e.type === 'midterm' ? 'نصفي' : e.type === 'final' ? 'نهائي' : 'شهري'}
                     </div>
                   </div>
-                  <Badge tone="info">{e.date || 'قريباً'}</Badge>
+                  <Badge tone="info">{e.startDate}</Badge>
                 </li>
               ))}
             </ul>

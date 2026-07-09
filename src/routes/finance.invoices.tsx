@@ -14,7 +14,7 @@ export const Route = createFileRoute("/finance/invoices")({
 });
 
 function FinanceInvoices() {
-  const { currency, activeStageInvoices, activeStageStudents, activeStageFeeStructures, activeStageSections, addInvoice, allDiscounts  } = useGlobalStore();
+  const { currency, activeStageInvoices, activeStageStudents, activeStageFeeStructures, activeStageSections, addInvoice, issueInvoice, cancelInvoice, allDiscounts  } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -90,8 +90,9 @@ function FinanceInvoices() {
     const totalDue = totalAmount - totalPaid;
     const paidCount = filtered.filter(inv => inv.status === "paid").length;
     const partialCount = filtered.filter(inv => inv.status === "partial").length;
-    const unpaidCount = filtered.filter(inv => inv.status === "unpaid").length;
-    return { totalAmount, totalPaid, totalDue, paidCount, partialCount, unpaidCount, total: filtered.length };
+    const unpaidCount = filtered.filter(inv => inv.status === "issued").length;
+    const draftCount = filtered.filter(inv => inv.status === "draft").length;
+    return { totalAmount, totalPaid, totalDue, paidCount, partialCount, unpaidCount, draftCount, total: filtered.length };
   }, [filtered]);
 
   const [isPrintOpen, setIsPrintOpen] = useState(false);
@@ -111,7 +112,7 @@ function FinanceInvoices() {
         { label: "المدفوع", key: "paid" },
         { label: "المتبقي", key: "due", render: (r) => (r.netAmount ?? r.amount) - r.paid },
         { label: "تاريخ الاستحقاق", key: "dueDate" },
-        { label: "الحالة", key: "status", render: (r) => r.status === "paid" ? "مسدد" : r.status === "partial" ? "مسدد جزئياً" : "غير مسدد" },
+        { label: "الحالة", key: "status", render: (r) => r.status === "paid" ? "مسدد" : r.status === "partial" ? "مسدد جزئياً" : r.status === "draft" ? "مسودة" : r.status === "cancelled" ? "ملغاة" : "مصدرة (غير مسددة)" },
       ]
     }
   ];
@@ -282,7 +283,8 @@ function FinanceInvoices() {
                 <div className="flex items-center gap-3 text-xs font-bold">
                   <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" /> {summaryStats.paidCount} مسدد</span>
                   <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" /> {summaryStats.partialCount} جزئي</span>
-                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-danger" /> {summaryStats.unpaidCount} معلق</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-danger" /> {summaryStats.unpaidCount} مصدر</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-muted" /> {summaryStats.draftCount} مسودة</span>
                 </div>
               </div>
             </div>
@@ -336,9 +338,10 @@ function FinanceInvoices() {
               onChange={e => setStatusFilter(e.target.value)}
             >
               <option value="">حالة السداد (الكل)</option>
-              <option value="paid">مسدد بالكامل</option>
-              <option value="partial">مسدد جزئياً</option>
-              <option value="unpaid">غير مسدد</option>
+              <option value="draft">مسودة</option>
+              <option value="issued">مصدرة (غير مسددة)</option>
+              <option value="partial">مسددة جزئياً</option>
+              <option value="paid">مسددة بالكامل</option>
               <option value="cancelled">ملغاة</option>
             </select>
           </div>
@@ -377,8 +380,8 @@ function FinanceInvoices() {
                 key: "status",
                 header: "الحالة",
                 cell: (r) => (
-                  <Badge tone={r.status === "paid" ? "success" : r.status === "partial" ? "warning" : r.status === "cancelled" ? "neutral" : "danger"}>
-                    {r.status === "paid" ? "مسدد" : r.status === "partial" ? "جزئي" : r.status === "cancelled" ? "ملغاة" : "غير مسدد"}
+                  <Badge tone={r.status === "paid" ? "success" : r.status === "partial" ? "warning" : r.status === "cancelled" ? "neutral" : r.status === "draft" ? "neutral" : "danger"}>
+                    {r.status === "paid" ? "مسدد" : r.status === "partial" ? "جزئي" : r.status === "cancelled" ? "ملغاة" : r.status === "draft" ? "مسودة" : "مصدرة"}
                   </Badge>
                 ),
               },
@@ -404,6 +407,34 @@ function FinanceInvoices() {
                     >
                       <Printer className="h-4 w-4" />
                     </button>
+                    {r.status === "draft" && (
+                      <button 
+                        onClick={() => {
+                          if (confirm('هل أنت متأكد من إصدار واعتماد هذه الفاتورة؟ سيتم توليد قيد محاسبي ولن تتمكن من إلغائه لاحقاً إلا بإنشاء قيد عكسي.')) {
+                            issueInvoice(r.id);
+                            toast.success("تم إصدار الفاتورة وتوليد القيد المحاسبي");
+                          }
+                        }}
+                        className="rounded-md p-2 text-success hover:bg-success/10 transition-colors"
+                        title="إصدار واعتماد الفاتورة"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    {(r.status === "draft" || r.status === "issued" || r.status === "partial") && (
+                      <button 
+                        onClick={() => {
+                          if (confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟ سيتم عكس القيد المحاسبي (إن وجد).')) {
+                            cancelInvoice(r.id);
+                            toast.success("تم إلغاء الفاتورة بنجاح");
+                          }
+                        }}
+                        className="rounded-md p-2 text-danger hover:bg-danger/10 transition-colors"
+                        title="إلغاء الفاتورة"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 )
               }

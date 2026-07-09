@@ -3,6 +3,7 @@ import { AppShell, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { Plus, Percent, Printer, Trash2, X, Users, GraduationCap, Building } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { FinancialCard, FilterBar } from "@/components/financial-components";
 import { useMemo, useState } from "react";
 import { useGlobalStore, Discount } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
@@ -120,7 +121,7 @@ function FinanceDiscounts() {
     <AppShell
       breadcrumb={[
         { label: "الرئيسية", to: "/" },
-        { label: "المالية والمحاسبة" },
+        { label: "المركز المالي" },
         { label: "الخصومات والمنح" },
       ]}
       actions={
@@ -140,7 +141,35 @@ function FinanceDiscounts() {
         </div>
       }
     >
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FinancialCard 
+            title="إجمالي قواعد الخصم" 
+            value={allDiscounts.length} 
+            icon={Percent} 
+            colorClass="text-primary bg-primary" 
+          />
+          <FinancialCard 
+            title="الخصومات النشطة" 
+            value={allDiscounts.filter(d => d.isActive).length} 
+            icon={GraduationCap} 
+            colorClass="text-success bg-success" 
+          />
+          <FinancialCard 
+            title="خصومات بمبالغ مقطوعة" 
+            value={allDiscounts.filter(d => d.type === 'fixed').length} 
+            icon={Building} 
+            colorClass="text-warning bg-warning" 
+          />
+        </div>
+
+        <FilterBar>
+          <div className="flex-1" />
+          <div className="text-sm text-muted-foreground font-bold">المرحلة الحالية: {getStageLabel(stage)}</div>
+        </FilterBar>
+
         <PageCard>
           <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
             <Percent className="h-5 w-5 text-primary" />

@@ -169,7 +169,7 @@ function HrLeaves() {
                     <option value="annual">سنوية</option>
                     <option value="sick">مرضية</option>
                     <option value="emergency">طارئة</option>
-                    <option value="unpaid">بدون راتب</option>
+                    <option value="issued">بدون راتب</option>
                   </select>
                 </div>
                 <div>
@@ -212,7 +212,7 @@ function HrLeaves() {
               <option value="annual">سنوية</option>
               <option value="sick">مرضية</option>
               <option value="emergency">طارئة</option>
-              <option value="unpaid">بدون راتب</option>
+              <option value="issued">بدون راتب</option>
             </select>
           </div>
         </div>
@@ -226,7 +226,7 @@ function HrLeaves() {
             rows={scopedLeaves}
             columns={[
               { key: "staffName", header: "الموظف", cell: (r) => <span className="font-bold">{r.staffName}</span> },
-              { key: "type", header: "نوع الإجازة", cell: (r) => <Badge tone={r.type === "unpaid" ? "danger" : r.type === "sick" ? "info" : "primary"}>{leaveTypeLabels[r.type]}</Badge> },
+              { key: "type", header: "نوع الإجازة", cell: (r) => <Badge tone={r.type === "issued" ? "danger" : r.type === "sick" ? "info" : "primary"}>{leaveTypeLabels[r.type]}</Badge> },
               { key: "period", header: "الفترة", cell: (r) => <span className="tabular-nums">{r.startDate} إلى {r.endDate}</span> },
               { key: "days", header: "الأيام", cell: (r) => <span className="font-black">{r.days}</span> },
               { key: "notes", header: "ملاحظات", cell: (r) => <span className="text-sm text-muted-foreground">{r.notes || "-"}</span> },

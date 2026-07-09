@@ -111,16 +111,17 @@ const NAV: Item[] = [
   {
     kind: "group",
     group: {
-      label: "المالية والمحاسبة",
+      label: "المركز المالي (ERP)",
       icon: DollarSign,
       items: [
+        { to: "/finance", label: "المركز المالي الموحد" },
         { to: "/finance/dashboard", label: "اللوحة المالية" },
-        { to: "/finance/ledger", label: "السجل المالي (دفتر اليومية)" },
-        { to: "/finance/invoices", label: "إدارة الفواتير" },
-        { to: "/finance/fees", label: "الرسوم الدراسية" },
-        { to: "/finance/payments", label: "سندات الصرف والقبض" },
-        { to: "/finance/discounts", label: "الخصومات" },
-        { to: "/finance/expenses", label: "المصروفات" },
+        { to: "/finance/ledger", label: "سجل القيود اليومية (GL)" },
+        { to: "/finance/invoices", label: "الفواتير والمطالبات" },
+        { to: "/finance/fees", label: "هيكل الرسوم الدراسية" },
+        { to: "/finance/payments", label: "سندات القبض والصرف" },
+        { to: "/finance/discounts", label: "الخصومات والإعفاءات" },
+        { to: "/finance/expenses", label: "المصروفات والاعتمادات" },
       ],
     },
   },
@@ -221,8 +222,13 @@ export function AppShell({
     notifications,
     unreadNotificationsCount,
     markAllNotificationsAsRead,
-    deleteNotification
+    deleteNotification,
+    allPayments,
+    allExpenses,
+    currency
   } = useGlobalStore();
+
+  const netBalance = allPayments.reduce((sum, p) => sum + p.amount, 0) - allExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Dark Mode Theme Toggle Logic
   const [systemIsDark, setSystemIsDark] = useState(false);
@@ -313,6 +319,15 @@ export function AppShell({
 
             <div className="flex items-center gap-2 justify-self-end">
               
+              {/* Financial Quick Status */}
+              <div className="hidden md:flex items-center gap-2 px-3 h-10 rounded-xl border border-border/50 bg-card/50">
+                <DollarSign className="w-4 h-4 text-primary" />
+                <span className="text-xs font-bold text-muted-foreground">الرصيد:</span>
+                <span className={`text-sm font-black tabular-nums ${netBalance >= 0 ? 'text-success' : 'text-danger'}`}>
+                  {netBalance.toLocaleString()} {currency}
+                </span>
+              </div>
+
               {/* Theme Toggle */}
               <button
                 onClick={() => updateSettings({ themeMode: isDark ? "light" : "dark" })}

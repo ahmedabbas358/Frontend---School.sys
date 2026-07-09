@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { User, Phone, MapPin, Printer, GraduationCap, FileText, AlertTriangle, CreditCard, X } from "lucide-react";
+import { User, Phone, MapPin, Printer, GraduationCap, FileText, AlertTriangle, CreditCard, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { FinancialTimeline } from "@/components/financial-components";
 
 export const Route = createFileRoute("/guardians/$id")({
   head: () => ({
@@ -15,9 +16,10 @@ export const Route = createFileRoute("/guardians/$id")({
 
 function GuardianProfile() {
   const { id } = Route.useParams();
-  const { currency, allStudents, allInvoices, addPayment, allGuardians } = useGlobalStore();
+  const { currency, allStudents, allInvoices, allPayments, addPayment, allGuardians } = useGlobalStore();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
   const [paymentData, setPaymentData] = useState({
     invoiceId: "",
     amount: 0,
@@ -74,6 +76,36 @@ function GuardianProfile() {
   const totalAmount = guardianInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const totalPaid = guardianInvoices.reduce((sum, inv) => sum + inv.paid, 0);
   const totalDue = totalAmount - totalPaid;
+
+  const guardianTransactions = useMemo(() => {
+    const invoices = guardianInvoices.map(i => {
+      const student = guardianData.students.find(s => s.id === i.studentId);
+      return {
+        id: `inv-${i.id}`,
+        date: i.issueDate || i.dueDate,
+        title: `إصدار فاتورة: ${i.title}`,
+        subtitle: `للطالب: ${student?.name || 'غير محدد'}`,
+        amount: i.amount,
+        type: "expense" as const, 
+        currency
+      };
+    });
+    const payments = allPayments.filter(p => studentIds.includes(p.studentId)).map(p => {
+      const student = guardianData.students.find(s => s.id === p.studentId);
+      return {
+        id: `pay-${p.id}`,
+        date: p.date,
+        title: `سداد دفعة`,
+        subtitle: `للطالب: ${student?.name || 'غير محدد'} - ${p.method === 'cash' ? 'نقدي' : p.method === 'bank_transfer' ? 'حوالة بنكية' : 'بطاقة ائتمان'}`,
+        amount: p.amount,
+        type: "income" as const,
+        currency,
+        method: p.method
+      };
+    });
+    
+    return [...invoices, ...payments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [guardianInvoices, allPayments, guardianData, studentIds, currency]);
 
   const printTemplates: PrintTemplate[] = [
     {
@@ -236,30 +268,34 @@ function GuardianProfile() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
-            <PageCard title="الأبناء المرتبطون بولي الأمر">
-              <div className="space-y-4">
+          
+          {/* Left Sidebar */}
+          <div className="space-y-6">
+            <PageCard title="الأبناء المرتبطون" className="shadow-sm">
+              <div className="space-y-3">
                 {guardianData.students.map(student => (
                   <Link 
                     key={student.id} 
-                    to="/students/$id" 
-                    params={{ id: student.id }}
-                    className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-md transition-all group"
+                    to={`/students/${student.id}`}
+                    className="flex flex-col p-3 rounded-2xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all group"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg shrink-0">
                         {student.name.split(' ')[0][0]}
                       </div>
-                      <div>
-                        <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">{student.name}</h3>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{student.name}</h3>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                           <GraduationCap className="h-3 w-3" /> {student.grade} - الشعبة: {student.sectionId}
                         </p>
                       </div>
                     </div>
-                    <div className="text-left flex flex-col items-end">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${student.status === 'نشط' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                    <div className="flex justify-between items-center mt-2 border-t border-border/50 pt-2">
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${student.status === 'نشط' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
                         {student.status || 'نشط'}
+                      </span>
+                      <span className="text-xs font-bold text-primary group-hover:underline">
+                        عرض الملف <ArrowLeft className="w-3 h-3 inline ml-1" />
                       </span>
                     </div>
                   </Link>
@@ -268,64 +304,142 @@ function GuardianProfile() {
             </PageCard>
           </div>
 
-          <div className="space-y-6">
-            <PageCard title="الملخص المالي المجمع" className="shadow-sm border-danger/20 bg-danger/5">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-background rounded-xl border border-border/50">
-                  <span className="text-sm font-bold text-muted-foreground flex items-center gap-2">
-                    <FileText className="h-4 w-4" /> إجمالي المستحق
-                  </span>
-                  <span className="font-black tabular-nums">{totalAmount.toLocaleString()} {currency}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-success/10 rounded-xl border border-success/20">
-                  <span className="text-sm font-bold text-success flex items-center gap-2">
-                    إجمالي المدفوع
-                  </span>
-                  <span className="font-black tabular-nums text-success">{totalPaid.toLocaleString()} {currency}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-danger/10 rounded-xl border border-danger/20">
-                  <span className="text-sm font-bold text-danger flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" /> إجمالي المتبقي
-                  </span>
-                  <span className="font-black tabular-nums text-danger">{totalDue.toLocaleString()} {currency}</span>
-                </div>
-              </div>
-            </PageCard>
+          {/* Right Content */}
+          <div className="md:col-span-2 space-y-6">
+            
+            {/* Tabs Header */}
+            <div className="flex gap-2 border-b border-border/50 overflow-x-auto pb-1 mb-4">
+              <button 
+                onClick={() => setActiveTab('overview')} 
+                className={`px-4 py-2 font-bold text-sm whitespace-nowrap transition-colors border-b-2 ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}
+              >
+                النظرة العامة
+              </button>
+              <button 
+                onClick={() => setActiveTab('financial')} 
+                className={`px-4 py-2 font-bold text-sm whitespace-nowrap transition-colors border-b-2 ${activeTab === 'financial' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}
+              >
+                الملف المالي المجمع
+              </button>
+            </div>
 
-            <PageCard title="الفواتير المستحقة للأبناء" className="shadow-sm">
-              <div className="space-y-3">
-                {guardianInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").length === 0 ? (
-                  <div className="text-center py-6 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد فواتير مستحقة.</div>
-                ) : (
-                  guardianInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").map(inv => {
-                    const student = guardianData.students.find(s => s.id === inv.studentId);
-                    return (
-                      <div key={inv.id} className="p-4 rounded-2xl border border-border/50 bg-background flex flex-col gap-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-bold text-sm">فاتورة: {inv.title || "مستحقات دراسية"}</p>
-                            <p className="text-xs text-muted-foreground mt-1">للطالب: <span className="font-bold">{student?.name}</span></p>
+            {activeTab === 'overview' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <PageCard title="المستحقات العاجلة" className="shadow-sm">
+                  <div className="space-y-3">
+                    {guardianInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").length === 0 ? (
+                      <div className="text-center py-6 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl bg-muted/5">لا توجد مستحقات مالية عاجلة. جميع حسابات الأبناء مسددة.</div>
+                    ) : (
+                      guardianInvoices.filter(inv => inv.status !== "paid" && inv.status !== "cancelled").slice(0, 3).map(inv => {
+                        const student = guardianData.students.find(s => s.id === inv.studentId);
+                        return (
+                          <div key={inv.id} className="p-4 rounded-2xl border border-warning/30 bg-warning/5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-warning/20 text-warning-foreground rounded-lg"><AlertTriangle className="w-5 h-5" /></div>
+                              <div>
+                                <p className="font-bold text-sm">مستحقات متأخرة: {inv.title || "الرسوم الدراسية"}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">للطالب: <span className="font-bold">{student?.name}</span></p>
+                              </div>
+                            </div>
+                            <div className="text-left flex flex-col items-end gap-2">
+                              <p className="font-black text-danger tabular-nums">{(inv.amount - inv.paid).toLocaleString()} {currency}</p>
+                              <button 
+                                onClick={() => {
+                                  setPaymentData({ invoiceId: inv.id, amount: inv.amount - inv.paid, method: "card" });
+                                  setIsPaymentOpen(true);
+                                }}
+                                className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-success text-white px-3 text-xs font-bold hover:bg-success/90 transition-colors shadow-sm"
+                              >
+                                سداد
+                              </button>
+                            </div>
                           </div>
-                          <div className="text-left">
-                            <p className="font-black text-danger tabular-nums">{(inv.amount - inv.paid).toLocaleString()} {currency}</p>
-                            <p className="text-xs text-muted-foreground mt-1">المتبقي للدفع</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setPaymentData({ invoiceId: inv.id, amount: inv.amount - inv.paid, method: "card" });
-                            setIsPaymentOpen(true);
-                          }}
-                          className="w-full inline-flex h-9 justify-center items-center gap-2 rounded-xl bg-success px-4 text-sm font-bold text-white hover:bg-success/90 transition-colors shadow-sm"
-                        >
-                          <CreditCard className="h-4 w-4" /> سداد الفاتورة
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
+                        );
+                      })
+                    )}
+                  </div>
+                </PageCard>
               </div>
-            </PageCard>
+            )}
+
+            {activeTab === 'financial' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                
+                {/* Financial Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="flex flex-col justify-center p-4 bg-background rounded-2xl border border-border/50 shadow-sm">
+                    <span className="text-sm font-bold text-muted-foreground mb-2 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" /> إجمالي المستحق
+                    </span>
+                    <span className="font-black text-xl tabular-nums">{totalAmount.toLocaleString()} {currency}</span>
+                  </div>
+                  <div className="flex flex-col justify-center p-4 bg-success/10 rounded-2xl border border-success/20 shadow-sm">
+                    <span className="text-sm font-bold text-success mb-2 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" /> إجمالي المدفوع
+                    </span>
+                    <span className="font-black text-xl tabular-nums text-success">{totalPaid.toLocaleString()} {currency}</span>
+                  </div>
+                  <div className="flex flex-col justify-center p-4 bg-danger/10 rounded-2xl border border-danger/20 shadow-sm">
+                    <span className="text-sm font-bold text-danger mb-2 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" /> إجمالي المتبقي
+                    </span>
+                    <span className="font-black text-xl tabular-nums text-danger">{totalDue.toLocaleString()} {currency}</span>
+                  </div>
+                </div>
+
+                <PageCard title="جميع الفواتير والمستحقات" className="shadow-sm">
+                  <div className="space-y-3">
+                    {guardianInvoices.length === 0 ? (
+                      <div className="text-center py-6 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد فواتير مسجلة لأبناء هذا الولي.</div>
+                    ) : (
+                      guardianInvoices.map(inv => {
+                        const student = guardianData.students.find(s => s.id === inv.studentId);
+                        return (
+                          <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-border/50 bg-background gap-4 hover:border-primary/30 transition-colors">
+                            <div>
+                              <p className="font-bold text-sm">{inv.title || "الرسوم الدراسية"}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                للطالب: <span className="font-bold">{student?.name}</span> • 
+                                تاريخ الاستحقاق: <span className="tabular-nums font-bold">{inv.dueDate}</span>
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-left">
+                                <p className="font-black tabular-nums">{inv.amount.toLocaleString()} {currency}</p>
+                                <p className={`text-xs font-bold mt-1 ${inv.status === "paid" ? "text-success" : inv.status === "partial" ? "text-warning" : "text-danger"}`}>
+                                  {inv.status === "paid" ? "مدفوعة بالكامل" : inv.status === "partial" ? `مدفوعة جزئياً (متبقي ${(inv.amount - inv.paid).toLocaleString()})` : "غير مدفوعة"}
+                                </p>
+                              </div>
+                              {inv.status !== "paid" && inv.status !== "cancelled" && (
+                                <button 
+                                  onClick={() => {
+                                    setPaymentData({ invoiceId: inv.id, amount: inv.amount - inv.paid, method: "card" });
+                                    setIsPaymentOpen(true);
+                                  }}
+                                  className="inline-flex h-9 items-center justify-center rounded-xl bg-success/10 text-success px-4 text-sm font-bold hover:bg-success/20 transition-colors border border-success/20"
+                                >
+                                  سداد
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </PageCard>
+
+                <PageCard title="سجل الحركات المالي (Timeline)" className="shadow-sm">
+                  {guardianTransactions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد حركات مالية مسجلة.</div>
+                  ) : (
+                    <div className="p-2">
+                      <FinancialTimeline transactions={guardianTransactions} />
+                    </div>
+                  )}
+                </PageCard>
+              </div>
+            )}
           </div>
         </div>
 

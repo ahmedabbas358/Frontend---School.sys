@@ -7,6 +7,7 @@ import { getGradesForStage } from "@/lib/school-structure";
 import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { FinancialTimeline } from "@/components/financial-components";
 
 export const Route = createFileRoute("/students/$id")({
   component: StudentProfile,
@@ -221,7 +222,7 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
 
 function StudentProfile() {
   const { id } = Route.useParams();
-  const { currency, allStudents, allInvoices, allClinicVisits, allDisciplineIncidents, allSections, activeStageFeeStructures, addInvoice, addPayment, allTextbooks, allTextbookDistributions, transportSubscriptions, transportRoutes  } = useGlobalStore();
+  const { currency, allStudents, allInvoices, allPayments, allClinicVisits, allDisciplineIncidents, allSections, activeStageFeeStructures, addInvoice, addPayment, allTextbooks, allTextbookDistributions, transportSubscriptions, transportRoutes  } = useGlobalStore();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
@@ -277,6 +278,30 @@ function StudentProfile() {
   const studentInvoices = allInvoices.filter((i) => i.studentId === student.id);
   const totalPaid = studentInvoices.reduce((acc, curr) => acc + (curr.paid || 0), 0);
   const totalDue = studentInvoices.reduce((acc, curr) => acc + ((curr.amount || 0) - (curr.paid || 0)), 0);
+  
+  const studentTransactions = useMemo(() => {
+    const invoices = studentInvoices.map(i => ({
+      id: `inv-${i.id}`,
+      date: i.issueDate || i.dueDate,
+      title: `إصدار فاتورة: ${i.title}`,
+      subtitle: `استحقاق رسوم`,
+      amount: i.amount,
+      type: "expense" as const, // For student, an invoice is a charge (negative impact on their balance)
+      currency
+    }));
+    const payments = allPayments.filter(p => p.studentId === student.id).map(p => ({
+      id: `pay-${p.id}`,
+      date: p.date,
+      title: `سداد دفعة`,
+      subtitle: `بواسطة ${p.method === 'cash' ? 'نقدي' : p.method === 'bank_transfer' ? 'حوالة بنكية' : 'بطاقة ائتمان'}`,
+      amount: p.amount,
+      type: "income" as const, // A payment is a credit (positive impact on their balance)
+      currency,
+      method: p.method
+    }));
+    
+    return [...invoices, ...payments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [studentInvoices, allPayments, student.id, currency]);
   
   const studentVisits = allClinicVisits.filter(v => v.studentId === student.id);
   const studentIncidents = allDisciplineIncidents.filter(i => i.studentId === student.id);
@@ -670,6 +695,16 @@ function StudentProfile() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </PageCard>
+
+            <PageCard title="سجل الحركات المالي (Timeline)" className="shadow-sm mt-6">
+              {studentTransactions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد حركات مالية مسجلة للطالب.</div>
+              ) : (
+                <div className="p-2">
+                  <FinancialTimeline transactions={studentTransactions} />
                 </div>
               )}
             </PageCard>

@@ -4,6 +4,7 @@ import { User, FileText, Calendar, Wallet, ArrowUpRight, Plus, HandCoins, Clock,
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { TransactionTimeline } from "@/components/financial-components";
 
 export const Route = createFileRoute("/hr/staff/$id")({
   component: HrStaffReview,
@@ -25,12 +26,18 @@ function HrStaffReview() {
     allSections,
     addStaffAdvance,
     addExpense,
+    allAcademicYears,
+    allEmployeeAssignments,
+    currentAcademicYearId
   } = useGlobalStore();
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [advanceMonth, setAdvanceMonth] = useState("2023-11");
+  const [activeTab, setActiveTab] = useState("overview");
 
   const staffData = useMemo(() => {
-    return allStaff.find(s => s.id === id) || {
+    const identity = allStaff.find(s => s.id === id);
+    const assignment = allEmployeeAssignments.find(a => a.employeeId === id && a.academicYearId === currentAcademicYearId);
+    return identity ? { ...identity, ...(assignment || {}) } : {
       id: id,
       name: "غير معروف",
       role: "موظف",
@@ -41,9 +48,10 @@ function HrStaffReview() {
       email: "",
       basicSalary: 0,
       allowance: 0,
-      deduction: 0
+      deduction: 0,
+      employeeNo: ""
     };
-  }, [id, allStaff]);
+  }, [id, allStaff, allEmployeeAssignments, currentAcademicYearId]);
 
   const staffPayments = useMemo(() => {
     return allExpenses.filter(
@@ -83,6 +91,13 @@ function HrStaffReview() {
   const attendanceImpact = staffAttendance.reduce((sum, item) => sum + (item.deductionAmount || 0), 0);
   const latestContract = staffContracts[0];
   const latestEvaluation = staffEvaluations[0];
+
+  const staffHistory = useMemo(() => {
+    if (!staffData) return [];
+    return allEmployeeAssignments
+      .filter((s: any) => s.employeeId === staffData.id)
+      .sort((a, b) => 0);
+  }, [staffData, allEmployeeAssignments]);
 
   const handleRequestAdvance = () => {
     const amount = Number(advanceAmount);
@@ -165,222 +180,275 @@ function HrStaffReview() {
         </div>
 
         <div className="space-y-6">
-          <PageCard>
-            <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-              <FileText className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-bold">البيانات الوظيفية</h3>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">الرقم الوظيفي</p>
-                <p className="font-bold">{staffData.id}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">القسم</p>
-                <p className="font-bold">{staffData.department}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">الراتب الأساسي</p>
-                <p className="font-bold tabular-nums">{(staffData as any).basicSalary || 5000} {currency}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">البدلات</p>
-                <p className="font-bold tabular-nums text-success">+{(staffData as any).allowance || 0} {currency}</p>
-              </div>
-            </div>
-          </PageCard>
+          {/* Tabs Header */}
+          <div className="flex gap-2 border-b border-border/50 overflow-x-auto pb-1 mb-4">
+            <button 
+              onClick={() => setActiveTab('overview')} 
+              className={`px-4 py-2 font-bold text-sm whitespace-nowrap transition-colors border-b-2 ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}
+            >
+              النظرة العامة
+            </button>
+            <button 
+              onClick={() => setActiveTab('financial')} 
+              className={`px-4 py-2 font-bold text-sm whitespace-nowrap transition-colors border-b-2 ${activeTab === 'financial' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}
+            >
+              الملف المالي
+            </button>
+          </div>
 
-          <PageCard>
-            <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-              <ClipboardCheck className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-bold">مركز الترابط التشغيلي</h3>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <div className="text-xs font-bold text-muted-foreground">العقود</div>
-                <div className="mt-1 text-xl font-black">{staffContracts.length}</div>
-                <div className="text-xs text-muted-foreground">{latestContract ? `ينتهي: ${latestContract.endDate}` : "لا يوجد عقد"}</div>
-              </div>
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <div className="text-xs font-bold text-muted-foreground">الإجازات</div>
-                <div className="mt-1 text-xl font-black">{staffLeaves.length}</div>
-                <div className="text-xs text-muted-foreground">الرصيد السنوي: {leaveBalance} يوم</div>
-              </div>
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <div className="text-xs font-bold text-muted-foreground">الحضور</div>
-                <div className="mt-1 text-xl font-black">{staffAttendance.length}</div>
-                <div className="text-xs text-muted-foreground">أثر مالي: {attendanceImpact.toLocaleString()} {currency}</div>
-              </div>
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <div className="text-xs font-bold text-muted-foreground">آخر تقييم</div>
-                <div className="mt-1 text-xl font-black">{latestEvaluation ? `${latestEvaluation.overallScore.toFixed(1)} / 5` : "-"}</div>
-                <div className="text-xs text-muted-foreground">{latestEvaluation?.period || "لا يوجد تقييم"}</div>
-              </div>
-            </div>
-          </PageCard>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            <PageCard>
-              <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-                <Calendar className="h-5 w-5 text-primary" />
-                <h3 className="font-bold">رصيد الإجازات</h3>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">الرصيد المتبقي:</span>
-                <span className="text-2xl font-bold text-primary">{leaveBalance} يوم</span>
-              </div>
-            </PageCard>
-
-            <PageCard>
-              <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-                <Wallet className="h-5 w-5 text-primary" />
-                <h3 className="font-bold">الرواتب المصروفة (المالية)</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between bg-primary/5 p-3 rounded-xl border border-primary/20">
-                  <span className="text-sm font-bold text-primary">إجمالي ما تم صرفه:</span>
-                  <span className="text-xl font-black text-primary tabular-nums">{totalPaidOut.toLocaleString()} {currency}</span>
+          {activeTab === 'overview' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <PageCard>
+                <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
+                  <ClipboardCheck className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-bold">مركز الترابط التشغيلي</h3>
                 </div>
-                <div className="space-y-2 mt-4">
-                  {staffPayments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center italic mt-4">لم يتم تسجيل أي عمليات صرف رواتب بعد.</p>
-                  ) : (
-                    staffPayments.map(p => (
-                      <div key={p.id} className="flex justify-between items-center p-3 border border-border/50 rounded-lg hover:bg-accent/50 transition-colors text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-md bg-success/10 text-success"><ArrowUpRight className="h-3 w-3" /></div>
-                          <div>
-                            <p className="font-bold">{p.title}</p>
-                            <p className="text-xs text-muted-foreground tabular-nums">{p.date}</p>
-                          </div>
-                        </div>
-                        <span className="font-black tabular-nums">{p.amount.toLocaleString()} {currency}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </PageCard>
-
-            <PageCard className="col-span-full">
-              <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-                <BookOpen className="h-5 w-5 text-primary" />
-                <h3 className="font-bold">الإسناد التدريسي المرتبط</h3>
-              </div>
-              {staffAssignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">لا توجد إسنادات تدريسية مرتبطة بهذا الموظف.</p>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2">
-                  {staffAssignments.map(item => (
-                    <div key={item.id} className="rounded-lg border border-border p-3 text-sm">
-                      <div className="font-bold">{item.subject}</div>
-                      <div className="text-xs text-muted-foreground">{item.section}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </PageCard>
-
-            <PageCard className="col-span-full">
-              <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-                <Clock className="h-5 w-5 text-primary" />
-                <h3 className="font-bold">آخر الحضور والإجازات والتقييمات</h3>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-bold"><Clock className="h-4 w-4 text-primary" /> الحضور</div>
-                  {staffAttendance.slice(0, 4).map(item => (
-                    <div key={item.id} className="rounded-lg border border-border p-2 text-sm">
-                      <div className="flex justify-between"><span className="font-bold">{item.date}</span><Badge tone={item.status === "present" ? "success" : item.status === "late" ? "warning" : item.status === "excused" ? "info" : "danger"}>{item.status === "present" ? "حاضر" : item.status === "late" ? "متأخر" : item.status === "excused" ? "بعذر" : "غائب"}</Badge></div>
-                      <div className="text-xs text-muted-foreground">خصم: {(item.deductionAmount || 0).toLocaleString()} {currency}</div>
-                    </div>
-                  ))}
-                  {staffAttendance.length === 0 && <p className="text-sm text-muted-foreground">لا توجد سجلات حضور.</p>}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-bold"><FileBadge className="h-4 w-4 text-primary" /> الإجازات</div>
-                  {staffLeaves.slice(0, 4).map(item => (
-                    <div key={item.id} className="rounded-lg border border-border p-2 text-sm">
-                      <div className="flex justify-between"><span className="font-bold">{item.startDate}</span><Badge tone={item.status === "approved" ? "success" : item.status === "pending" ? "warning" : "danger"}>{item.status === "approved" ? "معتمدة" : item.status === "pending" ? "قيد المراجعة" : "مرفوضة"}</Badge></div>
-                      <div className="text-xs text-muted-foreground">{item.days} يوم</div>
-                    </div>
-                  ))}
-                  {staffLeaves.length === 0 && <p className="text-sm text-muted-foreground">لا توجد إجازات.</p>}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-bold"><Star className="h-4 w-4 text-primary" /> التقييمات</div>
-                  {staffEvaluations.slice(0, 4).map(item => (
-                    <div key={item.id} className="rounded-lg border border-border p-2 text-sm">
-                      <div className="flex justify-between"><span className="font-bold">{item.period}</span><span className="font-black text-primary">{item.overallScore.toFixed(1)} / 5</span></div>
-                      <div className="text-xs text-muted-foreground">المقيم: {item.evaluator}</div>
-                    </div>
-                  ))}
-                  {staffEvaluations.length === 0 && <p className="text-sm text-muted-foreground">لا توجد تقييمات.</p>}
-                </div>
-              </div>
-            </PageCard>
-
-            <PageCard className="col-span-full">
-              <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-                <HandCoins className="h-5 w-5 text-primary" />
-                <h3 className="font-bold">إدارة السلف النقدية (تكامل مالي)</h3>
-              </div>
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-4">
-                  <p className="text-sm font-bold">طلب سلفة جديدة</p>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <input 
-                        type="number" 
-                        placeholder="المبلغ" 
-                        value={advanceAmount}
-                        onChange={(e) => setAdvanceAmount(e.target.value)}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <input 
-                        type="month" 
-                        value={advanceMonth}
-                        onChange={(e) => setAdvanceMonth(e.target.value)}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      />
-                    </div>
-                    <button 
-                      onClick={handleRequestAdvance}
-                      className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
-                    >
-                      <Plus className="h-4 w-4" /> اعتماد السلفة
-                    </button>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="text-xs font-bold text-muted-foreground">العقود</div>
+                    <div className="mt-1 text-xl font-black">{staffContracts.length}</div>
+                    <div className="text-xs text-muted-foreground">{latestContract ? `ينتهي: ${latestContract.endDate}` : "لا يوجد عقد"}</div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    عند اعتماد السلفة، سيتم ترحيلها تلقائياً كـ (مصروف) في قسم المحاسبة والمالية للتسوية.
-                  </p>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="text-xs font-bold text-muted-foreground">الإجازات</div>
+                    <div className="mt-1 text-xl font-black">{staffLeaves.length}</div>
+                    <div className="text-xs text-muted-foreground">الرصيد السنوي: {leaveBalance} يوم</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="text-xs font-bold text-muted-foreground">الحضور</div>
+                    <div className="mt-1 text-xl font-black">{staffAttendance.length}</div>
+                    <div className="text-xs text-muted-foreground">أثر مالي: {attendanceImpact.toLocaleString()} {currency}</div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="text-xs font-bold text-muted-foreground">آخر تقييم</div>
+                    <div className="mt-1 text-xl font-black">{latestEvaluation ? `${latestEvaluation.overallScore.toFixed(1)} / 5` : "-"}</div>
+                    <div className="text-xs text-muted-foreground">{latestEvaluation?.period || "لا يوجد تقييم"}</div>
+                  </div>
                 </div>
-                
-                <div className="space-y-3 border-r border-border pr-6">
-                  <p className="text-sm font-bold">سجل السلف</p>
-                  {staffAdvances.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">لا توجد سلف مسجلة.</p>
-                  ) : (
+              </PageCard>
+
+              <div className="grid gap-6 sm:grid-cols-2">
+                <PageCard className="col-span-full">
+                  <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <h3 className="font-bold">آخر الحضور والإجازات والتقييمات</h3>
+                  </div>
+                  <div className="grid gap-4 lg:grid-cols-3">
                     <div className="space-y-2">
-                      {staffAdvances.map(a => (
-                        <div key={a.id} className="flex items-center justify-between p-2 rounded-lg border border-border/50 text-sm">
-                          <div>
-                            <p className="font-bold">{a.amount} {currency}</p>
-                            <p className="text-xs text-muted-foreground">شهر الخصم: {a.deductionMonth}</p>
-                          </div>
-                          <Badge tone="success">{a.status}</Badge>
+                      <div className="flex items-center gap-2 text-sm font-bold"><Clock className="h-4 w-4 text-primary" /> الحضور</div>
+                      {staffAttendance.slice(0, 4).map(item => (
+                        <div key={item.id} className="rounded-lg border border-border p-2 text-sm">
+                          <div className="flex justify-between"><span className="font-bold">{item.date}</span><Badge tone={item.status === "present" ? "success" : item.status === "late" ? "warning" : item.status === "excused" ? "info" : "danger"}>{item.status === "present" ? "حاضر" : item.status === "late" ? "متأخر" : item.status === "excused" ? "بعذر" : "غائب"}</Badge></div>
+                          <div className="text-xs text-muted-foreground">خصم: {(item.deductionAmount || 0).toLocaleString()} {currency}</div>
+                        </div>
+                      ))}
+                      {staffAttendance.length === 0 && <p className="text-sm text-muted-foreground">لا توجد سجلات حضور.</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-bold"><FileBadge className="h-4 w-4 text-primary" /> الإجازات</div>
+                      {staffLeaves.slice(0, 4).map(item => (
+                        <div key={item.id} className="rounded-lg border border-border p-2 text-sm">
+                          <div className="flex justify-between"><span className="font-bold">{item.startDate}</span><Badge tone={item.status === "approved" ? "success" : item.status === "pending" ? "warning" : "danger"}>{item.status === "approved" ? "معتمدة" : item.status === "pending" ? "قيد المراجعة" : "مرفوضة"}</Badge></div>
+                          <div className="text-xs text-muted-foreground">{item.days} يوم</div>
+                        </div>
+                      ))}
+                      {staffLeaves.length === 0 && <p className="text-sm text-muted-foreground">لا توجد إجازات.</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-bold"><Star className="h-4 w-4 text-primary" /> التقييمات</div>
+                      {staffEvaluations.slice(0, 4).map(item => (
+                        <div key={item.id} className="rounded-lg border border-border p-2 text-sm">
+                          <div className="flex justify-between"><span className="font-bold">{item.period}</span><span className="font-black text-primary">{item.overallScore.toFixed(1)} / 5</span></div>
+                          <div className="text-xs text-muted-foreground">المقيم: {item.evaluator}</div>
+                        </div>
+                      ))}
+                      {staffEvaluations.length === 0 && <p className="text-sm text-muted-foreground">لا توجد تقييمات.</p>}
+                    </div>
+                  </div>
+                </PageCard>
+
+                <PageCard className="col-span-full">
+                  <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    <h3 className="font-bold">الإسناد التدريسي المرتبط</h3>
+                  </div>
+                  {staffAssignments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">لا توجد إسنادات تدريسية مرتبطة بهذا الموظف.</p>
+                  ) : (
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {staffAssignments.map(item => (
+                        <div key={item.id} className="rounded-lg border border-border p-3 text-sm">
+                          <div className="font-bold">{item.subject}</div>
+                          <div className="text-xs text-muted-foreground">{item.section}</div>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+                </PageCard>
+                
+                {staffHistory.length > 0 && (
+                  <PageCard className="col-span-full border-primary/20">
+                    <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
+                      <h3 className="font-bold text-lg">السجل التاريخي</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-right">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="p-4 font-bold rounded-tr-lg">العام الدراسي</th>
+                            <th className="p-4 font-bold">المسمى الوظيفي</th>
+                            <th className="p-4 font-bold">القسم</th>
+                            <th className="p-4 font-bold rounded-tl-lg">حالة العمل</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {staffHistory.map((hist) => {
+                            const yearName = allAcademicYears.find(y => y.id === (hist as any).academicYearId)?.name || "غير محدد";
+                            const isCurrentRecord = (hist as any).academicYearId === currentAcademicYearId;
+                            return (
+                              <tr key={hist.id} className={`border-b border-border transition-colors ${isCurrentRecord ? 'bg-primary/5 font-bold' : 'hover:bg-accent/30'}`}>
+                                <td className="p-4 font-bold text-primary">{yearName} {isCurrentRecord && <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full mr-2">الحالي</span>}</td>
+                                <td className="p-4">{hist.role}</td>
+                                <td className="p-4">{hist.department}</td>
+                                <td className="p-4">
+                                  <span className={`px-2 py-1 rounded-md text-xs font-bold ${hist.status === "active" ? "bg-success/10 text-success" : hist.status === "on_leave" ? "bg-warning/10 text-warning" : "bg-danger/10 text-danger"}`}>
+                                    {hist.status === "active" ? "على رأس العمل" : hist.status === "on_leave" ? "إجازة" : "منتهي الخدمات"}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </PageCard>
+                )}
               </div>
-            </PageCard>
-          </div>
+            </div>
+          )}
+
+          {activeTab === 'financial' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <PageCard>
+                <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-bold">البيانات الوظيفية</h3>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">الرقم الوظيفي</p>
+                    <p className="font-bold">{staffData.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">نظام الدفع</p>
+                    <p className="font-bold">
+                      {(staffData as any).paymentType === "PerLesson" ? "بالحصة" : (staffData as any).paymentType === "Daily" ? "أجر يومي" : "راتب شهري"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      {(staffData as any).paymentType === "PerLesson" ? "أجر الحصة الواحدة" : (staffData as any).paymentType === "Daily" ? "الأجر اليومي" : "الراتب الأساسي"}
+                    </p>
+                    <p className="font-bold tabular-nums">{(staffData as any).basicSalary || 0} {currency}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">البدلات</p>
+                    <p className="font-bold tabular-nums text-success">+{(staffData as any).allowance || 0} {currency}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">الحسميات الثابتة</p>
+                    <p className="font-bold tabular-nums text-danger">-{(staffData as any).deduction || 0} {currency}</p>
+                  </div>
+                </div>
+              </PageCard>
+
+              <PageCard>
+                <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
+                  <HandCoins className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold">إدارة السلف النقدية (تكامل مالي)</h3>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <p className="text-sm font-bold">طلب سلفة جديدة</p>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <input 
+                          type="number" 
+                          placeholder="المبلغ" 
+                          value={advanceAmount}
+                          onChange={(e) => setAdvanceAmount(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <input 
+                          type="month" 
+                          value={advanceMonth}
+                          onChange={(e) => setAdvanceMonth(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        />
+                      </div>
+                      <button 
+                        onClick={handleRequestAdvance}
+                        className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+                      >
+                        <Plus className="h-4 w-4" /> اعتماد السلفة
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      عند اعتماد السلفة، سيتم ترحيلها تلقائياً كـ (مصروف) في قسم المحاسبة والمالية للتسوية.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3 border-r border-border pr-6">
+                    <p className="text-sm font-bold">سجل السلف</p>
+                    {staffAdvances.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic">لا توجد سلف مسجلة.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {staffAdvances.map(a => (
+                          <div key={a.id} className="flex items-center justify-between p-2 rounded-lg border border-border/50 text-sm bg-background">
+                            <div>
+                              <p className="font-bold">{a.amount} {currency}</p>
+                              <p className="text-xs text-muted-foreground">شهر الخصم: {a.deductionMonth}</p>
+                            </div>
+                            <Badge tone="success">{a.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </PageCard>
+
+              <PageCard>
+                <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold">السجل المالي (Financial Timeline)</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-primary/5 p-3 rounded-xl border border-primary/20 mb-4">
+                    <span className="text-sm font-bold text-primary">إجمالي ما تم صرفه:</span>
+                    <span className="text-xl font-black text-primary tabular-nums">{totalPaidOut.toLocaleString()} {currency}</span>
+                  </div>
+                  <TransactionTimeline 
+                    transactions={staffPayments.map(p => ({
+                      id: p.id,
+                      date: p.date,
+                      title: p.title,
+                      subtitle: "راتب / مستحقات",
+                      amount: p.amount,
+                      type: "expense",
+                      currency
+                    }))} 
+                  />
+                </div>
+              </PageCard>
+            </div>
+          )}
         </div>
       </div>
+
     </AppShell>
   );
 }

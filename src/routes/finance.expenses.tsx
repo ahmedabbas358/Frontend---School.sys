@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { Plus, TrendingDown, Search, Filter, Printer, Trash2, X } from "lucide-react";
+import { Plus, TrendingDown, Search, Filter, Printer, Trash2, X, FileText, CreditCard, CheckCircle2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { FinancialCard, SmartAlert, FilterBar } from "@/components/financial-components";
 import { useGlobalStore, Expense } from "@/contexts/GlobalStoreContext";
 import { toast } from "sonner";
 
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/finance/expenses")({
 });
 
 function FinanceExpenses() {
-  const { currency, allExpenses, allExpenseCategories, allStaff, addExpense, deleteExpense  } = useGlobalStore();
+  const { currency, allExpenses, allExpenseCategories, allStaff, addExpense, deleteExpense, submitExpense, approveExpense, postExpense } = useGlobalStore();
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [beneficiaryType, setBeneficiaryType] = useState<"manual" | "staff">("manual");
@@ -128,15 +129,57 @@ function FinanceExpenses() {
         </div>
       }
     >
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[1fr_200px_auto]">
-            <div className="relative">
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+        
+        <SmartAlert 
+          type="info"
+          title="نظام التكامل المالي النشط"
+          message="يتم ترحيل واعتماد بعض المصروفات آلياً من أنظمة أخرى (مثل مسير الرواتب والسلف في شؤون الموظفين). لا يمكن حذف أو تعديل هذه المصروفات من هنا لضمان التطابق المالي."
+        />
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+          <FinancialCard 
+            title="إجمالي المصروفات" 
+            value={filtered.reduce((acc, curr) => acc + curr.amount, 0)} 
+            currency={currency} 
+            icon={TrendingDown} 
+            colorClass="text-danger bg-danger" 
+          />
+          <FinancialCard 
+            title="المصروفات الآلية (رواتب/سلف)" 
+            value={filtered.filter(e => e.categoryId === "EXPCAT-1" || e.categoryId === "EXPCAT-6").reduce((acc, curr) => acc + curr.amount, 0)} 
+            currency={currency} 
+            icon={FileText} 
+            colorClass="text-primary bg-primary" 
+          />
+          <FinancialCard 
+            title="المصروفات اليدوية" 
+            value={filtered.filter(e => e.categoryId !== "EXPCAT-1" && e.categoryId !== "EXPCAT-6").reduce((acc, curr) => acc + curr.amount, 0)} 
+            currency={currency} 
+            icon={CreditCard} 
+            colorClass="text-warning bg-warning" 
+          />
+          <FinancialCard 
+            title="إجمالي العمليات" 
+            value={filtered.length} 
+            currency="" 
+            icon={FileText} 
+            colorClass="text-foreground bg-muted" 
+          />
+        </div>
+
+        <FilterBar>
+          <div className="flex items-center gap-2">
+            <TrendingDown className="h-5 w-5 text-danger" />
+            <h2 className="text-lg font-bold">سجل المصروفات التشغيلية</h2>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="البحث في البيان، المستفيد، رقم السند..."
+                placeholder="البحث في البيان، المستفيد..."
                 className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
               />
             </div>
@@ -151,23 +194,32 @@ function FinanceExpenses() {
               ))}
             </select>
           </div>
-        </div>
+        </FilterBar>
 
         <PageCard>
-          <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-            <TrendingDown className="h-5 w-5 text-danger" />
-            <h2 className="text-lg font-bold">سجل المصروفات التشغيلية</h2>
-          </div>
           <DataTable
             rows={filtered}
             columns={[
               { key: "id", header: "رقم السند", cell: (r) => <span className="font-bold">{r.id}</span> },
-              { key: "title", header: "البيان", cell: (r) => <span className="font-medium">{r.title}</span> },
+              { key: "title", header: "البيان", cell: (r) => <div className="flex flex-col"><span className="font-medium">{r.title}</span>{(r.categoryId === "EXPCAT-1" || r.categoryId === "EXPCAT-6") && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded mt-1 w-max font-bold border border-primary/20">قيد آلي - شؤون الموظفين</span>}</div> },
               { key: "category", header: "التصنيف", cell: (r) => <span className="text-sm font-medium px-2 py-1 bg-accent rounded-md">{getCategoryName(r.categoryId)}</span> },
               { key: "amount", header: "المبلغ", cell: (r) => <span className="font-bold text-danger text-lg">{r.amount.toLocaleString()} {currency}</span> },
               { key: "date", header: "التاريخ", cell: (r) => r.date },
               { key: "beneficiary", header: "المستفيد", cell: (r) => r.beneficiary },
               { key: "method", header: "طريقة الدفع", cell: (r) => getMethodLabel(r.method) },
+              {
+                key: "status",
+                header: "الحالة",
+                cell: (r) => {
+                  const statusColors: any = { draft: "neutral", submitted: "warning", approved: "success", posted: "primary" };
+                  const statusLabels: any = { draft: "مسودة", submitted: "بانتظار الموافقة", approved: "معتمد", posted: "مرحّل" };
+                  return (
+                    <span className={`text-xs font-bold px-2 py-1 rounded bg-${statusColors[r.status || "draft"]}/10 text-${statusColors[r.status || "draft"]}`}>
+                      {statusLabels[r.status || "draft"]}
+                    </span>
+                  );
+                }
+              },
               {
                 key: "actions",
                 header: "إعدادات",
@@ -189,17 +241,58 @@ function FinanceExpenses() {
                     >
                       <Printer className="h-4 w-4" />
                     </button>
-                    <button 
-                      onClick={() => {
-                        if(confirm("هل أنت متأكد من حذف هذا السند؟")) {
-                          deleteExpense(r.id);
-                          toast.success("تم الحذف بنجاح");
-                        }
-                      }}
-                      className="rounded-md p-2 text-danger hover:bg-danger/10 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6") && (!r.status || r.status === "draft") && (
+                      <button 
+                        onClick={() => {
+                          submitExpense(r.id);
+                          toast.success("تم تقديم المصروف للموافقة");
+                        }}
+                        className="rounded-md p-2 text-warning hover:bg-warning/10 transition-colors"
+                        title="تقديم للموافقة"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </button>
+                    )}
+                    {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6") && r.status === "submitted" && (
+                      <button 
+                        onClick={() => {
+                          approveExpense(r.id);
+                          toast.success("تم اعتماد المصروف");
+                        }}
+                        className="rounded-md p-2 text-success hover:bg-success/10 transition-colors"
+                        title="اعتماد المصروف"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6") && r.status === "approved" && (
+                      <button 
+                        onClick={() => {
+                          if(confirm("هل أنت متأكد من ترحيل المصروف؟ سيتم توليد قيد محاسبي.")) {
+                            postExpense(r.id);
+                            toast.success("تم ترحيل المصروف بنجاح");
+                          }
+                        }}
+                        className="rounded-md p-2 text-primary hover:bg-primary/10 transition-colors"
+                        title="ترحيل وإنشاء قيد محاسبي"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                      </button>
+                    )}
+                    {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6" && r.status !== "posted") && (
+                      <button 
+                        onClick={() => {
+                          if(confirm("هل أنت متأكد من حذف هذا السند؟")) {
+                            deleteExpense(r.id);
+                            toast.success("تم الحذف بنجاح");
+                          }
+                        }}
+                        className="rounded-md p-2 text-danger hover:bg-danger/10 transition-colors"
+                        title="حذف"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 ),
               },

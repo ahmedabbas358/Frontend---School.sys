@@ -16,7 +16,7 @@ export const Route = createFileRoute("/teachers/")({
 });
 
 function TeachersList() {
-  const { activeStageStaff, activeStageSubjects, activeStageSections, addStaff, updateStaff, deleteStaff } = useGlobalStore();
+  const { allStaff, activeStageStaff, activeStageSubjects, activeStageSections, addStaff, updateStaff, deleteStaff, currentAcademicYearId } = useGlobalStore();
   const { stage } = useStage();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,10 +77,35 @@ function TeachersList() {
       updateStaff(editingId, { ...formData });
       toast.success("تم تعديل بيانات المعلم بنجاح");
     } else {
-      addStaff({ ...formData, stage });
+      if (formData.employeeNo) {
+        const isDuplicateInCurrentYear = activeStageStaff.some((s: any) => s.employeeNo === formData.employeeNo);
+        if (isDuplicateInCurrentYear) {
+          toast.error("هذا المعلم مسجل مسبقاً في العام الدراسي الحالي! لا يمكن تسجيله مرة أخرى.");
+          return;
+        }
+      }
+
+      addStaff({ ...formData, stage, academicYearId: currentAcademicYearId } as any);
       toast.success("تمت إضافة المعلم بنجاح");
     }
     setIsModalOpen(false);
+  };
+
+  const handleSmartRegistrationCheck = (empNoToCheck: string) => {
+    if (!empNoToCheck || empNoToCheck.length < 3) return;
+    const existingStaff = allStaff.find((s: any) => s.employeeNo === empNoToCheck);
+    if (existingStaff) {
+      toast.success("تم العثور على سجل سابق للمعلم! جاري استيراد البيانات التاريخية...");
+      setFormData(prev => ({
+        ...prev,
+        name: existingStaff.name,
+        role: existingStaff.role,
+        department: existingStaff.department,
+        status: existingStaff.status as any,
+        phone: existingStaff.phone || "",
+        email: existingStaff.email || "",
+      }));
+    }
   };
 
   const confirmDelete = () => {
@@ -233,6 +258,7 @@ function TeachersList() {
                         dir="ltr"
                         value={formData.employeeNo}
                         onChange={e => setFormData({...formData, employeeNo: e.target.value})}
+                        onBlur={(e) => handleSmartRegistrationCheck(e.target.value)}
                       />
                     </div>
                     <div>

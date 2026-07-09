@@ -2,8 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
+import { useStage } from "@/contexts/StageContext";
 import { DataTable } from "@/components/data-table";
-import { Users, Phone, Eye, Printer, Search, ArrowUpDown, Filter, Wallet, AlertCircle } from "lucide-react";
+import { getGradesForStage } from "@/lib/school-structure";
+import { Users, Phone, Eye, Printer, Search, ArrowUpDown, Filter, Wallet, AlertCircle, X } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 
 export const Route = createFileRoute("/guardians/")({
@@ -15,14 +17,14 @@ export const Route = createFileRoute("/guardians/")({
 
 function GuardiansList() {
   const { allGuardians, allStudents, allSections, addGuardian, allInvoices } = useGlobalStore();
+  const { stage, setStage } = useStage();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newGuardian, setNewGuardian] = useState({ name: "", phone: "", relation: "أب" });
+  const [newGuardian, setNewGuardian] = useState({ name: "", phone: "", relation: "أب", customRelation: "", gender: "ذكر" });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "childrenCount" | "dues">("name");
   const [filterDues, setFilterDues] = useState<"all" | "hasDues" | "noDues">("all");
-  const [filterStage, setFilterStage] = useState<string>("all");
   const [filterGrade, setFilterGrade] = useState<string>("all");
   const [filterSection, setFilterSection] = useState<string>("all");
 
@@ -59,9 +61,7 @@ function GuardiansList() {
       result = result.filter(g => g.totalDue === 0);
     }
 
-    if (filterStage !== "all") {
-      result = result.filter(g => g.students.some(s => s.stage === filterStage));
-    }
+    result = result.filter(g => g.students.some(s => s.stage === stage));
     
     if (filterGrade !== "all") {
       result = result.filter(g => g.students.some(s => s.grade === filterGrade));
@@ -83,16 +83,21 @@ function GuardiansList() {
     });
 
     return result;
-  }, [activeGuardians, allStudents, allInvoices, searchQuery, sortBy, filterDues, filterStage, filterGrade, filterSection]);
+  }, [activeGuardians, allStudents, allInvoices, searchQuery, sortBy, filterDues, stage, filterGrade, filterSection]);
 
   const totalOutstandingDues = useMemo(() => guardiansWithStudents.reduce((sum, g) => sum + g.totalDue, 0), [guardiansWithStudents]);
 
   const handleAddGuardian = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGuardian.name || !newGuardian.phone) return;
-    addGuardian(newGuardian);
+    addGuardian({
+      name: newGuardian.name,
+      phone: newGuardian.phone,
+      relation: newGuardian.relation === "غير ذلك" ? newGuardian.customRelation || "أخرى" : newGuardian.relation,
+      gender: newGuardian.gender as any
+    });
     setIsAddModalOpen(false);
-    setNewGuardian({ name: "", phone: "", relation: "أب" });
+    setNewGuardian({ name: "", phone: "", relation: "أب", customRelation: "", gender: "ذكر" });
   };
 
   const printTemplates: PrintTemplate[] = [
@@ -168,6 +173,11 @@ function GuardiansList() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute left-3 top-1/2 -translate-y-1/2 p-1 bg-muted rounded-full hover:bg-muted/80 transition-colors">
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                )}
               </div>
             </div>
             
@@ -207,54 +217,75 @@ function GuardiansList() {
             <div className="flex flex-col md:flex-row gap-4 items-end pt-4 border-t border-border/50">
               <div className="w-full md:w-1/3">
                 <label className="mb-2 block text-sm font-bold text-muted-foreground">تصفية حسب المرحلة</label>
-                <select
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-                  value={filterStage}
-                  onChange={(e) => {
-                    setFilterStage(e.target.value);
-                    setFilterGrade("all");
-                    setFilterSection("all");
-                  }}
-                >
-                  <option value="all">كل المراحل</option>
+                <div className="relative">
+                  <select
+                    className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer appearance-none"
+                    value={stage}
+                    onChange={(e) => {
+                      setStage(e.target.value as any);
+                      setFilterGrade("all");
+                      setFilterSection("all");
+                    }}
+                  >
                   <option value="kindergarten">رياض الأطفال</option>
                   <option value="primary">الابتدائية</option>
                   <option value="middle">المتوسطة</option>
                   <option value="high">الثانوية</option>
-                </select>
+                  </select>
+                  <ArrowUpDown className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
               </div>
 
               <div className="w-full md:w-1/3">
                 <label className="mb-2 block text-sm font-bold text-muted-foreground">تصفية حسب الصف</label>
-                <select
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-                  value={filterGrade}
-                  onChange={(e) => {
+                <div className="relative">
+                  <select
+                    className={`w-full rounded-xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer appearance-none ${filterGrade !== 'all' ? 'border-primary ring-1 ring-primary/20' : ''}`}
+                    value={filterGrade}
+                    onChange={(e) => {
                     setFilterGrade(e.target.value);
                     setFilterSection("all");
                   }}
-                  disabled={filterStage === "all"}
                 >
                   <option value="all">كل الصفوف</option>
-                  {Array.from(new Set(allSections.filter(s => s.stage === filterStage).map(s => s.grade))).map(g => (
+                  {getGradesForStage(stage).map(g => (
                     <option key={g} value={g}>{g}</option>
                   ))}
-                </select>
+                  </select>
+                  {filterGrade !== "all" ? (
+                    <button onClick={() => { setFilterGrade("all"); setFilterSection("all"); }} className="absolute left-3 top-1/2 -translate-y-1/2 p-1 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+                      <X className="h-3 w-3 text-primary" />
+                    </button>
+                  ) : (
+                    <ArrowUpDown className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  )}
+                </div>
               </div>
 
               <div className="w-full md:w-1/3">
                 <label className="mb-2 block text-sm font-bold text-muted-foreground">تصفية حسب الشعبة</label>
-                <select
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-                  value={filterSection}
+                <div className="relative">
+                  <select
+                    className={`w-full rounded-xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer appearance-none ${filterGrade === "all" ? 'opacity-50 cursor-not-allowed' : filterSection !== 'all' ? 'border-primary ring-1 ring-primary/20' : ''}`}
+                    value={filterSection}
                   onChange={(e) => setFilterSection(e.target.value)}
                   disabled={filterGrade === "all"}
                 >
-                  <option value="all">كل الشعب</option>
-                  {allSections.filter(s => s.stage === filterStage && s.grade === filterGrade).map(s => (
+                  <option value="all">{filterGrade === "all" ? 'اختر الصف أولاً' : 'كل الشعب'}</option>
+                  {allSections
+                    .filter(s => s.stage === stage && s.grade === filterGrade)
+                    .map(s => (
                     <option key={s.id} value={s.id}>شعبة {s.name}</option>
                   ))}
-                </select>
+                  </select>
+                  {filterSection !== "all" && filterGrade !== "all" ? (
+                    <button onClick={() => setFilterSection("all")} className="absolute left-3 top-1/2 -translate-y-1/2 p-1 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+                      <X className="h-3 w-3 text-primary" />
+                    </button>
+                  ) : (
+                    <ArrowUpDown className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -318,70 +349,105 @@ function GuardiansList() {
       />
 
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-primary p-4 text-primary-foreground flex justify-between items-center">
-              <h2 className="font-bold text-lg">إضافة ولي أمر جديد</h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="hover:bg-white/20 p-1 rounded-full transition-colors">
-                <Printer className="h-5 w-5 opacity-0" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-0 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-primary to-primary/80 p-6 text-primary-foreground relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+              <div className="flex justify-between items-center relative z-10">
+                <h2 className="font-extrabold text-xl flex items-center gap-2"><Users className="h-5 w-5" /> إضافة ولي أمر جديد</h2>
+                <button onClick={() => setIsAddModalOpen(false)} className="rounded-full p-2 hover:bg-black/20 transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             
-            <form onSubmit={handleAddGuardian} className="p-6 space-y-4">
+            <form onSubmit={handleAddGuardian} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-bold text-muted-foreground mb-1">الاسم الرباعي</label>
+                <label className="block text-sm font-bold text-muted-foreground mb-1.5">الاسم الرباعي</label>
                 <input
                   type="text"
                   required
                   value={newGuardian.name}
                   onChange={e => setNewGuardian(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background"
+                  className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                   placeholder="مثال: عبدالله محمد السالم"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-muted-foreground mb-1">رقم الجوال</label>
-                <input
-                  type="tel"
-                  required
-                  value={newGuardian.phone}
-                  onChange={e => setNewGuardian(prev => ({ ...prev, phone: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background"
-                  placeholder="05XXXXXXXX"
-                  dir="ltr"
-                />
+                <label className="block text-sm font-bold text-muted-foreground mb-1.5">رقم الجوال</label>
+                <div className="relative">
+                  <Phone className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="tel"
+                    required
+                    value={newGuardian.phone}
+                    onChange={e => setNewGuardian(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full rounded-xl border border-border/50 bg-background/50 pr-10 pl-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium tabular-nums"
+                    placeholder="05XXXXXXXX"
+                    dir="ltr"
+                  />
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-bold text-muted-foreground mb-1">صلة القرابة</label>
-                <select
-                  value={newGuardian.relation}
-                  onChange={e => setNewGuardian(prev => ({ ...prev, relation: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background"
-                >
-                  <option value="أب">أب</option>
-                  <option value="أم">أم</option>
-                  <option value="أخ">أخ</option>
-                  <option value="جد">جد</option>
-                  <option value="عم">عم</option>
-                  <option value="خال">خال</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">صلة القرابة</label>
+                  <select
+                    value={newGuardian.relation}
+                    onChange={e => setNewGuardian(prev => ({ ...prev, relation: e.target.value }))}
+                    className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer"
+                  >
+                    <option value="أب">أب</option>
+                    <option value="أم">أم</option>
+                    <option value="أخ">أخ</option>
+                    <option value="جد">جد</option>
+                    <option value="عم">عم</option>
+                    <option value="خال">خال</option>
+                    <option value="غير ذلك">غير ذلك</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">الجنس</label>
+                  <select
+                    value={newGuardian.gender}
+                    onChange={e => setNewGuardian(prev => ({ ...prev, gender: e.target.value }))}
+                    className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer"
+                  >
+                    <option value="ذكر">ذكر</option>
+                    <option value="أنثى">أنثى</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
+              {newGuardian.relation === "غير ذلك" && (
+                <div className="animate-in fade-in zoom-in duration-200">
+                  <label className="block text-sm font-bold text-primary mb-1.5">تحديد صلة القرابة يدوياً <span className="text-danger">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={newGuardian.customRelation}
+                    onChange={e => setNewGuardian(prev => ({ ...prev, customRelation: e.target.value }))}
+                    className="w-full rounded-xl border border-primary/30 bg-primary/5 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                    placeholder="مثال: زوج الأم، أخ بالرضاعة..."
+                  />
+                </div>
+              )}
+
+              <div className="pt-6 flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-primary py-3.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                >
+                  حفظ الإضافة
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 h-10 rounded-lg border border-input font-bold text-foreground hover:bg-accent transition-colors"
+                  className="px-6 rounded-xl border border-border bg-card font-bold hover:bg-accent transition-colors"
                 >
                   إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 h-10 rounded-lg bg-primary font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  حفظ الإضافة
                 </button>
               </div>
             </form>

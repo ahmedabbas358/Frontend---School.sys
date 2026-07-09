@@ -18,7 +18,7 @@ function AcademicSubjectsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
-  const [newSubject, setNewSubject] = useState({ name: "", code: "", applyToAll: false, grades: [] as string[], fee: 0 });
+  const [newSubject, setNewSubject] = useState({ name: "", code: "", grade: "", fee: 0 });
 
   const availableGrades = useMemo(() => getGradesForStage(stage), [stage]);
   const filteredSubjects = useMemo(() => {
@@ -42,14 +42,18 @@ function AcademicSubjectsPage() {
       toast.error("الرجاء تعبئة جميع الحقول الإلزامية");
       return;
     }
+    if (newSubject.grade === "") {
+      toast.error("يجب اختيار فصل دراسي للمادة");
+      return;
+    }
     
     try {
       addSubject({
         name: newSubject.name,
         code: newSubject.code,
         creditHours: 1,
-        stage: newSubject.applyToAll ? "all" : stage,
-        grades: newSubject.applyToAll ? undefined : newSubject.grades,
+        stage: stage,
+        grades: [newSubject.grade],
         fee: newSubject.fee > 0 ? newSubject.fee : undefined
       });
     } catch (error) {
@@ -59,7 +63,7 @@ function AcademicSubjectsPage() {
     
     toast.success("تمت إضافة المادة الدراسية بنجاح");
     setIsModalOpen(false);
-    setNewSubject({ name: "", code: "", applyToAll: false, grades: [], fee: 0 });
+    setNewSubject({ name: "", code: "", grade: "", fee: 0 });
   };
 
   return (
@@ -140,64 +144,65 @@ function AcademicSubjectsPage() {
           </div>
         </PageCard>
 
-        <PageCard>
-          <DataTable
-            rows={filteredSubjects}
-            empty={filterGrade ? "لا توجد مواد مخصصة لهذا الفصل." : "لا توجد مواد دراسية مسجلة في هذه المرحلة بعد."}
-            columns={[
-              { 
-                key: "c", header: "رمز المادة", 
-                cell: (s) => (
-                  <span className="tabular font-bold text-primary bg-primary/10 px-2 py-1 rounded-md text-xs">
-                    {s.code}
-                  </span>
-                ) 
-              },
-              { 
-                key: "n", header: "اسم المادة", 
-                cell: (s) => (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-base">{s.name}</span>
-                      {s.stage === "all" && <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground">مشترك لكل المراحل</span>}
-                      {s.stage !== "all" && (!s.grades || s.grades.length === 0) && <span className="text-[10px] bg-success/10 px-2 py-0.5 rounded-full text-success">كل فصول المرحلة</span>}
-                    </div>
-                    {s.grades && s.grades.length > 0 && s.stage !== "all" && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {s.grades.map(g => (
-                          <span key={g} className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded border border-primary/10">{g}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) 
-              },
+        {availableGrades.filter(g => !filterGrade || filterGrade === g).map(grade => {
+          const gradeSubjects = filteredSubjects.filter(s => s.grades?.includes(grade));
+          
+          if (gradeSubjects.length === 0 && filterGrade) return null;
 
-              { 
-                key: "f", header: "رسوم المادة", 
-                cell: (s) => s.fee ? <span className="tabular font-bold text-danger">{s.fee} {currency}</span> : <span className="text-muted-foreground text-xs">مجانًا</span>
-              },
-              {
-                key: "act", header: "",
-                cell: (s) => (
-                  <div className="flex gap-1 justify-end">
-                    <button 
-                      onClick={() => {
-                        if(confirm("هل أنت متأكد من حذف هذه المادة؟")) {
-                          deleteSubject(s.id);
-                          toast.success("تم الحذف بنجاح");
-                        }
-                      }}
-                      className="rounded-lg p-2 text-danger hover:bg-danger/10 transition-colors" title="حذف"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ),
-              },
-            ]}
-          />
-        </PageCard>
+          return (
+            <PageCard key={grade}>
+              <div className="flex items-center gap-3 mb-4 border-b border-border/10 pb-4">
+                <div className="bg-primary/10 text-primary p-2 rounded-lg">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-bold">مواد {grade}</h3>
+                <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs font-bold mr-auto">
+                  {gradeSubjects.length} مادة
+                </span>
+              </div>
+              
+              {gradeSubjects.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {gradeSubjects.map(s => (
+                    <div key={s.id} className="relative group bg-background border border-border/50 rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="font-bold text-primary bg-primary/5 border border-primary/10 px-2.5 py-1 rounded-md text-xs tracking-wider uppercase">
+                          {s.code}
+                        </span>
+                        <button 
+                          onClick={() => {
+                            if(confirm("هل أنت متأكد من حذف هذه المادة؟")) {
+                              deleteSubject(s.id);
+                              toast.success("تم الحذف بنجاح");
+                            }
+                          }}
+                          className="text-danger opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-danger/10 rounded-lg"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <h4 className="text-base font-bold mb-1 text-foreground">{s.name}</h4>
+                      
+                      <div className="flex items-center justify-between mt-5 pt-4 border-t border-border/40">
+                        <span className="text-xs font-medium text-muted-foreground">الرسوم الدراسية</span>
+                        {s.fee ? (
+                          <span className="font-black text-danger text-sm tabular-nums">{s.fee} {currency}</span>
+                        ) : (
+                          <span className="text-success text-[10px] font-black bg-success/10 px-2 py-1 rounded tracking-wide">مجانًا</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/50">
+                  <BookOpen className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm font-medium">لا توجد مواد دراسية مخصصة لهذا الفصل بعد.</p>
+                </div>
+              )}
+            </PageCard>
+          );
+        })}
       </div>
 
       {/* Add Modal */}
@@ -236,7 +241,6 @@ function AcademicSubjectsPage() {
                     onChange={e => setNewSubject({...newSubject, code: e.target.value})}
                   />
                 </div>
-
               </div>
 
               <div>
@@ -253,45 +257,20 @@ function AcademicSubjectsPage() {
               </div>
 
               <div className="pt-2">
-                <label className="flex items-center gap-3 rounded-xl border border-border/50 p-4 cursor-pointer hover:bg-accent/30 transition-colors">
-                  <input 
-                    type="checkbox" 
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                    checked={newSubject.applyToAll}
-                    onChange={e => setNewSubject({...newSubject, applyToAll: e.target.checked, grades: []})}
-                  />
-                  <div>
-                    <span className="block text-sm font-bold">تطبيق على جميع المراحل</span>
-                    <span className="block text-xs text-muted-foreground">حدد هذا الخيار إذا كانت المادة (مثل القرآن الكريم) تدرس في جميع المراحل.</span>
-                  </div>
-                </label>
+                <label className="mb-2 block text-sm font-medium text-muted-foreground">تخصيص الفصل الدراسي (إلزامي) <span className="text-danger">*</span></label>
+                <select
+                  required
+                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
+                  value={newSubject.grade}
+                  onChange={(e) => setNewSubject({ ...newSubject, grade: e.target.value })}
+                >
+                  <option value="" disabled>اختر الفصل الدراسي...</option>
+                  {availableGrades.map((grade) => (
+                    <option key={grade} value={grade}>{grade}</option>
+                  ))}
+                </select>
+                <span className="block text-xs text-muted-foreground mt-2">يتم ربط المادة بصف واحد فقط، إذا أردت نفس المادة لصف آخر قم بإضافتها مرة أخرى لذلك الصف.</span>
               </div>
-
-              {!newSubject.applyToAll && availableGrades.length > 0 && (
-                <div className="pt-2">
-                  <label className="mb-2 block text-sm font-medium text-muted-foreground">تخصيص للفصول (اختياري)</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availableGrades.map((grade) => (
-                      <label key={grade} className="flex items-center gap-2 rounded-lg border border-border/50 p-2 cursor-pointer hover:bg-accent/20 transition-colors">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                          checked={newSubject.grades.includes(grade)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewSubject({ ...newSubject, grades: [...newSubject.grades, grade] });
-                            } else {
-                              setNewSubject({ ...newSubject, grades: newSubject.grades.filter(g => g !== grade) });
-                            }
-                          }}
-                        />
-                        <span className="text-sm font-medium">{grade}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <span className="block text-xs text-muted-foreground mt-1">إذا لم يتم تحديد أي فصل، ستكون المادة متاحة لجميع فصول هذه المرحلة.</span>
-                </div>
-              )}
 
               <div className="pt-4 flex justify-end gap-3">
                 <button 

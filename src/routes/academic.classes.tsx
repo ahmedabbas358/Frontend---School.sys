@@ -127,7 +127,7 @@ function SectionDetailView({ sectionId, onBack }: { sectionId: string, onBack: (
     const totalExpected = sectionInvoices.reduce((sum, inv) => sum + (inv.netAmount ?? inv.amount), 0);
     const totalPaid = sectionPayments.reduce((sum, p) => sum + p.amount, 0);
     const totalDue = totalExpected - totalPaid;
-    const overdueStudents = sectionInvoices.filter(inv => inv.status === 'unpaid' || inv.status === 'partial').length;
+    const overdueStudents = sectionInvoices.filter(inv => inv.status === 'issued' || inv.status === 'partial').length;
     return { totalExpected, totalPaid, totalDue, overdueStudents };
   }, [sectionInvoices, sectionPayments]);
 
@@ -140,7 +140,7 @@ function SectionDetailView({ sectionId, onBack }: { sectionId: string, onBack: (
     const due = totalExpected - totalPaid;
     if (due <= 0) return { status: 'paid' as const, due: 0 };
     if (totalPaid > 0) return { status: 'partial' as const, due };
-    return { status: 'unpaid' as const, due };
+    return { status: 'issued' as const, due };
   };
 
   const handleAddStudent = (studentId: string) => {

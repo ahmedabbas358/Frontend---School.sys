@@ -59,9 +59,12 @@ function SchedulePage() {
     clearScheduleSlot 
   } = useGlobalStore();
 
+  const [filterGrade, setFilterGrade] = useState<string>("");
   const [targetSectionId, setTargetSectionId] = useState<string>(activeStageSections[0]?.id || "");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<{day: string, period: number} | null>(null);
+  
+  const availableGrades = useMemo(() => Array.from(new Set(activeStageSections.map(s => s.grade))), [activeStageSections]);
   
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState("");
@@ -82,8 +85,13 @@ function SchedulePage() {
   const teachers = activeStageStaff.filter(s => s.role.includes("معلم") || s.role.includes("مربي"));
   const targetSection = activeStageSections.find(s => s.id === targetSectionId);
 
-  const sectionsList = useMemo(() => activeStageSections
-    .map(s => ({ id: s.id, title: `شعبة ${s.name}`, subtitle: s.grade })), [activeStageSections]);
+  const sectionsList = useMemo(() => {
+    let secs = activeStageSections;
+    if (filterGrade) {
+      secs = secs.filter(s => s.grade === filterGrade);
+    }
+    return secs.map(s => ({ id: s.id, title: `شعبة ${s.name}`, subtitle: s.grade }));
+  }, [activeStageSections, filterGrade]);
 
   const getSlot = (day: string, period: number) => {
     return activeStageScheduleSlots.find(s => s.sectionId === targetSectionId && s.day === day && s.period === period);
@@ -278,14 +286,32 @@ function SchedulePage() {
       <div className="space-y-5 animate-in fade-in duration-500">
         <PageCard>
           <div className="flex flex-col md:flex-row gap-4 items-end md:items-center justify-between">
-            <div className="flex-1 w-full md:max-w-sm">
-              <label className="block text-sm font-bold text-muted-foreground mb-1.5 px-1">اختر الشعبة لإدارة جدولها</label>
-              <SearchableSelect 
-                value={targetSectionId} 
-                onChange={(v) => setTargetSectionId(v)}
-                options={sectionsList}
-                placeholder="-- ابحث عن شعبة --"
-              />
+            <div className="flex flex-col md:flex-row gap-4 w-full md:max-w-xl">
+              <div className="flex-1">
+                <label className="block text-sm font-bold text-muted-foreground mb-1.5 px-1">تصفية حسب الصف</label>
+                <select
+                  value={filterGrade}
+                  onChange={(e) => {
+                    const grade = e.target.value;
+                    setFilterGrade(grade);
+                    const firstSec = activeStageSections.find(s => !grade || s.grade === grade);
+                    setTargetSectionId(firstSec?.id || "");
+                  }}
+                  className="h-[42px] w-full rounded-xl border border-border/50 bg-background px-3 focus:border-primary focus:outline-none"
+                >
+                  <option value="">كل الصفوف</option>
+                  {availableGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div className="flex-1 w-full">
+                <label className="block text-sm font-bold text-muted-foreground mb-1.5 px-1">اختر الشعبة لإدارة جدولها</label>
+                <SearchableSelect 
+                  value={targetSectionId} 
+                  onChange={(v) => setTargetSectionId(v)}
+                  options={sectionsList}
+                  placeholder="-- ابحث عن شعبة --"
+                />
+              </div>
             </div>
             
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
