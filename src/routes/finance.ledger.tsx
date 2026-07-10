@@ -7,6 +7,7 @@ import { FinancialCard, EmptyState, SmartAlert } from '@/components/financial-co
 import { AccountBrowserModal } from '@/components/account-browser';
 import { AdvancedPrintEngine, PrintTemplate } from '@/components/print-engine';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { AccountingEngine } from '../core/finance/engine/AccountingEngine';
 
 export const Route = createFileRoute('/finance/ledger')({
   component: FinanceLedger,
@@ -62,25 +63,47 @@ function FinanceLedger() {
     e.preventDefault();
     if (!isManualValid) return;
 
-    addJournalEntry({
-      date: manualDate,
-      description: manualDescription,
-      referenceId: manualReference || undefined,
-      academicYearId: currentAcademicYearId ?? '',
-      moduleId: 'manual'
-    }, manualLines.map(l => ({
-      accountId: l.accountId,
-      debit: Number(l.debit) || 0,
-      credit: Number(l.credit) || 0,
-      description: l.description || manualDescription,
-      referenceId: l.referenceId,
-      referenceType: l.referenceType as any,
-    })));
+    try {
+      // Financial Core validation
+      AccountingEngine.validateDoubleEntry({
+        id: 'temp',
+        date: new Date(manualDate),
+        documentType: 'MANUAL_JOURNAL' as any,
+        documentReferenceId: manualReference || '',
+        currency: currency as any,
+        exchangeRate: 1,
+        posted: false,
+        lines: manualLines.map((l, i) => ({
+          id: String(i),
+          accountId: l.accountId,
+          debit: Number(l.debit) || 0,
+          credit: Number(l.credit) || 0,
+          description: l.description || manualDescription
+        }))
+      });
 
-    setIsManualEntryOpen(false);
-    setManualDescription('');
-    setManualReference('');
-    setManualLines([{ accountId: '', debit: 0, credit: 0, description: '' }, { accountId: '', debit: 0, credit: 0, description: '' }]);
+      addJournalEntry({
+        date: manualDate,
+        description: manualDescription,
+        referenceId: manualReference || undefined,
+        academicYearId: currentAcademicYearId ?? '',
+        moduleId: 'manual'
+      }, manualLines.map(l => ({
+        accountId: l.accountId,
+        debit: Number(l.debit) || 0,
+        credit: Number(l.credit) || 0,
+        description: l.description || manualDescription,
+        referenceId: l.referenceId,
+        referenceType: l.referenceType as any,
+      })));
+
+      setIsManualEntryOpen(false);
+      setManualDescription('');
+      setManualReference('');
+      setManualLines([{ accountId: '', debit: 0, credit: 0, description: '' }, { accountId: '', debit: 0, credit: 0, description: '' }]);
+    } catch (err: any) {
+      alert("خطأ من محرك المالية: " + err.message);
+    }
   };
 
   // Data processing

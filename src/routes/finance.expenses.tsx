@@ -6,6 +6,7 @@ import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialCard, SmartAlert, FilterBar } from "@/components/financial-components";
 import { useGlobalStore, Expense } from "@/contexts/GlobalStoreContext";
+import { useWorkflowEngine } from "@/engines/finance/useWorkflowEngine";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/finance/expenses")({
@@ -13,7 +14,8 @@ export const Route = createFileRoute("/finance/expenses")({
 });
 
 function FinanceExpenses() {
-  const { currency, allExpenses, allExpenseCategories, allStaff, addExpense, deleteExpense, submitExpense, approveExpense, postExpense } = useGlobalStore();
+  const { currency, allExpenses, allExpenseCategories, allStaff, addExpense, deleteExpense } = useGlobalStore();
+  const { transitionExpenseStatus } = useWorkflowEngine();
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [beneficiaryType, setBeneficiaryType] = useState<"manual" | "staff">("manual");
@@ -230,53 +232,49 @@ function FinanceExpenses() {
                         const fullExpense = {
                           ...r,
                           categoryName: getCategoryName(r.categoryId),
-                          amountStr: `${r.amount.toLocaleString()} {currency}`,
+                          amountStr: `${r.amount.toLocaleString()} ${currency}`,
                           methodLabel: getMethodLabel(r.method)
                         };
                         setSelectedExpense(fullExpense);
                         setIsPrintSingleOpen(true);
                       }}
-                      className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-primary transition-colors"
-                      title="طباعة سند صرف"
+                      className="flex items-center gap-1.5 rounded-lg bg-accent/50 px-3 py-1.5 text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                     >
-                      <Printer className="h-4 w-4" />
+                      <Printer className="h-4 w-4" /> طباعة
                     </button>
                     {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6") && (!r.status || r.status === "draft") && (
                       <button 
                         onClick={() => {
-                          submitExpense(r.id);
+                          transitionExpenseStatus(r.id, "submitted");
                           toast.success("تم تقديم المصروف للموافقة");
                         }}
-                        className="rounded-md p-2 text-warning hover:bg-warning/10 transition-colors"
-                        title="تقديم للموافقة"
+                        className="flex items-center gap-1.5 rounded-lg bg-warning/10 px-3 py-1.5 text-xs font-bold text-warning hover:bg-warning/20 transition-colors"
                       >
-                        <FileText className="h-4 w-4" />
+                        <FileText className="h-4 w-4" /> تقديم
                       </button>
                     )}
                     {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6") && r.status === "submitted" && (
                       <button 
                         onClick={() => {
-                          approveExpense(r.id);
+                          transitionExpenseStatus(r.id, "approved");
                           toast.success("تم اعتماد المصروف");
                         }}
-                        className="rounded-md p-2 text-success hover:bg-success/10 transition-colors"
-                        title="اعتماد المصروف"
+                        className="flex items-center gap-1.5 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-bold text-success hover:bg-success/20 transition-colors"
                       >
-                        <CheckCircle2 className="h-4 w-4" />
+                        <CheckCircle2 className="h-4 w-4" /> اعتماد
                       </button>
                     )}
                     {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6") && r.status === "approved" && (
                       <button 
                         onClick={() => {
-                          if(confirm("هل أنت متأكد من ترحيل المصروف؟ سيتم توليد قيد محاسبي.")) {
-                            postExpense(r.id);
+                          if(confirm("هل أنت متأكد من ترحيل وتسديد المصروف؟ سيتم توليد قيد محاسبي.")) {
+                            transitionExpenseStatus(r.id, "paid");
                             toast.success("تم ترحيل المصروف بنجاح");
                           }
                         }}
-                        className="rounded-md p-2 text-primary hover:bg-primary/10 transition-colors"
-                        title="ترحيل وإنشاء قيد محاسبي"
+                        className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
                       >
-                        <CreditCard className="h-4 w-4" />
+                        <CreditCard className="h-4 w-4" /> ترحيل القيد
                       </button>
                     )}
                     {(r.categoryId !== "EXPCAT-1" && r.categoryId !== "EXPCAT-6" && r.status !== "posted") && (
@@ -287,10 +285,9 @@ function FinanceExpenses() {
                             toast.success("تم الحذف بنجاح");
                           }
                         }}
-                        className="rounded-md p-2 text-danger hover:bg-danger/10 transition-colors"
-                        title="حذف"
+                        className="flex items-center gap-1.5 rounded-lg bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger hover:bg-danger/20 transition-colors"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" /> حذف
                       </button>
                     )}
                   </div>

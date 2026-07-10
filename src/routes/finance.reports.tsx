@@ -30,22 +30,20 @@ function FinanceReports() {
     let totalRevenue = 0;
     let totalExpense = 0;
     
-    // Revenue allAccounts (4xx), Expense allAccounts (5xx)
+    // Revenue allAccounts (starts with ACC-4), Expense allAccounts (starts with ACC-5)
     const revenueLines = allJournalLines.filter(jl => {
-      const acc = allAccounts.find(a => a.id === jl.accountId);
-      return acc?.type === "revenue" && filteredJEs.some(je => je.id === jl.journalEntryId);
+      return jl.accountId.startsWith("ACC-4") && filteredJEs.some(je => je.id === jl.journalEntryId);
     });
     
     const expenseLines = allJournalLines.filter(jl => {
-      const acc = allAccounts.find(a => a.id === jl.accountId);
-      return acc?.type === "expense" && filteredJEs.some(je => je.id === jl.journalEntryId);
+      return jl.accountId.startsWith("ACC-5") && filteredJEs.some(je => je.id === jl.journalEntryId);
     });
 
     totalRevenue = revenueLines.reduce((acc, curr) => acc + curr.credit - curr.debit, 0);
     totalExpense = expenseLines.reduce((acc, curr) => acc + curr.debit - curr.credit, 0);
 
     return { totalRevenue, totalExpense, netIncome: totalRevenue - totalExpense };
-  }, [allJournalLines, filteredJEs, allAccounts]);
+  }, [allJournalLines, filteredJEs]);
 
   // Entity specific transactions
   const entityTransactions = useMemo(() => {
@@ -74,8 +72,8 @@ function FinanceReports() {
     let outflow = 0;
 
     allJournalLines.forEach(jl => {
-      const acc = allAccounts.find(a => a.id === jl.accountId);
-      if (acc?.type === "asset" && (acc.name.includes("صندوق") || acc.name.includes("بنك"))) {
+      // Cash is ACC-1101, Bank is ACC-1102
+      if (jl.accountId === "ACC-1101" || jl.accountId === "ACC-1102") {
         if (filteredJEs.some(je => je.id === jl.journalEntryId)) {
           inflow += jl.debit;
           outflow += jl.credit;
@@ -84,7 +82,7 @@ function FinanceReports() {
     });
 
     return { inflow, outflow, netCash: inflow - outflow };
-  }, [allJournalLines, filteredJEs, allAccounts]);
+  }, [allJournalLines, filteredJEs]);
 
   return (
     <AppShell

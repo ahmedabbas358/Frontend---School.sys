@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { useStage, GRADE_OPTIONS } from "@/contexts/StageContext";
 import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
+import { useFeeEngine } from "@/engines/finance/useFeeEngine";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +45,7 @@ const highSchoolSchema = baseSchema.extend({
 function StudentRegistrationWizard() {
   const { stage, getStageLabel } = useStage();
   const { addStudent, allSections, activeStageStudents, allGuardians, allStudents, currentAcademicYearId } = useGlobalStore();
+  const { generateEnrollmentFees } = useFeeEngine();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -90,9 +92,13 @@ function StudentRegistrationWizard() {
       enrollmentDate: new Date().toISOString().split("T")[0],
       academicYearId: currentAcademicYearId,
     };
-    
     // Add student to the store
-    addStudent(studentData as Omit<Student, "id">);
+    const newStudentId = addStudent(studentData as Omit<Student, "id">);
+
+    // Auto-generate financial obligations using Fee Engine
+    if (newStudentId && currentAcademicYearId) {
+      generateEnrollmentFees(newStudentId, stage, data.grade, currentAcademicYearId);
+    }
 
     toast.success(`تم تسجيل الطالب ${data.name} بنجاح!`);
     

@@ -195,9 +195,9 @@ function FinanceFees() {
                           toast.success("تم الحذف بنجاح");
                         }
                       }}
-                      className="rounded-md p-2 text-danger hover:bg-danger/10 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger hover:bg-danger/20 transition-colors"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" /> حذف
                     </button>
                   </div>
                 ),

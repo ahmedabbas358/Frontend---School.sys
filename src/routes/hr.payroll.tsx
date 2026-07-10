@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { DollarSign, Printer, Download, Save, Calculator, Wallet, TrendingUp, TrendingDown, ArrowDown } from "lucide-react";
+import { DollarSign, Printer, Download, Save, Calculator, Wallet, TrendingUp, TrendingDown, ArrowDown, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useState, useMemo } from "react";
@@ -29,11 +29,15 @@ function getOverlapDaysInMonth(startDate: string, endDate: string, month: string
 }
 
 function HrPayroll() {
-  const { currency, activeStageStaff, activeStageStaffAttendance, allStaffLeaves, allStaffAdvances, addExpense } = useGlobalStore();
+  const { currency, activeStageStaff, activeStageStaffAttendance, allStaffLeaves, allStaffAdvances, addJournalEntry, currentAcademicYearId } = useGlobalStore();
   const [payrollMonth, setPayrollMonth] = useState(currentMonth());
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [approvedMonths, setApprovedMonths] = useState<string[]>([]);
+  const [paidMonths, setPaidMonths] = useState<string[]>([]);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<Set<string>>(new Set());
+
   const isApproved = approvedMonths.includes(payrollMonth);
+  const isPaid = paidMonths.includes(payrollMonth);
 
   const payrollData = useMemo(() => {
     return activeStageStaff.filter(staff => !staff.isDeleted && staff.status !== "terminated").map(staff => {
@@ -95,12 +99,32 @@ function HrPayroll() {
     });
   }, [activeStageStaff, activeStageStaffAttendance, allStaffAdvances, allStaffLeaves, payrollMonth]);
 
+  // Select/Deselect all
+  const toggleSelectAll = () => {
+    if (selectedStaffIds.size === payrollData.length) {
+      setSelectedStaffIds(new Set());
+    } else {
+      setSelectedStaffIds(new Set(payrollData.map(p => p.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedStaffIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedStaffIds(newSet);
+  };
+
+  const selectedData = useMemo(() => {
+    return payrollData.filter(p => selectedStaffIds.has(p.id));
+  }, [payrollData, selectedStaffIds]);
+
   const totals = useMemo(() => ({
-    basic: payrollData.reduce((sum, item) => sum + item.basic, 0),
-    allowance: payrollData.reduce((sum, item) => sum + item.allowance, 0),
-    deduction: payrollData.reduce((sum, item) => sum + item.deduction, 0),
-    net: payrollData.reduce((sum, item) => sum + item.net, 0),
-  }), [payrollData]);
+    basic: (selectedStaffIds.size > 0 ? selectedData : payrollData).reduce((sum, item) => sum + item.basic, 0),
+    allowance: (selectedStaffIds.size > 0 ? selectedData : payrollData).reduce((sum, item) => sum + item.allowance, 0),
+    deduction: (selectedStaffIds.size > 0 ? selectedData : payrollData).reduce((sum, item) => sum + item.deduction, 0),
+    net: (selectedStaffIds.size > 0 ? selectedData : payrollData).reduce((sum, item) => sum + item.net, 0),
+  }), [payrollData, selectedData, selectedStaffIds]);
 
   const handleApprovePayroll = () => {
     if (isApproved) {
@@ -108,21 +132,100 @@ function HrPayroll() {
       return;
     }
 
-    // Deep Integration: Automatically create expenses for each staff member's net salary
-    payrollData.forEach(payroll => {
-      addExpense({
-        title: `راتب شهر ${payrollMonth} - ${payroll.name}`,
-        amount: payroll.net,
-        date: new Date().toISOString().split("T")[0],
-        categoryId: "EXPCAT-1", // Payroll category
-        beneficiary: payroll.name,
-        method: "bank_transfer",
-        notes: `تم الاعتماد من مسير الرواتب. خصومات الحضور/الإجازات/السلف: ${payroll.deduction.toLocaleString()} ${currency}`
-      });
+    if (selectedStaffIds.size === 0) {
+      toast.error("الرجاء تحديد موظف واحد على الأقل لاعتماد راتبه.");
+      return;
+    }
+
+    // Journal Entry for Accrual (استحقاق الرواتب)
+    // Dr: 5101 (Salaries Expense) - Gross
+    // Cr: 2101 (Accrued Salaries Payable) - Net
+    
+    const lines = selectedData.map(payroll => ({
+      accountId: "ACC-2101", // مستحقات الموظفين (Payable)
+      debit: 0,
+      credit: payroll.net,
+      referenceId: payroll.id,
+      referenceType: 'employee' as const,
+      description: `استحقاق راتب ${payrollMonth} - ${payroll.name}`
+    }));
+
+    // Aggregate debit line
+    lines.push({
+      accountId: "ACC-5101", // الرواتب والأجور (Expense)
+      debit: totals.net,
+      credit: 0,
+      referenceId: payrollMonth,
+      referenceType: 'employee' as const,
+      description: `إجمالي مصروف رواتب شهر ${payrollMonth}`
     });
 
+    addJournalEntry({
+      academicYearId: currentAcademicYearId || "",
+      date: new Date().toISOString().split("T")[0],
+      referenceId: `PR-${payrollMonth}`,
+      referenceType: "payroll",
+      description: `اعتماد استحقاق رواتب شهر ${payrollMonth}`,
+      status: "posted",
+      isAutoGenerated: true,
+      sourceDocumentType: "payroll" as any,
+    }, lines as any);
+
     setApprovedMonths(prev => [...prev, payrollMonth]);
-    toast.success("تم اعتماد المسير بنجاح، وتم ترحيل المصروفات آلياً إلى قسم المالية!");
+    toast.success("تم اعتماد استحقاق الرواتب وتوليد القيود المحاسبية بنجاح!");
+  };
+
+  const handlePayPayroll = () => {
+    if (!isApproved) {
+      toast.error("يجب اعتماد الاستحقاق أولاً!");
+      return;
+    }
+    if (isPaid) {
+      toast.error("تم صرف هذا المسير مسبقاً!");
+      return;
+    }
+
+    if (selectedStaffIds.size === 0) {
+      toast.error("الرجاء تحديد الموظفين المراد صرف رواتبهم.");
+      return;
+    }
+
+    // Journal Entry for Payment (صرف الرواتب)
+    // Dr: 2101 (Accrued Salaries Payable) - Net
+    // Cr: 1102 (Bank) - Net
+    
+    const lines = selectedData.map(payroll => ({
+      accountId: "ACC-2101", // مستحقات الموظفين (Payable)
+      debit: payroll.net,
+      credit: 0,
+      referenceId: payroll.id,
+      referenceType: 'employee' as const,
+      description: `صرف راتب ${payrollMonth} - ${payroll.name}`
+    }));
+
+    // Aggregate credit line to Bank
+    lines.push({
+      accountId: "ACC-1102", // البنك
+      debit: 0,
+      credit: totals.net,
+      referenceId: payrollMonth,
+      referenceType: 'employee' as const,
+      description: `إجمالي صرف رواتب شهر ${payrollMonth} (تحويل بنكي)`
+    });
+
+    addJournalEntry({
+      academicYearId: currentAcademicYearId || "",
+      date: new Date().toISOString().split("T")[0],
+      referenceId: `PAY-${payrollMonth}`,
+      referenceType: "payroll",
+      description: `صرف رواتب شهر ${payrollMonth} (تحويل بنكي)`,
+      status: "posted",
+      isAutoGenerated: true,
+      sourceDocumentType: "payroll" as any,
+    }, lines as any);
+
+    setPaidMonths(prev => [...prev, payrollMonth]);
+    toast.success("تم صرف الرواتب وتحديث الرصيد البنكي بنجاح!");
   };
 
   const printTemplates: PrintTemplate[] = [
@@ -168,21 +271,31 @@ function HrPayroll() {
       actions={
         <div className="flex gap-2">
           <button onClick={() => setIsPrintOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm hover:bg-accent font-bold">
-            <Printer className="h-4 w-4" /> طباعة المسير
+            <Printer className="h-4 w-4" /> طباعة
           </button>
-          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm hover:bg-accent">
-            <Download className="h-4 w-4" /> تصدير للبنك
-          </button>
+          
           <button 
             onClick={() => {
-              if (window.confirm(`هل أنت متأكد من اعتماد مسير الرواتب لشهر ${payrollMonth}؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+              if (window.confirm(`هل أنت متأكد من اعتماد استحقاق مسير الرواتب لعدد (${selectedStaffIds.size}) موظفين لشهر ${payrollMonth}؟`)) {
                 handleApprovePayroll();
               }
             }}
-            disabled={isApproved}
-            className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-bold shadow-sm transition-colors ${isApproved ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+            disabled={isApproved || selectedStaffIds.size === 0}
+            className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-bold shadow-sm transition-colors ${isApproved || selectedStaffIds.size === 0 ? 'bg-muted text-muted-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'}`}
           >
-            <Save className="h-4 w-4" /> {isApproved ? "تم الاعتماد" : `اعتماد مسير ${payrollMonth}`}
+            <Save className="h-4 w-4" /> {isApproved ? "تم الاستحقاق" : "اعتماد الاستحقاق"}
+          </button>
+
+          <button 
+            onClick={() => {
+              if (window.confirm(`هل أنت متأكد من تنفيذ الصرف البنكي لعدد (${selectedStaffIds.size}) موظفين لشهر ${payrollMonth}؟ سيتم خصم ${totals.net} من رصيد البنك.`)) {
+                handlePayPayroll();
+              }
+            }}
+            disabled={!isApproved || isPaid || selectedStaffIds.size === 0}
+            className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-bold shadow-sm transition-colors ${!isApproved || isPaid || selectedStaffIds.size === 0 ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+          >
+            <Wallet className="h-4 w-4" /> {isPaid ? "تم الصرف" : "تنفيذ الصرف"}
           </button>
         </div>
       }
@@ -191,15 +304,15 @@ function HrPayroll() {
         {!isApproved && (
           <SmartAlert 
             type="info"
-            title="التكامل المالي الآلي"
-            description="اعتماد مسير الرواتب سيقوم تلقائياً بتوليد سندات صرف لكل موظف في قسم المصروفات المالية وتحديث الرصيد المالي للمدرسة."
+            title="نظام الرواتب المتكامل"
+            description="الخطوة الأولى: تحديد الموظفين ثم 'اعتماد الاستحقاق' لإثبات الالتزام في دفتر الأستاذ. الخطوة الثانية: 'تنفيذ الصرف' لخصم المبلغ من البنك."
           />
         )}
-        {isApproved && (
+        {isPaid && (
           <SmartAlert 
-            type="info"
-            title="تم اعتماد مسير الرواتب"
-            description="تم اعتماد هذا المسير وترحيل المصروفات آلياً إلى المركز المالي بنجاح. لا يمكن التعديل عليه."
+            type="success"
+            title="عملية مكتملة"
+            description="تم صرف الرواتب وتحديث الأرصدة البنكية ومستحقات الموظفين بنجاح."
           />
         )}
 
@@ -210,13 +323,13 @@ function HrPayroll() {
           </div>
           <div className="flex items-center gap-3">
             <input type="month" value={payrollMonth} onChange={event => setPayrollMonth(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold" />
-            <FinancialWorkflowBadge status={isApproved ? "approved" : "draft"} />
+            <FinancialWorkflowBadge status={isPaid ? "paid" : isApproved ? "approved" : "draft"} />
           </div>
         </FilterBar>
 
         <div className="grid gap-6 md:grid-cols-4">
           <FinancialCard 
-            title="إجمالي الأساسي" 
+            title="إجمالي الأساسي (للمحددين)" 
             value={totals.basic} 
             currency={currency} 
             icon={Wallet} 
@@ -237,7 +350,7 @@ function HrPayroll() {
             colorClass="text-danger bg-danger" 
           />
           <FinancialCard 
-            title="الصافي المستحق" 
+            title="الصافي المطلوب صرفه" 
             value={totals.net} 
             currency={currency} 
             icon={ArrowDown} 
@@ -246,30 +359,44 @@ function HrPayroll() {
         </div>
 
         <PageCard>
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-bold text-primary">
-            <Calculator className="h-4 w-4" />
-            يتم احتساب الصافي من الراتب الأساسي + البدلات، ثم خصم الحسميات اليدوية والحضور والإجازات بدون راتب والسلف.
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-bold text-primary">
+              <Calculator className="h-4 w-4" />
+              يتم احتساب الصافي من الراتب الأساسي + البدلات، ثم خصم الحسميات اليدوية والحضور والإجازات بدون راتب والسلف.
+            </div>
+            
+            <button 
+              onClick={toggleSelectAll} 
+              className="flex items-center gap-2 text-sm font-bold hover:text-primary transition-colors"
+            >
+              {selectedStaffIds.size === payrollData.length ? (
+                <><CheckSquare className="h-5 w-5 text-primary" /> إلغاء تحديد الكل</>
+              ) : (
+                <><Square className="h-5 w-5" /> تحديد الكل ({payrollData.length})</>
+              )}
+            </button>
           </div>
+          
           <DataTable
             rows={payrollData}
             columns={[
-              { key: "name", header: "الموظف", cell: (r) => <div><span className="font-bold">{r.name}</span><div className="text-xs text-muted-foreground">{r.role} - {r.department}</div></div> },
-              { key: "basic", header: "الأساسي", cell: (r) => `${r.basic.toLocaleString()} ${currency}` },
-              { key: "allowance", header: "البدلات", cell: (r) => <span className="text-success">+{r.allowance.toLocaleString()} {currency}</span> },
-              { key: "attendanceDeduction", header: "الحضور", cell: (r) => r.attendanceDeduction ? <span className="text-danger">-{r.attendanceDeduction.toLocaleString()} {currency}</span> : "-" },
-              { key: "leaveDeduction", header: "إجازات بدون راتب", cell: (r) => r.leaveDeduction ? <span className="text-danger">-{r.leaveDeduction.toLocaleString()} {currency} ({r.unpaidLeaveDays} يوم)</span> : "-" },
-              { key: "advanceDeduction", header: "السلف", cell: (r) => r.advanceDeduction ? <span className="text-danger">-{r.advanceDeduction.toLocaleString()} {currency}</span> : "-" },
-              { key: "deduction", header: "إجمالي الخصومات", cell: (r) => <span className="font-bold text-danger">-{r.deduction.toLocaleString()} {currency}</span> },
-              { key: "net", header: "الصافي المستحق", cell: (r) => <span className="font-bold text-lg">{r.net.toLocaleString()} {currency}</span> },
-              {
-                key: "actions",
-                header: "مفردات",
-                cell: () => (
-                  <button className="rounded-md p-2 hover:bg-accent">
-                    <Printer className="h-4 w-4" />
+              { 
+                key: "select", 
+                header: "", 
+                cell: (r) => (
+                  <button onClick={() => toggleSelect(r.id)} className="text-muted-foreground hover:text-primary transition-colors">
+                    {selectedStaffIds.has(r.id) ? <CheckSquare className="h-5 w-5 text-primary" /> : <Square className="h-5 w-5" />}
                   </button>
-                ),
+                )
               },
+              { key: "name", header: "الموظف", cell: (r) => <div className={!selectedStaffIds.has(r.id) ? "opacity-50" : ""}><span className="font-bold">{r.name}</span><div className="text-xs text-muted-foreground">{r.role} - {r.department}</div></div> },
+              { key: "basic", header: "الأساسي", cell: (r) => <span className={!selectedStaffIds.has(r.id) ? "opacity-50" : ""}>{r.basic.toLocaleString()} {currency}</span> },
+              { key: "allowance", header: "البدلات", cell: (r) => <span className={!selectedStaffIds.has(r.id) ? "opacity-50 text-success" : "text-success"}>+{r.allowance.toLocaleString()} {currency}</span> },
+              { key: "attendanceDeduction", header: "الحضور", cell: (r) => r.attendanceDeduction ? <span className={!selectedStaffIds.has(r.id) ? "opacity-50 text-danger" : "text-danger"}>-{r.attendanceDeduction.toLocaleString()} {currency}</span> : "-" },
+              { key: "leaveDeduction", header: "إجازات بدون راتب", cell: (r) => r.leaveDeduction ? <span className={!selectedStaffIds.has(r.id) ? "opacity-50 text-danger" : "text-danger"}>-{r.leaveDeduction.toLocaleString()} {currency} ({r.unpaidLeaveDays} يوم)</span> : "-" },
+              { key: "advanceDeduction", header: "السلف", cell: (r) => r.advanceDeduction ? <span className={!selectedStaffIds.has(r.id) ? "opacity-50 text-danger" : "text-danger"}>-{r.advanceDeduction.toLocaleString()} {currency}</span> : "-" },
+              { key: "deduction", header: "إجمالي الخصومات", cell: (r) => <span className={`font-bold ${!selectedStaffIds.has(r.id) ? "opacity-50 text-danger" : "text-danger"}`}>-{r.deduction.toLocaleString()} {currency}</span> },
+              { key: "net", header: "الصافي المستحق", cell: (r) => <span className={`font-bold text-lg ${!selectedStaffIds.has(r.id) ? "opacity-50" : ""}`}>{r.net.toLocaleString()} {currency}</span> },
             ]}
           />
         </PageCard>
@@ -279,7 +406,7 @@ function HrPayroll() {
         isOpen={isPrintOpen}
         onClose={() => setIsPrintOpen(false)}
         title={`مسير الرواتب - ${payrollMonth}`}
-        data={payrollData}
+        data={selectedStaffIds.size > 0 ? selectedData : payrollData}
         templates={printTemplates}
       />
     </AppShell>

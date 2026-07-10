@@ -51,14 +51,21 @@ import { Route as HrDashboardRouteImport } from './routes/hr.dashboard'
 import { Route as HrContractsRouteImport } from './routes/hr.contracts'
 import { Route as HrAttendanceRouteImport } from './routes/hr.attendance'
 import { Route as GuardiansIdRouteImport } from './routes/guardians.$id'
+import { Route as FinanceVendorsRouteImport } from './routes/finance.vendors'
+import { Route as FinanceTrialBalanceRouteImport } from './routes/finance.trial-balance'
+import { Route as FinanceTreasuryRouteImport } from './routes/finance.treasury'
+import { Route as FinanceStudentsRouteImport } from './routes/finance.students'
 import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
 import { Route as FinancePaymentsRouteImport } from './routes/finance.payments'
 import { Route as FinanceLedgerRouteImport } from './routes/finance.ledger'
-import { Route as FinanceInvoicesRouteImport } from './routes/finance.invoices'
 import { Route as FinanceFeesRouteImport } from './routes/finance.fees'
 import { Route as FinanceExpensesRouteImport } from './routes/finance.expenses'
 import { Route as FinanceDiscountsRouteImport } from './routes/finance.discounts'
 import { Route as FinanceDashboardRouteImport } from './routes/finance.dashboard'
+import { Route as FinanceCostCentersRouteImport } from './routes/finance.cost-centers'
+import { Route as FinanceBudgetsRouteImport } from './routes/finance.budgets'
+import { Route as FinanceBanksRouteImport } from './routes/finance.banks'
+import { Route as FinanceAdvancedRouteImport } from './routes/finance.advanced'
 import { Route as FinanceAccountsRouteImport } from './routes/finance.accounts'
 import { Route as FacilitiesRoomsRouteImport } from './routes/facilities.rooms'
 import { Route as FacilitiesMaintenanceRouteImport } from './routes/facilities.maintenance'
@@ -295,6 +302,26 @@ const GuardiansIdRoute = GuardiansIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => GuardiansRoute,
 } as any)
+const FinanceVendorsRoute = FinanceVendorsRouteImport.update({
+  id: '/vendors',
+  path: '/vendors',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceTrialBalanceRoute = FinanceTrialBalanceRouteImport.update({
+  id: '/trial-balance',
+  path: '/trial-balance',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceTreasuryRoute = FinanceTreasuryRouteImport.update({
+  id: '/treasury',
+  path: '/treasury',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceStudentsRoute = FinanceStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => FinanceRoute,
+} as any)
 const FinanceReportsRoute = FinanceReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -308,11 +335,6 @@ const FinancePaymentsRoute = FinancePaymentsRouteImport.update({
 const FinanceLedgerRoute = FinanceLedgerRouteImport.update({
   id: '/ledger',
   path: '/ledger',
-  getParentRoute: () => FinanceRoute,
-} as any)
-const FinanceInvoicesRoute = FinanceInvoicesRouteImport.update({
-  id: '/invoices',
-  path: '/invoices',
   getParentRoute: () => FinanceRoute,
 } as any)
 const FinanceFeesRoute = FinanceFeesRouteImport.update({
@@ -333,6 +355,26 @@ const FinanceDiscountsRoute = FinanceDiscountsRouteImport.update({
 const FinanceDashboardRoute = FinanceDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceCostCentersRoute = FinanceCostCentersRouteImport.update({
+  id: '/cost-centers',
+  path: '/cost-centers',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceBudgetsRoute = FinanceBudgetsRouteImport.update({
+  id: '/budgets',
+  path: '/budgets',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceBanksRoute = FinanceBanksRouteImport.update({
+  id: '/banks',
+  path: '/banks',
+  getParentRoute: () => FinanceRoute,
+} as any)
+const FinanceAdvancedRoute = FinanceAdvancedRouteImport.update({
+  id: '/advanced',
+  path: '/advanced',
   getParentRoute: () => FinanceRoute,
 } as any)
 const FinanceAccountsRoute = FinanceAccountsRouteImport.update({
@@ -504,14 +546,21 @@ export interface FileRoutesByFullPath {
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
   '/finance/accounts': typeof FinanceAccountsRoute
+  '/finance/advanced': typeof FinanceAdvancedRoute
+  '/finance/banks': typeof FinanceBanksRoute
+  '/finance/budgets': typeof FinanceBudgetsRoute
+  '/finance/cost-centers': typeof FinanceCostCentersRoute
   '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
-  '/finance/invoices': typeof FinanceInvoicesRoute
   '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
   '/finance/reports': typeof FinanceReportsRoute
+  '/finance/students': typeof FinanceStudentsRoute
+  '/finance/treasury': typeof FinanceTreasuryRoute
+  '/finance/trial-balance': typeof FinanceTrialBalanceRoute
+  '/finance/vendors': typeof FinanceVendorsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
   '/hr/contracts': typeof HrContractsRoute
@@ -576,14 +625,21 @@ export interface FileRoutesByTo {
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
   '/finance/accounts': typeof FinanceAccountsRoute
+  '/finance/advanced': typeof FinanceAdvancedRoute
+  '/finance/banks': typeof FinanceBanksRoute
+  '/finance/budgets': typeof FinanceBudgetsRoute
+  '/finance/cost-centers': typeof FinanceCostCentersRoute
   '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
-  '/finance/invoices': typeof FinanceInvoicesRoute
   '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
   '/finance/reports': typeof FinanceReportsRoute
+  '/finance/students': typeof FinanceStudentsRoute
+  '/finance/treasury': typeof FinanceTreasuryRoute
+  '/finance/trial-balance': typeof FinanceTrialBalanceRoute
+  '/finance/vendors': typeof FinanceVendorsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
   '/hr/contracts': typeof HrContractsRoute
@@ -654,14 +710,21 @@ export interface FileRoutesById {
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
   '/finance/accounts': typeof FinanceAccountsRoute
+  '/finance/advanced': typeof FinanceAdvancedRoute
+  '/finance/banks': typeof FinanceBanksRoute
+  '/finance/budgets': typeof FinanceBudgetsRoute
+  '/finance/cost-centers': typeof FinanceCostCentersRoute
   '/finance/dashboard': typeof FinanceDashboardRoute
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
-  '/finance/invoices': typeof FinanceInvoicesRoute
   '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
   '/finance/reports': typeof FinanceReportsRoute
+  '/finance/students': typeof FinanceStudentsRoute
+  '/finance/treasury': typeof FinanceTreasuryRoute
+  '/finance/trial-balance': typeof FinanceTrialBalanceRoute
+  '/finance/vendors': typeof FinanceVendorsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
   '/hr/contracts': typeof HrContractsRoute
@@ -733,14 +796,21 @@ export interface FileRouteTypes {
     | '/facilities/maintenance'
     | '/facilities/rooms'
     | '/finance/accounts'
+    | '/finance/advanced'
+    | '/finance/banks'
+    | '/finance/budgets'
+    | '/finance/cost-centers'
     | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
-    | '/finance/invoices'
     | '/finance/ledger'
     | '/finance/payments'
     | '/finance/reports'
+    | '/finance/students'
+    | '/finance/treasury'
+    | '/finance/trial-balance'
+    | '/finance/vendors'
     | '/guardians/$id'
     | '/hr/attendance'
     | '/hr/contracts'
@@ -805,14 +875,21 @@ export interface FileRouteTypes {
     | '/facilities/maintenance'
     | '/facilities/rooms'
     | '/finance/accounts'
+    | '/finance/advanced'
+    | '/finance/banks'
+    | '/finance/budgets'
+    | '/finance/cost-centers'
     | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
-    | '/finance/invoices'
     | '/finance/ledger'
     | '/finance/payments'
     | '/finance/reports'
+    | '/finance/students'
+    | '/finance/treasury'
+    | '/finance/trial-balance'
+    | '/finance/vendors'
     | '/guardians/$id'
     | '/hr/attendance'
     | '/hr/contracts'
@@ -882,14 +959,21 @@ export interface FileRouteTypes {
     | '/facilities/maintenance'
     | '/facilities/rooms'
     | '/finance/accounts'
+    | '/finance/advanced'
+    | '/finance/banks'
+    | '/finance/budgets'
+    | '/finance/cost-centers'
     | '/finance/dashboard'
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
-    | '/finance/invoices'
     | '/finance/ledger'
     | '/finance/payments'
     | '/finance/reports'
+    | '/finance/students'
+    | '/finance/treasury'
+    | '/finance/trial-balance'
+    | '/finance/vendors'
     | '/guardians/$id'
     | '/hr/attendance'
     | '/hr/contracts'
@@ -1236,6 +1320,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuardiansIdRouteImport
       parentRoute: typeof GuardiansRoute
     }
+    '/finance/vendors': {
+      id: '/finance/vendors'
+      path: '/vendors'
+      fullPath: '/finance/vendors'
+      preLoaderRoute: typeof FinanceVendorsRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/trial-balance': {
+      id: '/finance/trial-balance'
+      path: '/trial-balance'
+      fullPath: '/finance/trial-balance'
+      preLoaderRoute: typeof FinanceTrialBalanceRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/treasury': {
+      id: '/finance/treasury'
+      path: '/treasury'
+      fullPath: '/finance/treasury'
+      preLoaderRoute: typeof FinanceTreasuryRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/students': {
+      id: '/finance/students'
+      path: '/students'
+      fullPath: '/finance/students'
+      preLoaderRoute: typeof FinanceStudentsRouteImport
+      parentRoute: typeof FinanceRoute
+    }
     '/finance/reports': {
       id: '/finance/reports'
       path: '/reports'
@@ -1255,13 +1367,6 @@ declare module '@tanstack/react-router' {
       path: '/ledger'
       fullPath: '/finance/ledger'
       preLoaderRoute: typeof FinanceLedgerRouteImport
-      parentRoute: typeof FinanceRoute
-    }
-    '/finance/invoices': {
-      id: '/finance/invoices'
-      path: '/invoices'
-      fullPath: '/finance/invoices'
-      preLoaderRoute: typeof FinanceInvoicesRouteImport
       parentRoute: typeof FinanceRoute
     }
     '/finance/fees': {
@@ -1290,6 +1395,34 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/finance/dashboard'
       preLoaderRoute: typeof FinanceDashboardRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/cost-centers': {
+      id: '/finance/cost-centers'
+      path: '/cost-centers'
+      fullPath: '/finance/cost-centers'
+      preLoaderRoute: typeof FinanceCostCentersRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/budgets': {
+      id: '/finance/budgets'
+      path: '/budgets'
+      fullPath: '/finance/budgets'
+      preLoaderRoute: typeof FinanceBudgetsRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/banks': {
+      id: '/finance/banks'
+      path: '/banks'
+      fullPath: '/finance/banks'
+      preLoaderRoute: typeof FinanceBanksRouteImport
+      parentRoute: typeof FinanceRoute
+    }
+    '/finance/advanced': {
+      id: '/finance/advanced'
+      path: '/advanced'
+      fullPath: '/finance/advanced'
+      preLoaderRoute: typeof FinanceAdvancedRouteImport
       parentRoute: typeof FinanceRoute
     }
     '/finance/accounts': {
@@ -1581,27 +1714,41 @@ const FacilitiesRouteWithChildren = FacilitiesRoute._addFileChildren(
 
 interface FinanceRouteChildren {
   FinanceAccountsRoute: typeof FinanceAccountsRoute
+  FinanceAdvancedRoute: typeof FinanceAdvancedRoute
+  FinanceBanksRoute: typeof FinanceBanksRoute
+  FinanceBudgetsRoute: typeof FinanceBudgetsRoute
+  FinanceCostCentersRoute: typeof FinanceCostCentersRoute
   FinanceDashboardRoute: typeof FinanceDashboardRoute
   FinanceDiscountsRoute: typeof FinanceDiscountsRoute
   FinanceExpensesRoute: typeof FinanceExpensesRoute
   FinanceFeesRoute: typeof FinanceFeesRoute
-  FinanceInvoicesRoute: typeof FinanceInvoicesRoute
   FinanceLedgerRoute: typeof FinanceLedgerRoute
   FinancePaymentsRoute: typeof FinancePaymentsRoute
   FinanceReportsRoute: typeof FinanceReportsRoute
+  FinanceStudentsRoute: typeof FinanceStudentsRoute
+  FinanceTreasuryRoute: typeof FinanceTreasuryRoute
+  FinanceTrialBalanceRoute: typeof FinanceTrialBalanceRoute
+  FinanceVendorsRoute: typeof FinanceVendorsRoute
   FinanceIndexRoute: typeof FinanceIndexRoute
 }
 
 const FinanceRouteChildren: FinanceRouteChildren = {
   FinanceAccountsRoute: FinanceAccountsRoute,
+  FinanceAdvancedRoute: FinanceAdvancedRoute,
+  FinanceBanksRoute: FinanceBanksRoute,
+  FinanceBudgetsRoute: FinanceBudgetsRoute,
+  FinanceCostCentersRoute: FinanceCostCentersRoute,
   FinanceDashboardRoute: FinanceDashboardRoute,
   FinanceDiscountsRoute: FinanceDiscountsRoute,
   FinanceExpensesRoute: FinanceExpensesRoute,
   FinanceFeesRoute: FinanceFeesRoute,
-  FinanceInvoicesRoute: FinanceInvoicesRoute,
   FinanceLedgerRoute: FinanceLedgerRoute,
   FinancePaymentsRoute: FinancePaymentsRoute,
   FinanceReportsRoute: FinanceReportsRoute,
+  FinanceStudentsRoute: FinanceStudentsRoute,
+  FinanceTreasuryRoute: FinanceTreasuryRoute,
+  FinanceTrialBalanceRoute: FinanceTrialBalanceRoute,
+  FinanceVendorsRoute: FinanceVendorsRoute,
   FinanceIndexRoute: FinanceIndexRoute,
 }
 

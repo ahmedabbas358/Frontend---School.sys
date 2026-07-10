@@ -6,6 +6,7 @@ import { useGlobalStore } from '@/contexts/GlobalStoreContext';
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [deferredQuery, setDeferredQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const globalStore = useGlobalStore();
@@ -36,8 +37,14 @@ export function CommandPalette() {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
       setQuery('');
+      setDeferredQuery('');
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDeferredQuery(query), 150);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   if (!isOpen) return null;
 
@@ -53,32 +60,48 @@ export function CommandPalette() {
   // Dynamic search from GlobalStore
   const dynamicCommands: any[] = [];
   
-  if (query.length > 1) {
+  if (deferredQuery.length > 1) {
+    const q = deferredQuery.toLowerCase();
     // Search Students
-    globalStore.allStudents.forEach(s => {
-      if (s.name.includes(query) || s.id.includes(query)) {
+    let count = 0;
+    for (let i = 0; i < globalStore.allStudents.length; i++) {
+      if (count > 5) break; // Optimization: Stop after 5 matches
+      const s = globalStore.allStudents[i];
+      if (s.name.includes(q) || s.id.toLowerCase().includes(q)) {
         dynamicCommands.push({ id: `stu-${s.id}`, title: `الطالب: ${s.name}`, icon: Users, to: `/students/${s.id}`, keywords: '' });
+        count++;
       }
-    });
+    }
+    
     // Search Staff
-    globalStore.allStaff.forEach(s => {
-       if (s.name.includes(query) || s.id.includes(query)) {
-         dynamicCommands.push({ id: `staff-${s.id}`, title: `الموظف: ${s.name} (${s.role})`, icon: Briefcase, to: `/hr/evaluations`, keywords: '' });
-       }
-    });
+    count = 0;
+    for (let i = 0; i < globalStore.allStaff.length; i++) {
+      if (count > 3) break;
+      const s = globalStore.allStaff[i];
+      if (s.name.includes(q) || s.id.toLowerCase().includes(q)) {
+        dynamicCommands.push({ id: `staff-${s.id}`, title: `الموظف: ${s.name} (${s.role})`, icon: Briefcase, to: `/hr/evaluations`, keywords: '' });
+        count++;
+      }
+    }
+    
     // Search Rooms
-    globalStore.allRooms?.forEach(r => {
-       if (r.name.includes(query) || r.type.includes(query)) {
-         dynamicCommands.push({ id: `room-${r.id}`, title: `المرفق: ${r.name}`, icon: Wrench, to: `/facilities/rooms`, keywords: '' });
-       }
-    });
+    count = 0;
+    const rooms = globalStore.allRooms || [];
+    for (let i = 0; i < rooms.length; i++) {
+      if (count > 2) break;
+      const r = rooms[i];
+      if (r.name.includes(q) || r.type.includes(q)) {
+        dynamicCommands.push({ id: `room-${r.id}`, title: `المرفق: ${r.name}`, icon: Wrench, to: `/facilities/rooms`, keywords: '' });
+        count++;
+      }
+    }
   }
 
   const allCommands = [...staticCommands, ...dynamicCommands].filter(cmd => {
-    if (!query) return staticCommands.includes(cmd); // show static by default
-    const q = query.toLowerCase();
+    if (!deferredQuery) return staticCommands.includes(cmd); // show static by default
+    const q = deferredQuery.toLowerCase();
     return cmd.title.toLowerCase().includes(q) || cmd.keywords.includes(q);
-  }).slice(0, 8); // limit results
+  }).slice(0, 10); // limit results
 
   const handleSelect = (to: string) => {
     setIsOpen(false);

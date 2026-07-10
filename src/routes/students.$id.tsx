@@ -299,12 +299,11 @@ function StudentProfile() {
       currency,
       method: p.method
     }));
-    
     return [...invoices, ...payments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [studentInvoices, allPayments, student.id, currency]);
   
   const studentVisits = allClinicVisits.filter(v => v.studentId === student.id);
-  const studentIncidents = allDisciplineIncidents.filter(i => i.studentId === student.id);
+  const studentIncidents = allDisciplineIncidents.filter((inc: any) => inc.studentId === student.id);
   const studentSection = allSections.find(sec => sec.id === student.sectionId);
   const initials = student.name ? student.name.split(" ").map(n=>n[0]).slice(0,2).join("") : "ط";
 
@@ -349,7 +348,7 @@ function StudentProfile() {
                      {studentIncidents.slice(0, 5).map(inc => (
                        <tr key={inc.id}>
                          <td className="border p-2 tabular-nums">{inc.date}</td>
-                         <td className="border p-2">{inc.category}</td>
+                         <td className="border p-2"><span className="text-sm font-medium">{(inc as any).category}</span></td>
                          <td className="border p-2">{inc.description}</td>
                        </tr>
                      ))}
@@ -648,58 +647,74 @@ function StudentProfile() {
             </div>
 
             {/* Sub-tabs/Sections */}
-            <div id="financial-section">
-              <PageCard 
-                title="السجل المالي (الفواتير)" 
-                className="shadow-sm"
-              actions={
+            <div id="financial-section" className="space-y-6">
+              
+              {/* Manual Payment Action */}
+              <div className="flex gap-3 items-center justify-between bg-primary/5 p-4 rounded-3xl border border-primary/20 shadow-sm glass">
+                <div>
+                  <h3 className="font-bold text-primary flex items-center gap-2"><CreditCard className="h-5 w-5" /> تخصيص الدفعات اليدوي</h3>
+                  <p className="text-sm text-muted-foreground mt-1">يمكنك اختيار قسط أو رسم محدد لسداده.</p>
+                </div>
                 <button 
                   onClick={() => setIsNewInvoiceOpen(true)}
-                  className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-background border border-primary/30 px-4 text-sm font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-sm"
                 >
-                  <Plus className="h-3 w-3" /> إصدار فاتورة
+                  <Plus className="h-4 w-4" /> إصدار فاتورة / غرامة
                 </button>
-              }
-            >
+              </div>
+
+              {/* Installments & Invoices */}
+              <PageCard title="الخطة المالية والأقساط" className="shadow-sm">
               {studentInvoices.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد فواتير مسجلة للطالب.</div>
+                <div className="text-center py-8 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد رسوم أو فواتير مسجلة للطالب.</div>
               ) : (
-                <div className="space-y-3">
-                  {studentInvoices.map((inv) => (
-                    <div key={inv.id} className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-background hover:border-primary/30 transition-colors group">
+                <div className="space-y-4">
+                  {/* Group by academic year or category, here we just list them nicely */}
+                  {studentInvoices.map((inv) => {
+                    const balance = (inv.amount || 0) - (inv.paid || 0);
+                    return (
+                    <div key={inv.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border ${balance > 0 ? 'border-primary/20 bg-background/50' : 'border-success/20 bg-success/5'} hover:border-primary/50 transition-colors group gap-4 shadow-sm`}>
                       <div className="flex items-center gap-4">
-                        <div className={`w-2 h-10 rounded-full ${inv.status === "paid" ? "bg-success" : inv.status === "partial" ? "bg-warning" : "bg-danger"}`}></div>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${inv.status === "paid" ? "bg-success/20 text-success" : inv.status === "partial" ? "bg-warning/20 text-warning" : "bg-primary/10 text-primary"}`}>
+                          <FileText className="h-6 w-6" />
+                        </div>
                         <div>
-                          <p className="font-bold text-sm">فاتورة مستحقات دراسية ({inv.id})</p>
-                          <p className="text-xs text-muted-foreground mt-1 tabular-nums">تاريخ الاستحقاق: {inv.dueDate}</p>
+                          <p className="font-bold text-base">{inv.title}</p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1.5 font-medium">
+                            <span>الفاتورة: {inv.id}</span>
+                            <span>•</span>
+                            <span className="tabular-nums flex items-center gap-1"><CalendarDays className="h-3 w-3" /> الاستحقاق: {inv.dueDate}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right flex flex-col items-end gap-2">
-                        <div>
-                          <p className="font-black tabular-nums">{inv.amount.toLocaleString()} {currency}</p>
-                          <p className={`text-xs font-bold mt-1 ${inv.status === "paid" ? "text-success" : inv.status === "partial" ? "text-warning" : "text-danger"}`}>
-                            {inv.status === "paid" ? "مدفوعة بالكامل" : inv.status === "partial" ? `مدفوعة جزئياً (متبقي ${(inv.amount - inv.paid).toLocaleString()})` : "غير مدفوعة"}
+                      
+                      <div className="flex items-center sm:items-end justify-between sm:flex-col gap-2 sm:gap-1 pl-2 sm:pl-0 border-t sm:border-t-0 border-border/50 pt-3 sm:pt-0">
+                        <div className="text-right">
+                          <p className="font-black tabular-nums text-lg">{inv.amount.toLocaleString()} {currency}</p>
+                          <p className={`text-xs font-bold mt-0.5 ${inv.status === "paid" ? "text-success" : inv.status === "partial" ? "text-warning" : "text-danger"}`}>
+                            {inv.status === "paid" ? "مدفوعة بالكامل" : inv.status === "partial" ? `متبقي ${balance.toLocaleString()}` : "غير مدفوعة"}
                           </p>
                         </div>
-                        {inv.status !== "paid" && inv.status !== "cancelled" && (
+                        {balance > 0 && inv.status !== "cancelled" && (
                           <button 
                             onClick={() => {
-                              setPaymentData({ ...paymentData, invoiceId: inv.id, amount: inv.amount - inv.paid });
+                              setPaymentData({ ...paymentData, invoiceId: inv.id, amount: balance });
                               setIsPaymentOpen(true);
                             }}
-                            className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-success/10 text-success px-3 text-xs font-bold hover:bg-success/20 transition-colors"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-success text-white px-5 text-sm font-bold hover:bg-success/90 transition-colors shadow-sm"
                           >
-                            <CreditCard className="h-3 w-3" /> سداد دفعة
+                            <CreditCard className="h-4 w-4" /> دفع
                           </button>
                         )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
-            </PageCard>
+              </PageCard>
 
-            <PageCard title="سجل الحركات المالي (Timeline)" className="shadow-sm mt-6">
+              {/* Statement of Account (Timeline) */}
+              <PageCard title="كشف الحساب (الحركات المالية)" className="shadow-sm">
               {studentTransactions.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد حركات مالية مسجلة للطالب.</div>
               ) : (
@@ -707,7 +722,7 @@ function StudentProfile() {
                   <FinancialTimeline transactions={studentTransactions} />
                 </div>
               )}
-            </PageCard>
+              </PageCard>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
@@ -735,15 +750,15 @@ function StudentProfile() {
                   <div className="text-center py-6 text-muted-foreground font-bold h-full flex items-center justify-center border border-dashed border-border/50 rounded-2xl">سجل سلوكي ممتاز، لا يوجد مخالفات.</div>
                 ) : (
                   <div className="space-y-3">
-                    {studentIncidents.map(i => (
-                      <div key={i.id} className="p-4 rounded-2xl border border-border/50 bg-background text-sm hover:border-primary/30 transition-colors">
+                    {studentIncidents.map(inc => (
+                      <div key={inc.id} className="p-4 rounded-2xl border border-border/50 bg-background text-sm hover:border-primary/30 transition-colors">
                         <div className="flex justify-between items-start mb-2">
-                          <span className={`font-bold px-2 py-0.5 rounded-lg ${i.type === 'positive' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
-                            {i.category}
+                          <span className={`font-bold px-2 py-0.5 rounded-lg ${(inc as any).type === 'positive' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+                            {(inc as any).category}
                           </span>
-                          <span className="text-xs text-muted-foreground tabular-nums bg-muted px-2 py-0.5 rounded-lg">{i.date}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums bg-muted px-2 py-0.5 rounded-lg">{inc.date}</span>
                         </div>
-                        <p className="text-muted-foreground font-medium leading-relaxed">{i.description}</p>
+                        <p className="text-muted-foreground font-medium leading-relaxed">{inc.description}</p>
                       </div>
                     ))}
                   </div>

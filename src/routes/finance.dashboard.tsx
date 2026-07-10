@@ -5,7 +5,9 @@ import { useStage } from "@/contexts/StageContext";
 import { useMemo, useState } from "react";
 import { DollarSign, TrendingUp, TrendingDown, Wallet, Users, ArrowUpRight, ArrowDownRight, Printer, AlertTriangle, FileText, Plus, ArrowRight, User } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
-import { FinancialCard, FinancialTimeline, MiniBarChart, ProgressRing, FinancialSummaryCard, FilterBar, AcademicYearSelector, EmptyState } from "@/components/financial-components";
+import { FinancialCard, FinancialTimeline, ProgressRing, FinancialSummaryCard, FilterBar, AcademicYearSelector, EmptyState } from "@/components/financial-components";
+import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/finance/dashboard")({
   component: FinanceDashboard,
@@ -13,37 +15,35 @@ export const Route = createFileRoute("/finance/dashboard")({
 
 function FinanceDashboard() {
   const { stage, getStageLabel } = useStage();
-  const { currency, activeStageInvoices, allExpenses, allPayments, activeStageStaff, currentAcademicYearId, allAcademicYears } = useGlobalStore();
+  const { currency, activeStageInvoices, allExpenses, allPayments, currentAcademicYearId, allAcademicYears, allTreasuries, allBankAccounts, allVendors, generateBulkData } = useGlobalStore();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(currentAcademicYearId);
 
   // Filter data by selected year (if 'all', use all data, else filter)
   const filteredInvoices = useMemo(() => {
-    return activeStageInvoices; // Invoices are tied to stage but usually we would filter by year if they had one. For now, use activeStageInvoices.
+    return activeStageInvoices; 
   }, [activeStageInvoices, selectedYear]);
 
-  // Calculate Revenue Metrics
-  const revenueStats = useMemo(() => {
-    const totalExpected = filteredInvoices.reduce((sum, inv) => sum + (inv.netAmount ?? inv.amount), 0);
-    const totalPaid = filteredInvoices.reduce((sum, inv) => sum + inv.paid, 0);
-    const totalDue = totalExpected - totalPaid;
-    const totalDiscounts = filteredInvoices.reduce((sum, inv) => sum + (inv.discountAmount || 0), 0);
-    return { totalExpected, totalPaid, totalDue, totalDiscounts };
-  }, [filteredInvoices]);
+  // Command Center Metrics
+  const commandStats = useMemo(() => {
+    const totalTreasury = allTreasuries.filter(t => t.status === "active").reduce((sum, t) => sum + t.balance, 0);
+    const totalBank = allBankAccounts.filter(b => b.status === "active").reduce((sum, b) => sum + b.balance, 0);
+    
+    // Receivables: Unpaid invoices
+    const totalReceivables = filteredInvoices.reduce((sum, inv) => {
+       const due = (inv.netAmount ?? inv.amount) - inv.paid;
+       return due > 0 && inv.status !== "cancelled" ? sum + due : sum;
+    }, 0);
 
-  // Calculate Expense Metrics
-  const expenseStats = useMemo(() => {
-    const totalExpenses = allExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    return { totalExpenses };
-  }, [allExpenses, selectedYear]);
+    // Payables: Unpaid expenses + Vendor balances
+    const unpaidExpenses = allExpenses.filter(e => e.status !== "posted" && e.status !== "cancelled" && e.status !== "paid").reduce((sum, e) => sum + e.amount, 0);
+    const vendorBalances = allVendors.reduce((sum, v) => sum + v.balance, 0);
+    const totalPayables = unpaidExpenses + vendorBalances;
 
-  // Payroll Metrics
-  const payrollStats = useMemo(() => {
-    const estimatedPayroll = activeStageStaff.filter(s => !s.isDeleted && s.status !== "terminated").reduce((sum, staff) => sum + (staff.basicSalary || 0), 0);
-    return { estimatedPayroll, paidPayroll: 0 }; // In a real app we'd track paid payroll
-  }, [activeStageStaff]);
+    return { totalTreasury, totalBank, totalReceivables, totalPayables, unpaidExpenses };
+  }, [allTreasuries, allBankAccounts, filteredInvoices, allExpenses, allVendors]);
 
-  const netBalance = revenueStats.totalPaid - expenseStats.totalExpenses;
+  const netBalance = commandStats.totalTreasury + commandStats.totalBank;
 
   const recentTransactions = useMemo(() => {
     const payments = allPayments.map(p => {
@@ -88,14 +88,7 @@ function FinanceDashboard() {
         return d.getMonth() === m.month && d.getFullYear() === m.year;
       }).reduce((sum, p) => sum + p.amount, 0);
 
-      const expense = allExpenses.filter(e => {
-        const d = new Date(e.date);
-        return d.getMonth() === m.month && d.getFullYear() === m.year;
-      }).reduce((sum, e) => sum + e.amount, 0);
-
-      // MiniBarChart expects a single value, let's show net balance per month
-      // Alternatively, we can just show income.
-      return income > 0 ? income : 0; 
+      return { month: m.label, income, allExpenses, balance: income - expense };
     });
   }, [allPayments, allExpenses]);
 
@@ -137,9 +130,9 @@ function FinanceDashboard() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link to="/finance/invoices" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all group">
-            <div className="p-2 bg-primary/10 text-primary rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
-            <div className="font-bold text-sm">إصدار فاتورة</div>
+          <Link to="/finance/students" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all group">
+            <div className="p-2 bg-primary/10 text-primary rounded-xl group-hover:scale-110 transition-transform"><Users className="w-5 h-5" /></div>
+            <div className="font-bold text-sm">المالية الطلابية</div>
           </Link>
           <Link to="/finance/payments" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-success/50 hover:bg-success/5 transition-all group">
             <div className="p-2 bg-success/10 text-success rounded-xl group-hover:scale-110 transition-transform"><ArrowDownRight className="w-5 h-5" /></div>
@@ -153,53 +146,57 @@ function FinanceDashboard() {
             <div className="p-2 bg-warning/10 text-warning rounded-xl group-hover:scale-110 transition-transform"><Users className="w-5 h-5" /></div>
             <div className="font-bold text-sm">مسير الرواتب</div>
           </Link>
+          <button onClick={() => { generateBulkData(100); toast.success("تم توليد 100 سجل محاكاة بنجاح"); }} className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all group text-right">
+            <div className="p-2 bg-primary/10 text-primary rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
+            <div className="font-bold text-sm">توليد بيانات تجريبية (100)</div>
+          </button>
         </div>
 
         {/* Core KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <FinancialCard 
-            title="الرصيد الصافي المتاح" 
-            value={netBalance} 
+            title="رصيد الخزائن النقدية" 
+            value={commandStats.totalTreasury} 
             currency={currency} 
             icon={Wallet} 
-            colorClass="text-primary bg-primary" 
+            colorClass="text-emerald-600 bg-emerald-500" 
           />
           <FinancialCard 
-            title="إجمالي التحصيلات" 
-            value={revenueStats.totalPaid} 
+            title="رصيد الحسابات البنكية" 
+            value={commandStats.totalBank} 
+            currency={currency} 
+            icon={Building} 
+            colorClass="text-blue-600 bg-blue-500" 
+          />
+          <FinancialCard 
+            title="إجمالي الذمم المدينة (مستحقات)" 
+            value={commandStats.totalReceivables} 
             currency={currency} 
             icon={TrendingUp} 
-            colorClass="text-success bg-success" 
+            colorClass="text-amber-600 bg-amber-500" 
           />
           <FinancialCard 
-            title="المصروفات التشغيلية" 
-            value={expenseStats.totalExpenses} 
-            currency={currency} 
-            icon={TrendingDown} 
-            colorClass="text-danger bg-danger" 
-          />
-          <FinancialCard 
-            title="إجمالي المتأخرات" 
-            value={revenueStats.totalDue} 
+            title="الذمم الدائنة والمصروفات المستحقة" 
+            value={commandStats.totalPayables} 
             currency={currency} 
             icon={AlertTriangle} 
-            colorClass="text-warning bg-warning" 
+            colorClass="text-rose-600 bg-rose-500" 
           />
         </div>
 
         {/* Detailed Summaries */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FinancialSummaryCard 
-            title="تحصيل الرسوم الدراسية"
-            total={revenueStats.totalExpected}
-            paid={revenueStats.totalPaid}
+            title="موقف السيولة النقدية"
+            total={commandStats.totalTreasury + commandStats.totalBank}
+            paid={commandStats.totalTreasury}
             currency={currency}
             icon={Wallet}
           />
           <FinancialSummaryCard 
-            title="صرف رواتب الموظفين (تقديري)"
-            total={payrollStats.estimatedPayroll}
-            paid={payrollStats.paidPayroll}
+            title="موقف الدائنين (موردين + مصروفات قيد الاعتماد)"
+            total={commandStats.totalPayables}
+            paid={commandStats.unpaidExpenses}
             currency={currency}
             icon={Users}
           />
@@ -231,7 +228,7 @@ function FinanceDashboard() {
                         </div>
                         <div>
                           <div className="text-sm font-bold">{s.studentName}</div>
-                          <Link to={`/finance/invoices`} className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5">
+                          <Link to={`/finance/students`} className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5">
                             الملف المالي <ArrowRight className="w-3 h-3" />
                           </Link>
                         </div>
@@ -241,7 +238,7 @@ function FinanceDashboard() {
                       </div>
                     </div>
                   ))}
-                  <Link to="/finance/invoices" className="block w-full py-2 mt-2 text-center text-sm font-bold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                  <Link to="/finance/students" className="block w-full py-2 mt-2 text-center text-sm font-bold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
                     عرض جميع المتأخرات
                   </Link>
                 </div>
@@ -249,11 +246,23 @@ function FinanceDashboard() {
             </PageCard>
 
             <PageCard title="الإيرادات (6 أشهر)" className="mt-6">
-              <div className="h-48 flex flex-col justify-end mt-4">
-                <MiniBarChart data={chartData} height={150} />
-                <div className="flex justify-between mt-4 text-xs font-bold text-muted-foreground border-t border-border/50 pt-2">
-                  <span>الشهر -5</span><span>-4</span><span>-3</span><span>-2</span><span>الشهر الماضي</span><span>الشهر الحالي</span>
-                </div>
+              <div className="h-64 mt-4" dir="ltr">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value.toLocaleString()} ${currency}`, '']}
+                      contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ fontWeight: 'bold' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="income" name="الإيرادات" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="expense" name="المصروفات" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Line type="monotone" dataKey="balance" name="الصافي" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
             </PageCard>
           </div>
@@ -280,30 +289,30 @@ function FinanceDashboard() {
                   </div>
                   <div className="border p-4 rounded-xl bg-green-50 text-center">
                     <p className="text-sm text-gray-500 font-bold mb-1">إجمالي التحصيلات</p>
-                    <p className="text-2xl font-black text-green-600">{revenueStats.totalPaid.toLocaleString()} {currency}</p>
+                    <p className="text-2xl font-black text-green-600">{[].totalPaid.toLocaleString()} {currency}</p>
                   </div>
                   <div className="border p-4 rounded-xl bg-red-50 text-center">
                     <p className="text-sm text-gray-500 font-bold mb-1">إجمالي المصروفات</p>
-                    <p className="text-2xl font-black text-red-600">{expenseStats.totalExpenses.toLocaleString()} {currency}</p>
+                    <p className="text-2xl font-black text-red-600">{[].totalExpenses.toLocaleString()} {currency}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <h3 className="text-lg font-bold mb-4 border-b pb-2">تفاصيل الرسوم</h3>
+                    <h3 className="text-lg font-bold mb-4 border-b pb-2">تفاصيل السيولة والذمم</h3>
                     <table className="w-full text-sm mb-6">
                       <tbody>
-                        <tr className="border-b"><td className="py-2 px-2">إجمالي المتوقع</td><td className="text-left font-bold">{revenueStats.totalExpected.toLocaleString()}</td></tr>
-                        <tr className="border-b"><td className="py-2 px-2">المحصل</td><td className="text-left font-bold text-green-600">{revenueStats.totalPaid.toLocaleString()}</td></tr>
-                        <tr className="border-b"><td className="py-2 px-2">المتأخرات</td><td className="text-left font-bold text-red-600">{revenueStats.totalDue.toLocaleString()}</td></tr>
-                        <tr className="border-b"><td className="py-2 px-2">إجمالي الخصومات</td><td className="text-left font-bold text-orange-600">{revenueStats.totalDiscounts.toLocaleString()}</td></tr>
+                        <tr className="border-b"><td className="py-2 px-2">إجمالي الخزائن</td><td className="text-left font-bold">{commandStats.totalTreasury.toLocaleString()}</td></tr>
+                        <tr className="border-b"><td className="py-2 px-2">إجمالي البنوك</td><td className="text-left font-bold">{commandStats.totalBank.toLocaleString()}</td></tr>
+                        <tr className="border-b"><td className="py-2 px-2">إجمالي المتأخرات (لصالحنا)</td><td className="text-left font-bold text-green-600">{commandStats.totalReceivables.toLocaleString()}</td></tr>
+                        <tr className="border-b"><td className="py-2 px-2">إجمالي المستحقات (علينا)</td><td className="text-left font-bold text-red-600">{commandStats.totalPayables.toLocaleString()}</td></tr>
                       </tbody>
                     </table>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold mb-4 border-b pb-2">الرواتب المتوقعة (أساسي)</h3>
+                    <h3 className="text-lg font-bold mb-4 border-b pb-2">السيولة المتاحة</h3>
                     <p className="text-2xl font-black text-blue-600 text-center mt-4">
-                      {payrollStats.estimatedPayroll.toLocaleString()} {currency}
+                      {netBalance.toLocaleString()} {currency}
                     </p>
                   </div>
                 </div>

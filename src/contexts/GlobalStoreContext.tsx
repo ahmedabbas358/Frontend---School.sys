@@ -110,6 +110,7 @@ export interface Invoice {
   issueDate?: string;
   status: "draft" | "approved" | "issued" | "partial" | "paid" | "cancelled" | "written_off";
   stage: EducationalStage;
+  category?: string; // e.g. "tuition", "transport", "books"
 }
 
 export interface FeeStructure {
@@ -121,6 +122,7 @@ export interface FeeStructure {
   grades?: string[];
   sections?: string[];
   isMandatory: boolean;
+  installments?: { name: string, percentage: number, dueDate: string }[];
 }
 
 export interface Discount {
@@ -778,8 +780,8 @@ const initialInvoices: Invoice[] = [
 ];
 
 const initialFeeStructures: FeeStructure[] = [
-  { id: "FEE-001", name: "الرسوم الدراسية - ابتدائي", amount: 15000, type: "tuition", stage: "primary", isMandatory: true },
-  { id: "FEE-002", name: "الرسوم الدراسية - متوسط", amount: 18000, type: "tuition", stage: "middle", isMandatory: true },
+  { id: "FEE-001", name: "الرسوم الدراسية - ابتدائي", amount: 15000, type: "tuition", stage: "primary", isMandatory: true, installments: [{ name: "القسط الأول", percentage: 50, dueDate: "2023-09-01" }, { name: "القسط الثاني", percentage: 50, dueDate: "2024-02-01" }] },
+  { id: "FEE-002", name: "الرسوم الدراسية - متوسط", amount: 18000, type: "tuition", stage: "middle", isMandatory: true, installments: [{ name: "القسط الأول", percentage: 50, dueDate: "2023-09-01" }, { name: "القسط الثاني", percentage: 50, dueDate: "2024-02-01" }] },
   { id: "FEE-003", name: "رسوم النقل (اتجاهين)", amount: 3000, type: "transport", stage: "all", isMandatory: false },
   { id: "FEE-004", name: "رسوم التسجيل", amount: 1000, type: "registration", stage: "all", isMandatory: true },
 ];
@@ -957,6 +959,7 @@ interface GlobalStoreContextType {
   allDiscounts: Discount[];
   allPayments: Payment[];
   allExpenses: Expense[];
+  allVendors: Vendor[];
   allExpenseCategories: ExpenseCategory[];
   allAccounts: Account[];
   allJournalEntries: JournalEntry[];
@@ -1014,7 +1017,7 @@ interface GlobalStoreContextType {
 
 
   // Actions
-  addStudent: (student: Omit<Student, "id">) => void;
+  addStudent: (student: Omit<Student, "id">) => string;
   updateStudent: (id: string, updates: Partial<Student>) => void;
   softDeleteStudent: (id: string) => void;
   restoreStudent: (id: string) => void;
@@ -1041,6 +1044,8 @@ interface GlobalStoreContextType {
   deleteDiscount: (id: string) => void;
   addPayment: (invoiceId: string, amount: number, method: string, referenceNo?: string) => void;
   addExpense: (expenseData: Omit<Expense, "id"> & { status?: Expense["status"] }) => void;
+  addVendor: (vendor: any) => void;
+  payVendor: (vendorId: string, amount: number) => void;
   submitExpense: (id: string) => void;
   approveExpense: (id: string) => void;
   postExpense: (id: string) => void;
@@ -1175,6 +1180,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [discounts, setDiscounts] = useState<Discount[]>(initialDiscounts);
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const [vendors, setVendors] = useLocalStorage<Vendor[]>("erp_vendors", []);
   const [expenseCategories] = useState<ExpenseCategory[]>(initialExpenseCategories);
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [libraryIssues, setLibraryIssues] = useState<LibraryIssue[]>(initialLibraryIssues);
@@ -1287,7 +1293,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [textbookDistributions, setTextbookDistributions] = useState<TextbookDistribution[]>([]);
 
   const [transportRoutes, setTransportRoutes] = useState<TransportRoute[]>([]);
-  const [transportSubscriptions, setTransportSubscriptions] = useState<TransportSubscription[]>([]);
+  const [transportSubscriptions, setTransportSubscription] = useState<TransportSubscription[]>([]);
 
 
 
@@ -1346,7 +1352,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const activeStageTimetableSettings = useMemo(() => timetableSettings.stage === activeStage || timetableSettings.stage === "all" ? timetableSettings : timetableSettings, [timetableSettings, activeStage]);
 
   // --- Actions ---
-  const addStudent = (studentData: Omit<Student, "id">) => {
+  const addStudent = (studentData: Omit<Student, "id">): string => {
     const existingStudent = students.find(s => s.nationalId === studentData.nationalId);
     const newStudentId = existingStudent ? existingStudent.id : `STU-${Math.floor(1000 + Math.random() * 9000)}`;
     
@@ -1369,33 +1375,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     };
     setStudentEnrollments(prev => [newEnrollment, ...prev]);
 
-    // Calculate tuition base
-    const tuitionAmount = studentData.stage === "kindergarten" ? 6000 : studentData.stage === "primary" ? 5000 : studentData.stage === "middle" ? 6500 : 8000;
-    
-    // Calculate additional fees from subjects
-    const applicableSubjects = subjects.filter(sub => 
-      (sub.stage === "all" || sub.stage === studentData.stage) && 
-      (!sub.grades || sub.grades.length === 0 || sub.grades.includes(studentData.grade))
-    );
-    const subjectFees = applicableSubjects.reduce((acc, curr) => acc + (curr.fee || 0), 0);
-    
-    const totalAmount = tuitionAmount + subjectFees;
-
-    const newInvoice: Invoice = {
-      id: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
-      studentId: newStudentId, 
-      studentName: studentData.name, 
-      amount: totalAmount, 
-      netAmount: totalAmount, 
-      discountAmount: 0, 
-      paid: 0,
-      dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
-      status: "issued", 
-      stage: studentData.stage, 
-      issueDate: new Date().toISOString().split('T')[0], 
-      title: subjectFees > 0 ? "الرسوم الدراسية ورسوم المواد" : "الرسوم الدراسية"
-    };
-    setInvoices((prev) => [newInvoice, ...prev]);
+    return newStudentId;
   };
 
   const updateStudent = (id: string, updates: Partial<Student>) => {
@@ -1743,6 +1723,9 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       setJournalLines(prev => [jl1, jl2, ...prev]);
     }
   };
+
+  const addVendor = (vendor: any) => setVendors(prev => [...prev, { ...vendor, id: `VEN-${Math.random().toString(36).substr(2, 9)}` }]);
+  const payVendor = (vendorId: string, amount: number) => { /* Logic here */ };
 
   const submitExpense = (id: string) => {
     setExpenses(prev => prev.map(e => e.id === id && (e.status === "draft" || !e.status) ? { ...e, status: "submitted" } : e));
@@ -2374,6 +2357,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       addGuardian, updateGuardian, softDeleteGuardian, restoreGuardian, hardDeleteGuardian,
       restoreItem, hardDeleteItem,
       addPayment, addInvoice, issueInvoice, cancelInvoice, updateInvoice, deleteInvoice, addFeeStructure, updateFeeStructure, deleteFeeStructure, addDiscount, updateDiscount, deleteDiscount, addExpense, submitExpense, approveExpense, postExpense, updateExpense, deleteExpense, addJournalEntry, rolloverFinancialBalances,
+      allVendors: vendors, addVendor, payVendor,
       addAccount, updateAccount, deleteAccount, toggleAccountStatus,
       addBook, issueBook, returnBook, addInventoryItem, updateInventoryItem, deleteInventoryItem,
       processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, addStaffAdvance, addClinicVisit, addDisciplineIncident, addAttendanceSession, addBehaviorTransaction,

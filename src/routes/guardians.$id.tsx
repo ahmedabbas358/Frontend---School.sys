@@ -276,7 +276,7 @@ function GuardianProfile() {
                 {guardianData.students.map(student => (
                   <Link 
                     key={student.id} 
-                    to={`/students/${student.id}`}
+                    to="/students/$id" params={{ id: student.id }}
                     className="flex flex-col p-3 rounded-2xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all group"
                   >
                     <div className="flex items-center gap-3 mb-2">
