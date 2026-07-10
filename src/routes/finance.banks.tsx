@@ -65,7 +65,7 @@ function FinanceBanks() {
               >
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-bold text-lg">{bank.bankName}</h4>
-                  <Badge variant="success">نشط</Badge>
+                  <Badge tone="success">نشط</Badge>
                 </div>
                 <div className="text-sm font-bold text-muted-foreground mb-4">{bank.accountName} - {bank.accountNumber}</div>
                 <div className="text-2xl font-black text-primary">

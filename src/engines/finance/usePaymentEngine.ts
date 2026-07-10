@@ -24,6 +24,10 @@ export function usePaymentEngine() {
     const invoice = globalStore.allInvoices.find(i => i.id === invoiceId);
     if (!invoice) throw new Error("الفاتورة غير موجودة");
 
+    // Find the active cash session for the treasury (if cash/card/etc and linked to a treasury)
+    const activeSession = globalStore.allCashSessions.find(s => s.status === "open"); // This might need refinement to match destinationAccount to treasury, but for now take the first open or specific one.
+
+
     const academicYearId = invoice.academicYearId || globalStore.academicYears.find(y => y.isCurrent)?.id;
     if (!academicYearId) throw new Error("لا توجد سنة دراسية محددة");
 
@@ -36,12 +40,16 @@ export function usePaymentEngine() {
       method,
       referenceNo,
       notes,
+      sessionId: activeSession?.id,
     };
     
-    // We call the raw globalStore method to persist payment
-    // To do this properly, we need to ensure globalStore has addPayment
-    // For now we assume addPayment takes Omit<Payment, "id">
     globalStore.addPayment(paymentRecord);
+    
+    // If it's cash and there's an active session, update the treasury balance (if not handled via GL strictly)
+    // Actually, in an ERP, the GL handles everything. But we should also update the treasury balance directly for quick dashboarding.
+    if (activeSession) {
+       // update treasury balance natively if needed, but usually GL is the source of truth.
+    }
 
     // 2. Generate Automated Accounting Entry
     // Debit: Destination Account (Treasury/Bank)

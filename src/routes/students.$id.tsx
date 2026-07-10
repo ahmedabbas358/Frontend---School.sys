@@ -861,7 +861,7 @@ function StudentProfile() {
             </div>
             <form onSubmit={(e) => {
               e.preventDefault();
-              addPayment(paymentData.invoiceId, paymentData.amount, paymentData.method);
+              addPayment({ invoiceId: paymentData.invoiceId, amount: paymentData.amount, method: paymentData.method as any, studentId: student.id, date: new Date().toISOString() });
               toast.success("تم تسجيل الدفعة بنجاح");
               setIsPaymentOpen(false);
             }} className="p-6 space-y-4">

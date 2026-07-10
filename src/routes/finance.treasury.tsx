@@ -2,20 +2,65 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { Wallet, Plus, CheckCircle2, XCircle, Clock, AlertTriangle, ArrowRightLeft } from "lucide-react";
+import { Wallet, Plus, CheckCircle2, XCircle, Clock, ArrowRightLeft, ArrowDownRight, ArrowUpRight, FileText } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/finance/treasury")({
   component: FinanceTreasury,
 });
 
 function FinanceTreasury() {
-  const { allTreasuries, allCashSessions, currency, openCashSession, closeCashSession } = useGlobalStore();
+  const {
+    allPayments,
+    allExpenses,
+    currency, 
+    addPayment,
+    addExpense
+  } = useGlobalStore();
+
+  const [allTreasuries] = useState([
+    { id: "T-01", name: "الصندوق الرئيسي", status: "active" },
+    { id: "T-02", name: "صندوق الاستقبال", status: "active" }
+  ]);
+  
+  const [allCashSessions, setAllCashSessions] = useState<any[]>([]);
+  const [expenseCategories] = useState([
+    { id: "CAT-1", name: "مصروفات تشغيلية" },
+    { id: "CAT-2", name: "نثريات" }
+  ]);
+
+  const openCashSession = (treasuryId: string, openingBalance: number) => {
+    setAllCashSessions(prev => [
+      ...prev,
+      {
+        id: `SESS-${Math.floor(1000 + Math.random() * 9000)}`,
+        treasuryId,
+        openedAt: new Date().toISOString(),
+        status: "open",
+        openingBalance
+      }
+    ]);
+  };
+
+  const closeCashSession = (sessionId: string, actualClosingBalance: number) => {
+    setAllCashSessions(prev => prev.map(s => 
+      s.id === sessionId 
+        ? { ...s, status: "closed", closedAt: new Date().toISOString(), actualClosingBalance }
+        : s
+    ));
+  };
+  
   const [selectedTreasury, setSelectedTreasury] = useState<string | null>(null);
   
   const [openSessionModal, setOpenSessionModal] = useState<boolean>(false);
   const [closeSessionModalData, setCloseSessionModalData] = useState<{ sessionId: string, expectedBalance: number } | null>(null);
+
+  const [receiptModal, setReceiptModal] = useState<{ sessionId: string, treasuryId: string } | null>(null);
+  const [expenseModal, setExpenseModal] = useState<{ sessionId: string, treasuryId: string } | null>(null);
+
+  const activeTreasuries = allTreasuries.filter(t => t.status === "active");
 
   const handleOpenSession = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,14 +84,86 @@ function FinanceTreasury() {
     setCloseSessionModalData(null);
   };
 
-  const activeTreasuries = allTreasuries.filter(t => t.status === "active");
+  const handleAddReceipt = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!receiptModal) return;
+    const formData = new FormData(e.currentTarget);
+    const amount = Number(formData.get("amount"));
+    const notes = formData.get("notes") as string;
+    const referenceNo = formData.get("referenceNo") as string;
+    const method = formData.get("method") as any;
+
+    addPayment({
+      amount,
+      date: new Date().toISOString(),
+      method,
+      referenceNo,
+      notes,
+      sessionId: receiptModal.sessionId,
+    });
+    toast.success("تم إصدار سند القبض بنجاح");
+    setReceiptModal(null);
+  };
+
+  const handleAddExpense = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!expenseModal) return;
+    const formData = new FormData(e.currentTarget);
+    const amount = Number(formData.get("amount"));
+    const title = formData.get("title") as string;
+    const beneficiary = formData.get("beneficiary") as string;
+    const categoryId = formData.get("categoryId") as string;
+    const notes = formData.get("notes") as string;
+    const referenceNo = formData.get("referenceNo") as string;
+    const method = formData.get("method") as any;
+
+    addExpense({
+      title,
+      amount,
+      date: new Date().toISOString(),
+      categoryId,
+      beneficiary,
+      method,
+      referenceNo,
+      notes,
+      status: "paid",
+      sessionId: expenseModal.sessionId,
+    });
+    toast.success("تم إصدار سند الصرف بنجاح");
+    setExpenseModal(null);
+  };
+
+  const getSessionTransactions = (sessionId: string) => {
+    const receipts = allPayments.filter(p => p.sessionId === sessionId).map(p => ({
+      id: `RCPT-${Math.floor(10000 + Math.random() * 90000)}`,
+      date: p.date,
+      type: 'receipt',
+      amount: p.amount,
+      description: p.notes || "سند قبض عام",
+      method: p.method,
+      reference: p.referenceNo
+    }));
+
+    const expenses = allExpenses.filter(e => e.sessionId === sessionId).map(e => ({
+      id: e.id,
+      date: e.date,
+      type: 'expense',
+      amount: e.amount,
+      description: e.title,
+      beneficiary: e.beneficiary,
+      method: e.method,
+      reference: e.referenceNo
+    }));
+
+    return [...receipts, ...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
 
   return (
     <AppShell
       breadcrumb={[
         { label: "الرئيسية", to: "/" },
         { label: "المركز المالي", to: "/finance" },
-        { label: "الخزينة (الصندوق)" },
+        { label: "إدارة الخزينة والتحصيل" },
       ]}
       actions={
         <button 
@@ -69,12 +186,12 @@ function FinanceTreasury() {
       }
     >
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Treasuries List */}
           <div className="lg:col-span-1 space-y-4">
             <h3 className="text-lg font-black text-foreground flex items-center gap-2 mb-4">
-              <Wallet className="w-5 h-5 text-primary" /> صناديق الكاش
+              <Wallet className="w-5 h-5 text-primary" /> الصناديق
             </h3>
             {activeTreasuries.map(treasury => {
               const activeSession = allCashSessions.find(s => s.treasuryId === treasury.id && s.status === "open");
@@ -83,14 +200,14 @@ function FinanceTreasury() {
                 <div 
                   key={treasury.id}
                   onClick={() => setSelectedTreasury(treasury.id)}
-                  className={`p-4 border rounded-xl cursor-pointer transition-all ${selectedTreasury === treasury.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-card hover:border-primary/30'}`}
+                  className={`p-4 border rounded-xl cursor-pointer transition-all ${selectedTreasury === treasury.id ? 'border-primary bg-primary/5 shadow-md' : 'border-border/50 bg-card hover:border-primary/30 hover:shadow-sm'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-bold text-lg">{treasury.name}</h4>
                     {activeSession ? (
-                      <Badge variant="success" className="animate-pulse">جلسة مفتوحة</Badge>
+                      <Badge tone="success" className="animate-pulse shadow-sm shadow-success/20">مفتوح</Badge>
                     ) : (
-                      <Badge variant="secondary">مغلق</Badge>
+                      <Badge tone="neutral">مغلق</Badge>
                     )}
                   </div>
                   <div className="text-2xl font-black text-primary mt-2">
@@ -102,21 +219,120 @@ function FinanceTreasury() {
             })}
           </div>
 
-          {/* Cash Sessions for Selected Treasury */}
-          <div className="lg:col-span-2">
+          {/* Treasury Details / Cash Sessions */}
+          <div className="lg:col-span-3">
             {!selectedTreasury ? (
-              <PageCard className="h-full flex flex-col items-center justify-center p-12 text-center border-dashed">
-                <Wallet className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-                <h3 className="text-xl font-bold text-muted-foreground">اختر صندوقاً لعرض الجلسات النقدية</h3>
-                <p className="text-sm text-muted-foreground mt-2">يمكنك فتح وإغلاق الجلسات النقدية ومطابقة النقدية في الصندوق</p>
+              <PageCard className="h-[600px] flex flex-col items-center justify-center p-12 text-center border-dashed">
+                <Wallet className="w-16 h-16 text-muted-foreground mb-4 opacity-20" />
+                <h3 className="text-2xl font-bold text-muted-foreground">اختر صندوقاً للإدارة</h3>
+                <p className="text-sm text-muted-foreground mt-2 max-w-md">قم بتحديد الصندوق لفتح الجلسات النقدية وإصدار سندات القبض والصرف وإدارة السيولة النقدية اليومية.</p>
               </PageCard>
             ) : (
-              <PageCard className="h-full">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-black">جلسات النقدية للصندوق</h3>
-                </div>
-                
-                <div className="animate-in slide-in-from-bottom-4 duration-500 delay-100">
+              <div className="space-y-6">
+                {/* Active Session Dashboard */}
+                {allCashSessions.find(s => s.treasuryId === selectedTreasury && s.status === "open") && (
+                  (() => {
+                    const activeSession = allCashSessions.find(s => s.treasuryId === selectedTreasury && s.status === "open")!;
+                    const transactions = getSessionTransactions(activeSession.id);
+                    const totalReceipts = transactions.filter(t => t.type === 'receipt').reduce((sum, t) => sum + t.amount, 0);
+                    const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                    const currentCalculatedBalance = activeSession.openingBalance + totalReceipts - totalExpenses;
+
+                    return (
+                      <PageCard className="border-primary/20 shadow-lg shadow-primary/5 overflow-hidden">
+                        <div className="bg-primary/5 p-4 -mx-6 -mt-6 mb-6 border-b border-primary/10 flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-success/10 rounded-full text-success">
+                              <Clock className="w-5 h-5 animate-pulse" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-black text-primary">جلسة نقدية نشطة</h3>
+                              <p className="text-sm text-muted-foreground">مفتوحة بواسطة: {activeSession.openedBy} - {new Date(activeSession.openedAt).toLocaleString('ar-EG')}</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => setCloseSessionModalData({ sessionId: activeSession.id, expectedBalance: currentCalculatedBalance })}
+                            className="bg-danger/10 text-danger hover:bg-danger hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+                          >
+                            إنهاء وإغلاق الجلسة
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 mb-6">
+                          <div className="p-4 rounded-xl border border-border/50 bg-card">
+                            <div className="text-sm font-bold text-muted-foreground mb-1">رصيد الفتح</div>
+                            <div className="text-2xl font-black">{activeSession.openingBalance.toLocaleString()}</div>
+                          </div>
+                          <div className="p-4 rounded-xl border border-success/30 bg-success/5">
+                            <div className="text-sm font-bold text-success mb-1 flex justify-between">
+                              إجمالي المقبوضات <ArrowDownRight className="w-4 h-4" />
+                            </div>
+                            <div className="text-2xl font-black text-success">+{totalReceipts.toLocaleString()}</div>
+                          </div>
+                          <div className="p-4 rounded-xl border border-danger/30 bg-danger/5">
+                            <div className="text-sm font-bold text-danger mb-1 flex justify-between">
+                              إجمالي المصروفات <ArrowUpRight className="w-4 h-4" />
+                            </div>
+                            <div className="text-2xl font-black text-danger">-{totalExpenses.toLocaleString()}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 mb-6">
+                          <button 
+                            onClick={() => setReceiptModal({ sessionId: activeSession.id, treasuryId: selectedTreasury })}
+                            className="flex-1 flex items-center justify-center gap-2 bg-success text-white py-3 rounded-xl font-bold hover:bg-success/90 transition-colors shadow-sm"
+                          >
+                            <ArrowDownRight className="w-5 h-5" /> إصدار سند قبض (إيراد)
+                          </button>
+                          <button 
+                            onClick={() => setExpenseModal({ sessionId: activeSession.id, treasuryId: selectedTreasury })}
+                            className="flex-1 flex items-center justify-center gap-2 bg-danger text-white py-3 rounded-xl font-bold hover:bg-danger/90 transition-colors shadow-sm"
+                          >
+                            <ArrowUpRight className="w-5 h-5" /> إصدار سند صرف (مصروف)
+                          </button>
+                        </div>
+
+                        {transactions.length > 0 ? (
+                          <div className="border rounded-lg overflow-hidden">
+                            <div className="bg-muted px-4 py-2 text-sm font-bold border-b flex justify-between items-center">
+                              <span>حركات الجلسة الحالية</span>
+                              <Badge tone="primary">{transactions.length} حركة</Badge>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto">
+                              {transactions.map(t => (
+                                <div key={t.id} className="p-3 border-b last:border-0 hover:bg-muted/30 flex justify-between items-center">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-full ${t.type === 'receipt' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+                                      {t.type === 'receipt' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                                    </div>
+                                    <div>
+                                      <div className="font-bold text-sm">{t.description}</div>
+                                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                                        <span>{new Date(t.date).toLocaleTimeString('ar-EG')}</span>
+                                        {t.method && <Badge tone="neutral" className="text-[10px] scale-90 origin-right">{t.method}</Badge>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className={`font-black ${t.type === 'receipt' ? 'text-success' : 'text-danger'}`}>
+                                    {t.type === 'receipt' ? '+' : '-'}{t.amount.toLocaleString()} {currency}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center border border-dashed rounded-xl text-muted-foreground">
+                            لا توجد حركات مالية في هذه الجلسة حتى الآن
+                          </div>
+                        )}
+                      </PageCard>
+                    );
+                  })()
+                )}
+
+                {/* Historical Sessions */}
+                <PageCard>
+                  <h3 className="text-xl font-black mb-6">سجل جلسات النقدية (تاريخي)</h3>
                   <DataTable
                     columns={[
                       { key: "sessionInfo", header: "معلومات الجلسة", cell: (session: any) => (
@@ -137,35 +353,17 @@ function FinanceTreasury() {
                           <span className="font-medium">{session.openingBalance.toLocaleString()}</span>
                         )
                       },
-                      { key: "closingBalance", header: "الرصيد الفعلي", cell: (session: any) => (
-                          <span className="font-bold">{session.actualClosingBalance ? session.actualClosingBalance.toLocaleString() : '-'}</span>
+                      { key: "closingBalance", header: "الرصيد الفعلي (للإغلاق)", cell: (session: any) => (
+                          <span className="font-bold">{session.actualClosingBalance !== undefined ? session.actualClosingBalance.toLocaleString() : '-'}</span>
                         )
                       },
                       { key: "status", header: "الحالة والمطابقة", cell: (session: any) => (
                           session.status === 'open' ? (
-                            <Badge variant="success" className="animate-pulse">مفتوحة</Badge>
+                            <Badge tone="success" className="animate-pulse shadow-sm shadow-success/20">مفتوحة</Badge>
                           ) : (
-                            <Badge variant={session.difference === 0 ? "success" : "danger"}>
+                            <Badge tone={session.difference === 0 ? "success" : "danger"}>
                               {session.difference === 0 ? "مطابق" : `فروقات: ${session.difference}`}
                             </Badge>
-                          )
-                        )
-                      },
-                      { key: "actions", header: "إجراءات", cell: (session: any) => (
-                          session.status === 'open' ? (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const treasury = allTreasuries.find(t => t.id === session.treasuryId);
-                                const expectedClosing = treasury?.balance ?? session.openingBalance;
-                                setCloseSessionModalData({ sessionId: session.id, expectedBalance: expectedClosing });
-                              }}
-                              className="text-xs font-bold bg-danger/10 text-danger hover:bg-danger hover:text-white px-3 py-1.5 rounded-lg transition-colors"
-                            >
-                              إغلاق الجلسة
-                            </button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">مغلقة</span>
                           )
                         )
                       }
@@ -174,14 +372,15 @@ function FinanceTreasury() {
                     pageSize={10}
                     pageSizeOptions={[5, 10, 25, 50]}
                   />
-                </div>
-              </PageCard>
+                </PageCard>
+              </div>
             )}
           </div>
 
         </div>
       </div>
 
+      {/* Modals */}
       {/* Open Session Modal */}
       {openSessionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
@@ -193,8 +392,8 @@ function FinanceTreasury() {
             <form onSubmit={handleOpenSession} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-muted-foreground mb-1">رصيد الفتح الفعلي ({currency})</label>
-                <input type="number" name="openingBalance" required min="0" defaultValue={allTreasuries.find(t => t.id === selectedTreasury)?.balance || 0} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50" />
-                <p className="text-xs text-muted-foreground mt-1">قم بعد النقدية الموجودة فعلياً في الصندوق الآن</p>
+                <input type="number" name="openingBalance" required min="0" defaultValue={allTreasuries.find(t => t.id === selectedTreasury)?.balance || 0} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 text-xl font-bold" />
+                <p className="text-xs text-muted-foreground mt-1">قم بعد النقدية الموجودة فعلياً في الصندوق الآن لتسجيل رصيد بداية المدة للجلسة.</p>
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="submit" className="flex-1 btn-primary">تأكيد وفتح الجلسة</button>
@@ -208,30 +407,123 @@ function FinanceTreasury() {
       {/* Close Session Modal */}
       {closeSessionModalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border overflow-hidden">
-            <div className="p-4 border-b border-border/50 flex justify-between items-center bg-muted/30">
-              <h3 className="font-bold flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-danger" /> إغلاق الجلسة ومطابقة النقدية</h3>
+          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl shadow-danger/10 border border-border overflow-hidden">
+            <div className="p-4 border-b border-border/50 flex justify-between items-center bg-danger/5">
+              <h3 className="font-bold flex items-center gap-2 text-danger"><CheckCircle2 className="w-5 h-5" /> إغلاق الجلسة ومطابقة النقدية</h3>
               <button onClick={() => setCloseSessionModalData(null)} className="p-1 hover:bg-accent rounded-md"><XCircle className="w-4 h-4" /></button>
             </div>
             <form onSubmit={handleCloseSession} className="p-6 space-y-4">
-              <div className="p-3 bg-muted rounded-lg flex justify-between items-center">
+              <div className="p-4 bg-muted rounded-xl flex justify-between items-center border border-border/50">
                 <span className="text-sm font-bold text-muted-foreground">الرصيد الدفتري المتوقع:</span>
-                <span className="font-black text-lg">{closeSessionModalData.expectedBalance.toLocaleString()} {currency}</span>
+                <span className="font-black text-2xl">{closeSessionModalData.expectedBalance.toLocaleString()} {currency}</span>
               </div>
               <div>
                 <label className="block text-sm font-bold text-muted-foreground mb-1">الرصيد الفعلي (الموجود بالدرج) ({currency})</label>
-                <input type="number" name="actualClosingBalance" required min="0" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/50 text-xl font-bold" />
-                <p className="text-xs text-muted-foreground mt-1">أدخل المبلغ الموجود فعلياً بعد عدّه</p>
+                <input type="number" name="actualClosingBalance" required min="0" className="w-full px-4 py-3 border-2 border-primary/20 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 text-2xl font-black transition-all" />
+                <p className="text-xs text-muted-foreground mt-1">أدخل المبلغ الموجود فعلياً بعد عدّه لمطابقته مع النظام</p>
               </div>
               <div className="pt-4 flex gap-3">
-                <button type="submit" className="flex-1 btn-primary bg-danger hover:bg-danger/90">إغلاق الجلسة</button>
-                <button type="button" onClick={() => setCloseSessionModalData(null)} className="flex-1 btn-secondary">إلغاء</button>
+                <button type="submit" className="flex-1 btn-primary bg-danger hover:bg-danger/90">تأكيد وإغلاق الجلسة</button>
+                <button type="button" onClick={() => setCloseSessionModalData(null)} className="flex-1 btn-secondary">رجوع</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* Receipt Modal */}
+      {receiptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl border border-border overflow-hidden">
+            <div className="p-4 border-b border-border/50 flex justify-between items-center bg-success/5">
+              <h3 className="font-bold flex items-center gap-2 text-success"><ArrowDownRight className="w-5 h-5" /> إصدار سند قبض عام</h3>
+              <button onClick={() => setReceiptModal(null)} className="p-1 hover:bg-accent rounded-md"><XCircle className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleAddReceipt} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">المبلغ ({currency})</label>
+                  <input type="number" name="amount" required min="1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-success/50 font-bold" />
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">طريقة الدفع</label>
+                  <select name="method" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-success/50">
+                    <option value="cash">نقدي</option>
+                    <option value="card">بطاقة / شبكة</option>
+                    <option value="bank_transfer">تحويل بنكي</option>
+                    <option value="cheque">شيك</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">البيان / ملاحظات</label>
+                  <input type="text" name="notes" required placeholder="مثال: إيرادات متفرقة, بيع زي مدرسي..." className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-success/50" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">رقم المرجع (اختياري)</label>
+                  <input type="text" name="referenceNo" placeholder="رقم إيصال أو عملية بنكية" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-success/50" />
+                </div>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="submit" className="flex-1 btn-primary bg-success hover:bg-success/90">حفظ وطباعة</button>
+                <button type="button" onClick={() => setReceiptModal(null)} className="flex-1 btn-secondary">إلغاء</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Modal */}
+      {expenseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl border border-border overflow-hidden">
+            <div className="p-4 border-b border-border/50 flex justify-between items-center bg-danger/5">
+              <h3 className="font-bold flex items-center gap-2 text-danger"><ArrowUpRight className="w-5 h-5" /> إصدار سند صرف</h3>
+              <button onClick={() => setExpenseModal(null)} className="p-1 hover:bg-accent rounded-md"><XCircle className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleAddExpense} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">عنوان المصروف</label>
+                  <input type="text" name="title" required placeholder="مثال: صيانة كهرباء, مشتريات بوفيه..." className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-danger/50" />
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">المبلغ ({currency})</label>
+                  <input type="number" name="amount" required min="1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-danger/50 font-bold text-danger" />
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">التصنيف</label>
+                  <select name="categoryId" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-danger/50">
+                    {expenseCategories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">المستفيد</label>
+                  <input type="text" name="beneficiary" required placeholder="اسم المستلم / الشركة" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-danger/50" />
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">طريقة الدفع</label>
+                  <select name="method" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-danger/50">
+                    <option value="cash">نقدي</option>
+                    <option value="card">بطاقة / شبكة</option>
+                    <option value="bank_transfer">تحويل بنكي</option>
+                    <option value="cheque">شيك</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-bold text-muted-foreground mb-1">رقم المرجع وملاحظات (اختياري)</label>
+                  <input type="text" name="notes" placeholder="تفاصيل إضافية..." className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-danger/50" />
+                </div>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="submit" className="flex-1 btn-primary bg-danger hover:bg-danger/90">اعتماد وصرف</button>
+                <button type="button" onClick={() => setExpenseModal(null)} className="flex-1 btn-secondary">إلغاء</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </AppShell>
   );

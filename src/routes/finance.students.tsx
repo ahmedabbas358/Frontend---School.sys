@@ -202,10 +202,10 @@ function FinanceStudents() {
               },
               { key: "status", header: "الحالة", cell: (r: any) => (
                   r.totalDue > 0 
-                    ? <Badge variant="danger"><AlertTriangle className="w-3 h-3 ml-1" /> متأخرات</Badge>
+                    ? <Badge tone="danger"><AlertTriangle className="w-3 h-3 ml-1" /> متأخرات</Badge>
                     : r.totalFees > 0 
-                      ? <Badge variant="success"><CheckCircle2 className="w-3 h-3 ml-1" /> مسدد بالكامل</Badge>
-                      : <Badge variant="secondary">لا يوجد رسوم</Badge>
+                      ? <Badge tone="success"><CheckCircle2 className="w-3 h-3 ml-1" /> مسدد بالكامل</Badge>
+                      : <Badge tone="neutral">لا يوجد رسوم</Badge>
                 )
               },
               { key: "actions", header: "إجراءات", cell: (r: any) => (
@@ -276,7 +276,7 @@ function FinanceStudents() {
                             <td className="px-4 py-3 text-success font-bold">{inv.paid > 0 ? inv.paid.toLocaleString() : '-'}</td>
                             <td className="px-4 py-3 text-danger font-black">{due > 0 ? due.toLocaleString() : '-'}</td>
                             <td className="px-4 py-3">
-                              {inv.status === "paid" ? <Badge variant="success">مسدد</Badge> : inv.status === "partial" ? <Badge variant="warning">مسدد جزئياً</Badge> : <Badge variant="secondary">مستحق</Badge>}
+                              {inv.status === "paid" ? <Badge tone="success">مسدد</Badge> : inv.status === "partial" ? <Badge tone="warning">مسدد جزئياً</Badge> : <Badge tone="neutral">مستحق</Badge>}
                             </td>
                           </tr>
                         );
