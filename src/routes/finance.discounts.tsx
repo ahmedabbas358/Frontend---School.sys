@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell, PageCard } from "@/components/app-shell";
+import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { Plus, Percent, Printer, Trash2, X, Users, GraduationCap, Building } from "lucide-react";
+import { Plus, Percent, Printer, Trash2, X, Users, GraduationCap, Building, Tag, CheckCircle2 } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialCard, FilterBar } from "@/components/financial-components";
 import { useMemo, useState } from "react";
@@ -19,6 +19,7 @@ function FinanceDiscounts() {
   const { stage, stages, getStageLabel } = useStage();
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [q, setQ] = useState("");
 
   const [newDiscount, setNewDiscount] = useState<Partial<Discount>>({
     name: "",
@@ -37,14 +38,6 @@ function FinanceDiscounts() {
     if (!newDiscount.grades?.length) return activeStageSections;
     return activeStageSections.filter(section => newDiscount.grades?.includes(section.grade));
   }, [activeStageSections, newDiscount.grades]);
-
-  const targetStudents = useMemo(() => {
-    return activeStageStudents.filter(student => {
-      if (newDiscount.grades?.length && !newDiscount.grades.includes(student.grade)) return false;
-      if (newDiscount.sections?.length && (!student.sectionId || !newDiscount.sections.includes(student.sectionId))) return false;
-      return true;
-    });
-  }, [activeStageStudents, newDiscount.grades, newDiscount.sections]);
 
   const getTargetSummary = (discount: Discount) => {
     const parts: string[] = [];
@@ -74,7 +67,7 @@ function FinanceDiscounts() {
   const handleAddDiscount = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDiscount.name || !newDiscount.value) {
-      toast.error("يرجى تعبئة الحقول المطلوبة");
+      toast.error("يرجى تعبئة الحقول المطلوبة (اسم الخصم والقيمة)");
       return;
     }
     try {
@@ -90,328 +83,236 @@ function FinanceDiscounts() {
       toast.error(error instanceof Error ? error.message : "تعذر حفظ الخصم");
       return;
     }
-    toast.success("تم إضافة الخصم بنجاح");
+    toast.success("تم إضافة بند وقاعدة الخصم والمنحة بنجاح");
     setIsModalOpen(false);
     setNewDiscount({ name: "", type: "percentage", value: 0, description: "", stage, grades: [], sections: [], studentIds: [], isActive: true });
   };
 
+  const filteredDiscounts = useMemo(() => {
+    return allDiscounts.filter(d => {
+      if (q) {
+        const qLower = q.toLowerCase();
+        const matchName = d.name.toLowerCase().includes(qLower);
+        const matchDesc = d.description?.toLowerCase().includes(qLower);
+        if (!matchName && !matchDesc) return false;
+      }
+      return true;
+    });
+  }, [allDiscounts, q]);
+
   const printTemplates: PrintTemplate[] = [
     {
       id: "discounts-list",
-      name: "كشف الخصومات والمنح",
+      name: "قائمة المنح والخصومات",
       category: "المالية",
       type: "table",
       columns: [
-        { label: "اسم الخصم / المنحة", key: "name" },
-        { label: "نوع الخصم", key: "typeStr" },
+        { label: "كود/اسم الخصم", key: "name" },
+        { label: "النوع", key: "typeLabel" },
         { label: "القيمة", key: "valueStr" },
-        { label: "شروط التطبيق", key: "description" },
-      ],
-      description: "طباعة كشف مجمع بقواعد الخصومات والمنح الدراسية المعتمدة"
+        { label: "النطاق المستهدف", key: "targetSummary" },
+        { label: "عدد المستفيدين", key: "matchCount" },
+      ]
     }
   ];
 
-  const printData = allDiscounts.map(d => ({
+  const printData = filteredDiscounts.map(d => ({
     ...d,
-    typeStr: d.type === "percentage" ? "نسبة مئوية" : "مبلغ مقطوع",
-    valueStr: d.type === "percentage" ? `${d.value}%` : `${d.value.toLocaleString()} ${currency}`
+    typeLabel: d.type === "percentage" ? "نسبة مئوية (%)" : "مبلغ ثابت",
+    valueStr: d.type === "percentage" ? `${d.value}%` : `${d.value.toLocaleString()} ${currency}`,
+    targetSummary: getTargetSummary(d),
+    matchCount: countMatches(d)
   }));
 
   return (
     <AppShell
       breadcrumb={[
         { label: "الرئيسية", to: "/" },
-        { label: "المركز المالي" },
-        { label: "الخصومات والمنح" },
+        { label: "المركز المالي", to: "/finance/dashboard" },
+        { label: "إدارة الخصومات والمنح الدراسية" },
       ]}
       actions={
         <div className="flex gap-2">
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+            onClick={() => setIsPrintOpen(true)} 
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border px-3.5 text-xs font-extrabold hover:bg-accent shadow-sm"
           >
-            <Plus className="h-4 w-4" /> إضافة قاعدة خصم
+            <Printer className="h-4 w-4" /> طباعة لائحة الخصومات
           </button>
-          <button
-            onClick={() => setIsPrintOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary/10 px-4 text-sm font-bold text-primary hover:bg-primary/20 transition-all border border-primary/20"
+          <button 
+            onClick={() => setIsModalOpen(true)} 
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 text-xs font-extrabold shadow-sm hover:bg-primary/90 transition-all"
           >
-            <Printer className="h-4 w-4" /> طباعة الكشف
+            <Plus className="h-4 w-4" /> إضافة بند خصم/منحة جديدة
           </button>
         </div>
       }
     >
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="space-y-6 animate-in fade-in duration-500 pb-20">
         
-        {/* Statistics Cards */}
+        {/* Top Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FinancialCard 
-            title="إجمالي قواعد الخصم" 
-            value={allDiscounts.length} 
-            icon={Percent} 
-            colorClass="text-primary bg-primary" 
-          />
-          <FinancialCard 
-            title="الخصومات النشطة" 
-            value={allDiscounts.filter(d => d.isActive).length} 
-            icon={GraduationCap} 
-            colorClass="text-success bg-success" 
-          />
-          <FinancialCard 
-            title="خصومات بمبالغ مقطوعة" 
-            value={allDiscounts.filter(d => d.type === 'fixed').length} 
-            icon={Building} 
-            colorClass="text-warning bg-warning" 
-          />
+          <PageCard className="p-4 flex items-center gap-4 bg-card border border-border/50 rounded-2xl shadow-sm">
+            <div className="p-3 bg-primary/10 text-primary rounded-xl"><Tag className="w-6 h-6" /></div>
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">إجمالي قواعد الخصوم والمنح</p>
+              <p className="text-2xl font-black tabular-nums">{allDiscounts.length}</p>
+            </div>
+          </PageCard>
+          <PageCard className="p-4 flex items-center gap-4 border-l-4 border-l-success rounded-2xl shadow-sm">
+            <div className="p-3 bg-success/10 text-success rounded-xl"><GraduationCap className="w-6 h-6" /></div>
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">الطلاب المستفيدين من الخصومات</p>
+              <p className="text-xl font-black tabular-nums text-success">
+                {activeStageStudents.filter(s => allDiscounts.some(d => countMatches(d) > 0)).length} طالب
+              </p>
+            </div>
+          </PageCard>
+          <PageCard className="p-4 flex items-center gap-4 border-l-4 border-l-amber-500 rounded-2xl shadow-sm">
+            <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl"><Percent className="w-6 h-6" /></div>
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">أنواع الخصومات المفعلة</p>
+              <p className="text-xl font-black tabular-nums text-amber-600">خصم الأخوة / منحة تفوق</p>
+            </div>
+          </PageCard>
         </div>
 
-        <FilterBar>
-          <div className="flex-1" />
-          <div className="text-sm text-muted-foreground font-bold">المرحلة الحالية: {getStageLabel(stage)}</div>
-        </FilterBar>
-
-        <PageCard>
-          <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-            <Percent className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-bold">إدارة الخصومات والمنح الدراسية</h2>
-          </div>
+        {/* Data Table */}
+        <div className="animate-in slide-in-from-bottom-4 duration-500">
           <DataTable
-            rows={allDiscounts}
             columns={[
-              { key: "name", header: "اسم الخصم / المنحة", cell: (r) => <span className="font-bold">{r.name}</span> },
-              { key: "type", header: "نوع الخصم", cell: (r) => <span className="text-sm font-medium px-2 py-1 bg-accent rounded-md">{r.type === "percentage" ? "نسبة مئوية" : "مبلغ مقطوع"}</span> },
-              { key: "value", header: "القيمة", cell: (r) => <span className="font-bold text-danger text-lg">{r.type === "percentage" ? `${r.value}%` : `${r.value.toLocaleString()} ${currency}`}</span> },
-              { key: "targets", header: "نطاق التطبيق", cell: (r) => <span className="text-sm font-bold text-primary">{getTargetSummary(r)}</span> },
-              { key: "matches", header: "مطابق حالياً", cell: (r) => <span className="rounded-lg bg-success/10 px-2 py-1 text-xs font-bold text-success">{countMatches(r)} طالب</span> },
-              { key: "description", header: "الوصف والشروط", cell: (r) => <span className="text-sm text-muted-foreground">{r.description || "-"}</span> },
-              {
-                key: "actions",
-                header: "إعدادات",
-                cell: (r) => (
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => {
-                        if(confirm("هل أنت متأكد من حذف هذا الخصم؟")) {
-                          deleteDiscount(r.id);
-                          toast.success("تم الحذف بنجاح");
-                        }
-                      }}
-                      className="flex items-center gap-1.5 rounded-lg bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger hover:bg-danger/20 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" /> حذف
-                    </button>
+              { 
+                key: "name", 
+                header: "اسم الخصم / المنحة", 
+                cell: (d: any) => (
+                  <div>
+                    <div className="font-extrabold text-sm">{d.name}</div>
+                    {d.description && <div className="text-xs text-muted-foreground">{d.description}</div>}
                   </div>
-                ),
+                )
               },
+              { 
+                key: "type", 
+                header: "نوع الخصم والقيمة", 
+                cell: (d: any) => (
+                  <div className="flex items-center gap-2">
+                    <Badge tone={d.type === "percentage" ? "info" : "success"}>
+                      {d.type === "percentage" ? `خصم ${d.value}%` : `خصم ثابت: ${d.value.toLocaleString()} ${currency}`}
+                    </Badge>
+                  </div>
+                )
+              },
+              { 
+                key: "target", 
+                header: "النطاق المستهدف", 
+                cell: (d: any) => <span className="font-bold text-xs text-muted-foreground">{getTargetSummary(d)}</span> 
+              },
+              { 
+                key: "matches", 
+                header: "الطلاب المستفيدين", 
+                cell: (d: any) => <Badge tone="neutral">{countMatches(d)} طالب</Badge> 
+              },
+              { 
+                key: "actions", 
+                header: "إجراءات", 
+                cell: (d: any) => (
+                  <button 
+                    onClick={() => {
+                      deleteDiscount(d.id);
+                      toast.success("تم إلغاء بند الخصم بنجاح");
+                    }}
+                    className="text-xs font-bold text-danger hover:bg-danger/10 p-1.5 rounded-lg transition-all"
+                    title="حذف الخصم"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )
+              }
             ]}
+            rows={filteredDiscounts}
+            pageSize={10}
+            pageSizeOptions={[10, 25, 50]}
+            empty="لا توجد منح أو خصومات مسجلة تطابق شروط التصفية"
           />
-        </PageCard>
+        </div>
       </div>
 
+      {/* --- Add Discount Modal --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl rounded-3xl bg-card shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-            <div className="bg-primary/5 p-6 flex items-center justify-between border-b border-border/50">
-              <h2 className="text-2xl font-black flex items-center gap-2 text-primary">
-                <Percent className="h-6 w-6" /> إضافة قاعدة خصم جديدة
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border overflow-hidden">
+            <div className="p-5 border-b border-border/50 flex justify-between items-center bg-primary/10">
+              <h3 className="font-extrabold text-base flex items-center gap-2 text-primary"><Plus className="w-5 h-5" /> إضافة بند خصم / منحة جديدة</h3>
+              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-accent rounded-lg"><X className="w-4 h-4" /></button>
             </div>
-            
-            <form onSubmit={handleAddDiscount} className="p-6 space-y-5 overflow-y-auto">
-              <div className="grid gap-4">
+            <form onSubmit={handleAddDiscount} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground mb-1">اسم الخصم أو المنحة <span className="text-danger">*</span></label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="مثال: خصم الأخ الثاني (15%) أو منحة تفوق" 
+                  value={newDiscount.name}
+                  onChange={e => setNewDiscount(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary/40 outline-none" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">اسم الخصم <span className="text-danger">*</span></label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="مثال: خصم الإخوة"
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                    value={newDiscount.name}
-                    onChange={e => setNewDiscount({...newDiscount, name: e.target.value})}
+                  <label className="block text-xs font-bold text-muted-foreground mb-1">نوع الخصم</label>
+                  <select 
+                    value={newDiscount.type}
+                    onChange={e => setNewDiscount(prev => ({ ...prev, type: e.target.value as any }))}
+                    className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-xs focus:ring-2 focus:ring-primary/40 outline-none"
+                  >
+                    <option value="percentage">نسبة مئوية (%)</option>
+                    <option value="fixed">مبلغ ثابت ({currency})</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground mb-1">قيمة الخصم <span className="text-danger">*</span></label>
+                  <input 
+                    type="number" 
+                    required 
+                    min="1" 
+                    placeholder="أدخل القيمة..." 
+                    value={newDiscount.value || ""}
+                    onChange={e => setNewDiscount(prev => ({ ...prev, value: Number(e.target.value) }))}
+                    className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-base focus:ring-2 focus:ring-primary/40 outline-none" 
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">نوع الخصم <span className="text-danger">*</span></label>
-                    <select
-                      required
-                      className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                      value={newDiscount.type}
-                      onChange={e => setNewDiscount({...newDiscount, type: e.target.value as any})}
-                    >
-                      <option value="percentage">نسبة مئوية (%)</option>
-                      <option value="fixed">مبلغ مقطوع ({currency})</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">القيمة <span className="text-danger">*</span></label>
-                    <input
-                      required
-                      type="number"
-                      min="1"
-                      max={newDiscount.type === "percentage" ? 100 : 100000}
-                      className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-black text-xl text-danger focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums text-left"
-                      dir="ltr"
-                      value={newDiscount.value || ""}
-                      onChange={e => setNewDiscount({...newDiscount, value: Number(e.target.value)})}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الوصف والشروط (اختياري)</label>
-                  <textarea
-                    rows={3}
-                    placeholder="اكتب شروط تطبيق هذا الخصم..."
-                    className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-medium focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors resize-none"
-                    value={newDiscount.description}
-                    onChange={e => setNewDiscount({...newDiscount, description: e.target.value})}
-                  ></textarea>
-                </div>
-
-                <div className="rounded-2xl border border-border/50 bg-muted/20 p-4">
-                  <div className="mb-4 flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    <h3 className="font-black">نطاق تطبيق الخصم الفعلي</h3>
-                    <span className="mr-auto rounded-lg bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-                      {targetStudents.filter(student => !newDiscount.studentIds?.length || newDiscount.studentIds.includes(student.id)).length} طالب مطابق
-                    </span>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-muted-foreground">المرحلة</label>
-                      <select
-                        className="w-full rounded-2xl border border-border/50 bg-background px-4 py-3 font-bold"
-                        value={newDiscount.stage || stage}
-                        onChange={event => setNewDiscount({ ...newDiscount, stage: event.target.value as any, grades: [], sections: [], studentIds: [] })}
-                      >
-                        <option value="all">كل المراحل</option>
-                        {stages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex items-center justify-between rounded-2xl border border-border/50 bg-background p-4">
-                      <div>
-                        <p className="font-bold">الخصم مفعل</p>
-                        <p className="text-xs text-muted-foreground">الخصم غير المفعل لن يطبق على الفواتير الجديدة.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        className="h-5 w-5 accent-primary"
-                        checked={newDiscount.isActive !== false}
-                        onChange={event => setNewDiscount({ ...newDiscount, isActive: event.target.checked })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-                        <GraduationCap className="h-4 w-4" /> الفصول
-                      </div>
-                      <div className="max-h-48 overflow-y-auto rounded-xl border border-border/50 bg-background p-2">
-                        {grades.map(grade => (
-                          <label key={grade} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-primary"
-                              checked={newDiscount.grades?.includes(grade) || false}
-                              onChange={event => setNewDiscount(prev => ({
-                                ...prev,
-                                grades: event.target.checked ? [...(prev.grades || []), grade] : (prev.grades || []).filter(item => item !== grade),
-                                sections: event.target.checked ? prev.sections : (prev.sections || []).filter(sectionId => activeStageSections.find(section => section.id === sectionId)?.grade !== grade),
-                                studentIds: [],
-                              }))}
-                            />
-                            <span className="text-sm font-bold">{grade}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-                        <Building className="h-4 w-4" /> الشعب
-                      </div>
-                      <div className="max-h-48 overflow-y-auto rounded-xl border border-border/50 bg-background p-2">
-                        {targetSections.map(section => (
-                          <label key={section.id} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-primary"
-                              checked={newDiscount.sections?.includes(section.id) || false}
-                              onChange={event => setNewDiscount(prev => ({
-                                ...prev,
-                                sections: event.target.checked ? [...(prev.sections || []), section.id] : (prev.sections || []).filter(item => item !== section.id),
-                                studentIds: [],
-                              }))}
-                            />
-                            <span className="text-sm font-bold">{section.grade} / شعبة {section.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-                        <Users className="h-4 w-4" /> طلاب محددون
-                      </div>
-                      <div className="max-h-48 overflow-y-auto rounded-xl border border-border/50 bg-background p-2">
-                        {targetStudents.map(student => (
-                          <label key={student.id} className="flex cursor-pointer items-start gap-2 rounded-lg p-2 hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="mt-1 h-4 w-4 accent-primary"
-                              checked={newDiscount.studentIds?.includes(student.id) || false}
-                              onChange={event => setNewDiscount(prev => ({
-                                ...prev,
-                                studentIds: event.target.checked ? [...(prev.studentIds || []), student.id] : (prev.studentIds || []).filter(item => item !== student.id),
-                              }))}
-                            />
-                            <span>
-                              <span className="block text-sm font-bold">{student.name}</span>
-                              <span className="block text-xs text-muted-foreground">{student.grade} / ولي الأمر: {student.guardianName}</span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              <div className="pt-6 flex justify-end gap-3 border-t border-border/50 mt-6">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl px-5 py-2.5 font-bold hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit" 
-                  className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
-                >
-                  حفظ الخصم
-                </button>
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground mb-1">الوصف والملاحظات</label>
+                <input 
+                  type="text" 
+                  placeholder="ملاحظات توضيحية حول ضوابط الخصم..." 
+                  value={newDiscount.description || ""}
+                  onChange={e => setNewDiscount(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl text-xs focus:ring-2 focus:ring-primary/40 outline-none" 
+                />
+              </div>
+
+              <div className="pt-3 flex gap-3">
+                <button type="submit" className="flex-1 btn-primary font-extrabold py-2.5 rounded-xl">حفظ بند الخصم</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 btn-secondary py-2.5 rounded-xl">إلغاء</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      <AdvancedPrintEngine 
-        isOpen={isPrintOpen} 
-        onClose={() => setIsPrintOpen(false)} 
-        title="كشف الخصومات والمنح الدراسية"
+      {/* --- Advanced Print Engine --- */}
+      <AdvancedPrintEngine
+        isOpen={isPrintOpen}
+        onClose={() => setIsPrintOpen(false)}
+        title="لائحة الخصومات والمنح الدراسية المعتمـدة"
         data={printData}
-        templates={printTemplates} 
+        templates={printTemplates}
       />
+
     </AppShell>
   );
 }

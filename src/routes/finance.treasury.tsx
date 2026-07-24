@@ -5,52 +5,14 @@ import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { Wallet, Plus, CheckCircle2, XCircle, Clock, ArrowRightLeft, ArrowDownRight, ArrowUpRight, FileText } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
+const uuidv4 = () => Math.random().toString(36).substr(2, 9);
 
 export const Route = createFileRoute("/finance/treasury")({
   component: FinanceTreasury,
 });
 
 function FinanceTreasury() {
-  const {
-    allPayments,
-    allExpenses,
-    currency, 
-    addPayment,
-    addExpense
-  } = useGlobalStore();
-
-  const [allTreasuries] = useState([
-    { id: "T-01", name: "الصندوق الرئيسي", status: "active" },
-    { id: "T-02", name: "صندوق الاستقبال", status: "active" }
-  ]);
-  
-  const [allCashSessions, setAllCashSessions] = useState<any[]>([]);
-  const [expenseCategories] = useState([
-    { id: "CAT-1", name: "مصروفات تشغيلية" },
-    { id: "CAT-2", name: "نثريات" }
-  ]);
-
-  const openCashSession = (treasuryId: string, openingBalance: number) => {
-    setAllCashSessions(prev => [
-      ...prev,
-      {
-        id: `SESS-${Math.floor(1000 + Math.random() * 9000)}`,
-        treasuryId,
-        openedAt: new Date().toISOString(),
-        status: "open",
-        openingBalance
-      }
-    ]);
-  };
-
-  const closeCashSession = (sessionId: string, actualClosingBalance: number) => {
-    setAllCashSessions(prev => prev.map(s => 
-      s.id === sessionId 
-        ? { ...s, status: "closed", closedAt: new Date().toISOString(), actualClosingBalance }
-        : s
-    ));
-  };
+  const { allTreasuries, allCashSessions, allPayments, allExpenses, allExpenseCategories, openCashSession, closeCashSession, currency, addPayment, addExpense, currentAcademicYearId } = useGlobalStore();
   
   const [selectedTreasury, setSelectedTreasury] = useState<string | null>(null);
   
@@ -68,7 +30,7 @@ function FinanceTreasury() {
     const formData = new FormData(e.currentTarget);
     const openingBalance = Number(formData.get("openingBalance"));
     
-    openCashSession(selectedTreasury, openingBalance);
+    openCashSession(selectedTreasury, "U-1001", openingBalance);
     toast.success("تم فتح الجلسة النقدية بنجاح");
     setOpenSessionModal(false);
   };
@@ -135,7 +97,7 @@ function FinanceTreasury() {
 
   const getSessionTransactions = (sessionId: string) => {
     const receipts = allPayments.filter(p => p.sessionId === sessionId).map(p => ({
-      id: `RCPT-${Math.floor(10000 + Math.random() * 90000)}`,
+      id: p.id,
       date: p.date,
       type: 'receipt',
       amount: p.amount,
@@ -493,7 +455,7 @@ function FinanceTreasury() {
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-sm font-bold text-muted-foreground mb-1">التصنيف</label>
                   <select name="categoryId" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-danger/50">
-                    {expenseCategories.map(c => (
+                    {allExpenseCategories?.map((c: any) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>

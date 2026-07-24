@@ -12,7 +12,7 @@ export const Route = createFileRoute("/facilities/rooms")({
 });
 
 function RoomsPage() {
-  const { allRooms, addRoom, updateRoom, deleteRoom } = useGlobalStore();
+  const { allRooms, addRoom, updateRoom, deleteRoom, allSections, assignSectionToRoom } = useGlobalStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editingRoom, setEditingRoom] = useState<any | null>(null);
   const [searchQ, setSearchQ] = useState("");
@@ -230,6 +230,28 @@ function RoomsPage() {
                 <span className="text-sm">{roomTypeLabel[r.type] ?? r.type}</span>
               )},
               { key: "capacity", header: "السعة", cell: (r) => `${r.capacity} شخص` },
+              { key: "section", header: "الشعبة الدراسية المخصصة", cell: (r) => (
+                <select
+                  value={r.assignedSectionId || ""}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      assignSectionToRoom(e.target.value, r.id);
+                      toast.success(`تم ربط القاعة بالشعبة بنجاح`);
+                    } else if (r.assignedSectionId) {
+                      assignSectionToRoom(r.assignedSectionId, undefined);
+                      toast.success(`تم إلغاء ربط القاعة`);
+                    }
+                  }}
+                  className="text-xs font-bold bg-card border border-border rounded-lg px-2.5 py-1 text-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="">-- بدون شعبة مخصصة --</option>
+                  {allSections.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.grade} - شعبة {s.name}
+                    </option>
+                  ))}
+                </select>
+              )},
               { key: "status", header: "الحالة", cell: (r) => (
                 <Badge tone={r.status === "available" ? "success" : r.status === "maintenance" ? "danger" : "warning"}>
                   {r.status === "available" ? "متاحة" : r.status === "maintenance" ? "تحت الصيانة" : "مشغولة"}

@@ -74,14 +74,24 @@ function Accordion({ title, icon: Icon, children, defaultOpen = false }: { title
 }
 
 // Helper for Content Editable
-function EditableText({ value, onChange, className, style, tagName: Tag = "span" }: any) {
+function EditableText({ value, onChange, className, style, tagName: Tag = "div" }: any) {
+  const isReactElement = React.isValidElement(value);
+
+  if (isReactElement) {
+    return (
+      <Tag className={`outline-none block w-full leading-relaxed ${className}`} style={{ lineHeight: "1.6", wordBreak: "break-word", overflowWrap: "break-word", ...style }}>
+        {value}
+      </Tag>
+    );
+  }
+
   return (
     <Tag
       contentEditable
       suppressContentEditableWarning
       onBlur={(e: any) => onChange && onChange(e.target.innerText)}
-      className={`outline-none focus:ring-2 focus:ring-primary/50 focus:bg-primary/5 rounded transition-all cursor-text ${className}`}
-      style={style}
+      className={`outline-none focus:ring-2 focus:ring-primary/50 focus:bg-primary/5 rounded transition-all cursor-text block leading-relaxed ${className}`}
+      style={{ lineHeight: "1.6", wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "normal", ...style }}
       dangerouslySetInnerHTML={{ __html: String(value ?? "") }}
     />
   );
@@ -247,13 +257,22 @@ export function AdvancedPrintEngine({
     }
   }, [themePreset]);
 
-  // Sync title when opened
+  // Sync title when opened & Reset after print
   useEffect(() => {
     if (isOpen) {
       setCustomTitle(title);
       setCustomSubtitle(subtitle || "");
     }
   }, [isOpen, title, subtitle]);
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      setIsPreparingPrint(false);
+      setShowAllForPrint(false);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => window.removeEventListener("afterprint", handleAfterPrint);
+  }, []);
 
   const [autoFit, setAutoFit] = useState(true);
 
@@ -266,12 +285,16 @@ export function AdvancedPrintEngine({
   const handlePrint = () => {
     setIsPreparingPrint(true);
     setShowAllForPrint(true);
-    // Allow React to mount all elements before invoking print
-    setTimeout(() => {
-      window.print();
-      setIsPreparingPrint(false);
-      setShowAllForPrint(false);
-    }, 1200);
+    
+    // High-performance double-frame render commit before calling window.print
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          window.print();
+          setIsPreparingPrint(false);
+        }, 200);
+      });
+    });
   };
 
   const handleExport = (format: "csv" | "json" | "txt" | "html") => {
@@ -376,30 +399,63 @@ export function AdvancedPrintEngine({
     @media print {
       @page { 
         size: A4 ${paperOrientation}; 
-        margin: ${marginSize === 'none' ? '0' : marginSize === 'sm' ? '1cm' : marginSize === 'md' ? '2cm' : '3cm'};
+        margin: ${marginSize === 'none' ? '0' : marginSize === 'sm' ? '0.8cm' : marginSize === 'md' ? '1.5cm' : '2.5cm'};
+      }
+      body * {
+        visibility: hidden !important;
+      }
+      .print-paper-canvas,
+      .print-paper-canvas * {
+        visibility: visible !important;
+      }
+      .print-paper-canvas {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: ${marginSize === 'none' ? '0' : marginSize === 'sm' ? '10px' : marginSize === 'md' ? '20px' : '30px'} !important;
+        box-shadow: none !important;
+        border: none !important;
+        background-color: white !important;
+        color: black !important;
       }
       body {
         -webkit-print-color-adjust: exact !important;
         color-adjust: exact !important;
         print-color-adjust: exact !important;
+        background-color: white !important;
       }
       table { 
-        page-break-inside: auto; 
-        ${autoFit ? 'width: 100% !important; max-width: 100% !important;' : ''}
+        width: 100% !important;
+        border-collapse: collapse !important;
+        table-layout: auto !important;
+        page-break-inside: auto !important;
       }
       tr { 
-        page-break-inside: avoid; 
-        page-break-after: auto; 
+        page-break-inside: avoid !important; 
+        break-inside: avoid !important;
       }
       thead { 
-        display: table-header-group; 
+        display: table-header-group !important; 
       }
       tfoot { 
-        display: table-footer-group; 
+        display: table-footer-group !important; 
       }
-      .print-auto-fit th, .print-auto-fit td {
-        word-break: break-word;
-        white-space: normal;
+      th, td {
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        line-height: 1.6 !important;
+        vertical-align: middle !important;
+        height: auto !important;
+        padding: 6px 8px !important;
+      }
+      .print-controls-sidebar,
+      .print-hidden,
+      header, nav, aside, button {
+        display: none !important;
       }
     }
   `;
@@ -724,7 +780,7 @@ export function AdvancedPrintEngine({
 
         {/* The Paper */}
         <div 
-          className={`bg-white shadow-2xl print:shadow-none transition-all relative ${paperOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'} ${marginMap[marginSize]} ${pageFrame ? 'ring-4 ring-offset-4 ring-offset-white' : ''}`}
+          className={`bg-white shadow-2xl print:shadow-none transition-all relative print-paper-canvas ${paperOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'} ${marginMap[marginSize]} ${pageFrame ? 'ring-4 ring-offset-4 ring-offset-white' : ''}`}
           style={{
             fontFamily: fontFamily === 'sans' ? 'sans-serif' : fontFamily === 'serif' ? 'serif' : fontFamily === 'mono' ? 'monospace' : 'Cairo, sans-serif',
             color: textColor,
@@ -764,18 +820,18 @@ export function AdvancedPrintEngine({
 
           {/* Type: TABLE */}
           {currentTemplateObj?.type === "table" && (
-            <div className="w-full">
-              <table className={`w-full text-right border-collapse ${autoFit ? 'print-auto-fit' : ''}`} style={{ ...tableBorderStyleObj, tableLayout: autoFit ? 'auto' : 'fixed' }}>
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-right border-collapse" style={{ ...tableBorderStyleObj, tableLayout: 'auto' }}>
                 <thead style={{ display: 'table-header-group' }}>
                   <tr>
-                    {showPageNumbers && <th className="p-2 border font-bold w-12 text-center" style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj }}>#</th>}
+                    {showPageNumbers && <th className="p-2 border font-bold w-12 text-center" style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj, lineHeight: '1.6', verticalAlign: 'middle' }}>#</th>}
                     {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => (
-                      <th key={col.key} className="p-2 border font-bold hover:bg-black/5 transition-colors" style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj }}>
+                      <th key={col.key} className="p-2.5 border font-bold hover:bg-black/5 transition-colors text-right" style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj, lineHeight: '1.6', verticalAlign: 'middle', wordBreak: 'break-word' }}>
                         <EditableText 
-                          tagName="span" 
+                          tagName="div" 
                           value={customHeaders[col.key] || col.label} 
                           onChange={(val: string) => setCustomHeaders(prev => ({...prev, [col.key]: val}))}
-                          className="block w-full p-1"
+                          className="block w-full p-1 leading-relaxed font-bold text-right"
                         />
                       </th>
                     ))}
@@ -783,13 +839,22 @@ export function AdvancedPrintEngine({
                 </thead>
                 <tbody className={fontMap[dataFontSize]}>
                   {previewData.map((row, idx) => (
-                    <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : stripeColor }}>
-                      {showPageNumbers && <td className="p-2 border text-center font-bold" style={tableBorderStyleObj}>{idx + 1}</td>}
-                      {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => (
-                        <td key={col.key} className="p-2 border" style={tableBorderStyleObj}>
-                          <EditableText tagName="div" value={col.render ? col.render(row) : row[col.key] ?? "-"} className="block w-full p-1 hover:bg-muted/50" />
-                        </td>
-                      ))}
+                    <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : stripeColor, pageBreakInside: 'avoid' }}>
+                      {showPageNumbers && <td className="p-2 border text-center font-bold" style={{ ...tableBorderStyleObj, verticalAlign: 'middle', lineHeight: '1.6' }}>{idx + 1}</td>}
+                      {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => {
+                        const cellValue = col.render ? col.render(row) : row[col.key] ?? "-";
+                        return (
+                          <td key={col.key} className="p-2.5 border text-right" style={{ ...tableBorderStyleObj, verticalAlign: 'middle', lineHeight: '1.6', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                            {editMode && !showAllForPrint ? (
+                              <EditableText tagName="div" value={cellValue} className="block w-full p-1 hover:bg-muted/50 leading-relaxed text-right" />
+                            ) : (
+                              <div className="block w-full p-1 font-semibold leading-relaxed text-right">
+                                {React.isValidElement(cellValue) ? cellValue : (cellValue !== undefined && cellValue !== null ? String(cellValue) : "-")}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                   {Array.from({ length: extraEmptyRows }).map((_, idx) => (

@@ -4,7 +4,7 @@ import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
 import { EducationalStage, STAGE_LIST } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
-import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus } from "lucide-react";
+import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus, RefreshCw, Sun, Sunset, Sparkles, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialTimeline } from "@/components/financial-components";
@@ -222,12 +222,24 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
 
 function StudentProfile() {
   const { id } = Route.useParams();
-  const { currency, allStudents, allInvoices, allPayments, allClinicVisits, allDisciplineIncidents, allSections, activeStageFeeStructures, addInvoice, addPayment, allTextbooks, allTextbookDistributions, transportSubscriptions, transportRoutes  } = useGlobalStore();
+  const { 
+    currency, allStudents, allInvoices, allPayments, allClinicVisits, allDisciplineIncidents, 
+    allSections, activeStageFeeStructures, addInvoice, addPayment, allTextbooks, 
+    allTextbookDistributions, transportSubscriptions, transportRoutes,
+    addTransportSubscription, updateTransportSubscription, deleteTransportSubscription
+  } = useGlobalStore();
+
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   
+  const [isTransportModalOpen, setIsTransportModalOpen] = useState(false);
+  const [transportForm, setTransportForm] = useState({
+    routeId: "",
+    direction: "round-trip" as "round-trip" | "going" | "returning"
+  });
+
   const [newInvoiceData, setNewInvoiceData] = useState({
     title: "",
     amount: 0,
@@ -244,6 +256,69 @@ function StudentProfile() {
 
   const studentSubscription = useMemo(() => student ? transportSubscriptions.find((s: any) => s.studentId === student.id) : null, [student, transportSubscriptions]);
   const studentRoute = useMemo(() => studentSubscription ? transportRoutes.find((r: any) => r.id === studentSubscription.routeId) : null, [studentSubscription, transportRoutes]);
+
+  const handleOpenTransportModal = () => {
+    if (studentSubscription) {
+      setTransportForm({
+        routeId: studentSubscription.routeId,
+        direction: (studentSubscription.direction as any) || "round-trip"
+      });
+    } else if (transportRoutes.length > 0) {
+      setTransportForm({
+        routeId: transportRoutes[0].id,
+        direction: "round-trip"
+      });
+    }
+    setIsTransportModalOpen(true);
+  };
+
+  const handleSaveTransport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!student) return;
+    if (!transportForm.routeId) {
+      toast.error("يرجى اختيار خط الترحيل والنقل");
+      return;
+    }
+
+    const routeObj = transportRoutes.find(r => r.id === transportForm.routeId);
+    if (!routeObj) {
+      toast.error("خط الترحيل المحدد غير موجود");
+      return;
+    }
+
+    const calculatedFee = transportForm.direction === "round-trip" ? routeObj.feeAmount : Math.round(routeObj.feeAmount * 0.6);
+
+    try {
+      if (studentSubscription) {
+        updateTransportSubscription(studentSubscription.id, {
+          routeId: transportForm.routeId,
+          direction: transportForm.direction as any,
+          fee: calculatedFee
+        });
+        toast.success(`تم تحديث خط الترحيل للطالب إلى (${routeObj.name}) بنجاح!`);
+      } else {
+        addTransportSubscription({
+          studentId: student.id,
+          routeId: transportForm.routeId,
+          direction: transportForm.direction as any,
+          fee: calculatedFee,
+          status: "active"
+        });
+        toast.success(`تم تسجيل الطالب في خط ترحيل (${routeObj.name}) وإصدار الفاتورة الرسمية!`);
+      }
+      setIsTransportModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "حدث خطأ أثناء حفظ التحديث");
+    }
+  };
+
+  const handleDeleteTransport = () => {
+    if (!studentSubscription) return;
+    if (confirm("هل أنت متأكد من إلغاء اشتراك الطالب في النقل المدرسي وإلغاء الفاتورة غير المسددة؟")) {
+      deleteTransportSubscription(studentSubscription.id);
+      toast.success("تم إلغاء اشتراك النقل المدرسي للطالب بنجاح!");
+    }
+  };
 
   const studentTextbooks = useMemo(() => {
     return student ? allTextbooks.filter(tb => tb.gradeId === student.grade) : [];
@@ -331,7 +406,7 @@ function StudentProfile() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-100 p-4 rounded-xl border border-gray-300">
                 <p className="text-gray-500 text-sm font-bold mb-1">المخالفات السلوكية</p>
-                <p className="text-3xl font-black text-gray-800 tabular-nums">{studentIncidents.filter(i => i.type === 'negative').length}</p>
+                <p className="text-3xl font-black text-gray-800 tabular-nums">{studentIncidents.length}</p>
               </div>
               <div className="bg-gray-100 p-4 rounded-xl border border-gray-300">
                 <p className="text-gray-500 text-sm font-bold mb-1">الرصيد المالي المتبقي</p>
@@ -420,7 +495,7 @@ function StudentProfile() {
             <div className="bg-gray-100 p-6 rounded-xl border border-gray-400 my-8 shadow-inner">
               <h4 className="font-bold text-gray-500 text-sm mb-2">تفاصيل المخالفة:</h4>
               <p className="font-bold text-xl">
-                {studentIncidents.filter(i => i.type === 'negative')[0]?.description || "...................................................................................."}
+                {studentIncidents[0]?.description || "...................................................................................."}
               </p>
             </div>
             <p className="text-justify">
@@ -600,26 +675,63 @@ function StudentProfile() {
             )}
 
             {/* Transport Card */}
-            <PageCard title="النقل المدرسي" className="shadow-sm">
+            <PageCard title="النقل المدرسي والتراحيل" className="shadow-sm">
               {studentSubscription && studentRoute ? (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center bg-primary/5 p-3 rounded-xl border border-primary/20">
-                    <span className="text-sm text-primary font-bold flex items-center gap-2"><Bus className="h-4 w-4" /> المسار:</span>
+                    <span className="text-sm text-primary font-bold flex items-center gap-2"><Bus className="h-4 w-4" /> الخط / المسار:</span>
                     <span className="font-bold">{studentRoute.name}</span>
                   </div>
                   <div className="flex justify-between items-center bg-background/50 p-3 rounded-xl border border-border/50">
-                    <span className="text-sm text-muted-foreground font-bold">نوع الاشتراك:</span>
-                    <span className="font-bold">{studentSubscription.direction === 'round-trip' ? 'ذهاب وعودة' : studentSubscription.direction === 'going' ? 'ذهاب فقط' : 'عودة فقط'}</span>
+                    <span className="text-sm text-muted-foreground font-bold">نوع الترحيل:</span>
+                    <span className="font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-lg text-xs">
+                      {studentSubscription.direction === 'round-trip' ? 'ذهاب وعودة' : studentSubscription.direction === 'going' || (studentSubscription.direction as any) === 'pickup' ? 'ذهاب فقط' : 'عودة فقط'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center bg-background/50 p-3 rounded-xl border border-border/50">
-                    <span className="text-sm text-muted-foreground font-bold">الرسوم السنوية:</span>
-                    <span className="font-bold">{studentSubscription.direction === 'round-trip' ? studentRoute.feeAmount : studentRoute.feeAmount * 0.6} {currency}</span>
+                    <span className="text-sm text-muted-foreground font-bold">الرسوم المسجلة:</span>
+                    <span className="font-black text-primary tabular-nums">
+                      {(studentSubscription.fee || (studentSubscription.direction === 'round-trip' ? studentRoute.feeAmount : Math.round(studentRoute.feeAmount * 0.6))).toLocaleString()} {currency}
+                    </span>
+                  </div>
+                  {studentRoute.driverName && (
+                    <div className="flex justify-between items-center bg-background/50 p-3 rounded-xl border border-border/50 text-xs">
+                      <span className="text-muted-foreground font-bold">السائق والحافلة:</span>
+                      <span className="font-bold">{studentRoute.driverName} {studentRoute.vehiclePlate ? `(${studentRoute.vehiclePlate})` : ''}</span>
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex gap-2">
+                    <button
+                      onClick={handleOpenTransportModal}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 bg-card border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                    >
+                      <Settings className="w-3.5 h-3.5" /> تعديل الترحيل
+                    </button>
+                    <button
+                      onClick={handleDeleteTransport}
+                      className="inline-flex items-center justify-center p-2 bg-danger/10 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-all border border-danger/20"
+                      title="إلغاء الاشتراك"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Bus className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm font-bold">غير مشترك في النقل المدرسي</p>
+                <div className="text-center py-4 text-muted-foreground space-y-3">
+                  <div className="p-3 bg-muted/40 rounded-full w-12 h-12 mx-auto flex items-center justify-center">
+                    <Bus className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">غير مشترك في النقل المدرسي</p>
+                    <p className="text-xs text-muted-foreground mt-1">يمكنك ربطه بأحد خطوط التراحيل وحساب الرسوم تلقائياً.</p>
+                  </div>
+                  <button
+                    onClick={handleOpenTransportModal}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" /> إضافة إلى خط ترحيل
+                  </button>
                 </div>
               )}
             </PageCard>
@@ -861,7 +973,7 @@ function StudentProfile() {
             </div>
             <form onSubmit={(e) => {
               e.preventDefault();
-              addPayment({ invoiceId: paymentData.invoiceId, amount: paymentData.amount, method: paymentData.method as any, studentId: student.id, date: new Date().toISOString() });
+              addPayment({ invoiceId: paymentData.invoiceId, amount: paymentData.amount, method: paymentData.method as any, date: new Date().toISOString() });
               toast.success("تم تسجيل الدفعة بنجاح");
               setIsPaymentOpen(false);
             }} className="p-6 space-y-4">
@@ -881,6 +993,126 @@ function StudentProfile() {
               <div className="pt-4 flex gap-3 justify-end">
                 <button type="button" onClick={() => setIsPaymentOpen(false)} className="rounded-xl px-6 py-2.5 font-bold hover:bg-accent transition-colors border border-border">إلغاء</button>
                 <button type="submit" className="rounded-xl bg-success px-8 py-2.5 font-bold text-white hover:bg-success/90 transition-colors shadow-md">حفظ الدفعة</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Transport Subscription Modal */}
+      {isTransportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-border/50 bg-primary/10">
+              <h2 className="text-lg font-black flex items-center gap-2 text-primary">
+                <Bus className="h-6 w-6 text-primary" />
+                {studentSubscription ? "تعديل اشتراك الترحيل والمسار" : "إضافة الطالب لخط ترحيل جديد"}
+              </h2>
+              <button onClick={() => setIsTransportModalOpen(false)} className="p-2 hover:bg-accent rounded-full transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTransport} className="p-6 space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-extrabold text-foreground flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" /> اختر خط الترحيل / النقل <span className="text-danger">*</span>
+                </label>
+                <select
+                  value={transportForm.routeId}
+                  onChange={(e) => setTransportForm({ ...transportForm, routeId: e.target.value })}
+                  className="w-full rounded-xl border-2 border-border/60 bg-background px-4 py-3.5 font-bold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer text-sm"
+                  required
+                >
+                  <option value="">-- اختر المسار / الخط المخصص --</option>
+                  {transportRoutes.map((route: any) => (
+                    <option key={route.id} value={route.id}>
+                      📌 {route.name} ({route.feeAmount.toLocaleString()} {currency}) {route.driverName ? `- السائق: ${route.driverName}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Trip Direction Selection Cards */}
+              <div className="space-y-2">
+                <label className="block text-sm font-extrabold text-foreground">نوع الترحيل والاتجاه</label>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div
+                    onClick={() => setTransportForm({ ...transportForm, direction: "round-trip" })}
+                    className={`cursor-pointer p-3 rounded-xl border-2 transition-all text-center space-y-1 ${
+                      transportForm.direction === "round-trip"
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/20 shadow-sm"
+                        : "border-border/60 bg-card hover:border-primary/40"
+                    }`}
+                  >
+                    <RefreshCw className="h-4 w-4 mx-auto text-primary" />
+                    <div className="font-extrabold text-xs">ذهاب وعودة</div>
+                    <span className="text-[10px] font-bold text-primary block">100% الرسوم</span>
+                  </div>
+
+                  <div
+                    onClick={() => setTransportForm({ ...transportForm, direction: "going" })}
+                    className={`cursor-pointer p-3 rounded-xl border-2 transition-all text-center space-y-1 ${
+                      transportForm.direction === "going"
+                        ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20 shadow-sm"
+                        : "border-border/60 bg-card hover:border-primary/40"
+                    }`}
+                  >
+                    <Sun className="h-4 w-4 mx-auto text-amber-600" />
+                    <div className="font-extrabold text-xs">ذهاب فقط</div>
+                    <span className="text-[10px] font-bold text-amber-600 block">60% الرسوم</span>
+                  </div>
+
+                  <div
+                    onClick={() => setTransportForm({ ...transportForm, direction: "returning" })}
+                    className={`cursor-pointer p-3 rounded-xl border-2 transition-all text-center space-y-1 ${
+                      transportForm.direction === "returning"
+                        ? "border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/20 shadow-sm"
+                        : "border-border/60 bg-card hover:border-primary/40"
+                    }`}
+                  >
+                    <Sunset className="h-4 w-4 mx-auto text-indigo-600" />
+                    <div className="font-extrabold text-xs">عودة فقط</div>
+                    <span className="text-[10px] font-bold text-indigo-600 block">60% الرسوم</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Calculated fee preview */}
+              {transportForm.routeId && (() => {
+                const selRoute = transportRoutes.find(r => r.id === transportForm.routeId);
+                const feeVal = selRoute ? (transportForm.direction === 'round-trip' ? selRoute.feeAmount : Math.round(selRoute.feeAmount * 0.6)) : 0;
+                return (
+                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 space-y-1.5 animate-in fade-in">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-bold text-xs text-primary block">الرسوم المحسوبة المعدلة:</span>
+                        <span className="text-[11px] text-muted-foreground font-medium">الخط: {selRoute?.name}</span>
+                      </div>
+                      <span className="text-2xl font-black text-primary tabular-nums">{feeVal.toLocaleString()} {currency}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground font-medium pt-1.5 border-t border-primary/10">
+                      سيتم تعديل الذمة المالية والتحديث التلقائي لفاتورة الترحيل في الدفتر العام للحساب.
+                    </p>
+                  </div>
+                );
+              })()}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-primary text-primary-foreground py-3.5 rounded-xl font-extrabold hover:bg-primary/90 transition-all shadow-md text-sm"
+                >
+                  {studentSubscription ? "حفظ وتحديث الاشتراك" : "تأكيد الاشتراك وتوليد الفاتورة"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsTransportModalOpen(false)}
+                  className="bg-muted text-muted-foreground px-5 py-3.5 rounded-xl font-bold hover:bg-muted/80 transition-colors text-sm"
+                >
+                  إلغاء
+                </button>
               </div>
             </form>
           </div>

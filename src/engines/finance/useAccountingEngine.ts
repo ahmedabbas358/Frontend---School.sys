@@ -50,7 +50,7 @@ export function useAccountingEngine() {
     ];
 
     // Build entry
-    const entry: Omit<JournalEntry, "id" | "lines"> & { lines: typeof lines } = {
+    const entry: Omit<JournalEntry, "id"> = {
       academicYearId,
       date: new Date().toISOString(),
       referenceId,
@@ -60,7 +60,7 @@ export function useAccountingEngine() {
     };
 
     // Forward to global store to persist
-    globalStore.addJournalEntry(entry);
+    globalStore.addJournalEntry(entry, lines);
   };
 
   /**
@@ -82,7 +82,7 @@ export function useAccountingEngine() {
       throw new Error("قيد غير متزن: إجمالي المدين لا يساوي إجمالي الدائن.");
     }
 
-    const entry: Omit<JournalEntry, "id" | "lines"> & { lines: typeof lines } = {
+    const entry: Omit<JournalEntry, "id"> = {
       academicYearId,
       date: new Date().toISOString(),
       referenceId,
@@ -91,7 +91,7 @@ export function useAccountingEngine() {
       status: "posted"
     };
 
-    globalStore.addJournalEntry(entry);
+    globalStore.addJournalEntry(entry, lines);
   };
 
   return {

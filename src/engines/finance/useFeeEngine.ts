@@ -21,19 +21,19 @@ export function useFeeEngine() {
     academicYearId: string
   ) => {
     // Find all mandatory fee structures for this stage and grade
-    const applicableStructures = globalStore.feeStructures.filter(
-      f => f.isMandatory && 
+    const applicableStructures = (globalStore.activeStageFeeStructures || []).filter(
+      (f: any) => f.isMandatory && 
            (f.stage === "all" || f.stage === stage) &&
            (!f.grades || f.grades.length === 0 || f.grades.includes(grade))
     );
 
-    const student = globalStore.allStudents.find(s => s.id === studentId);
+    const student = (globalStore.allStudents || []).find((s: any) => s.id === studentId);
     if (!student) return;
 
     for (const structure of applicableStructures) {
       // Check if structure has installments
       if (structure.installments && structure.installments.length > 0) {
-        structure.installments.forEach((installment, index) => {
+        structure.installments.forEach((installment: any, index: number) => {
           const installmentAmount = structure.amount * (installment.percentage / 100);
           const newInvoiceId = "INV-" + Math.floor(10000 + Math.random() * 90000) + "-" + index;
           
@@ -100,8 +100,8 @@ export function useFeeEngine() {
    * Apply a discount or grant to an existing invoice
    */
   const applyDiscount = (invoiceId: string, discountId: string) => {
-    const invoice = globalStore.allInvoices.find(i => i.id === invoiceId);
-    const discount = globalStore.discounts?.find(d => d.id === discountId);
+    const invoice = (globalStore.allInvoices || []).find((i: any) => i.id === invoiceId);
+    const discount = (globalStore.allDiscounts || []).find((d: any) => d.id === discountId);
     
     if (!invoice || !discount) throw new Error("الفاتورة أو الخصم غير موجود");
 
@@ -111,17 +111,13 @@ export function useFeeEngine() {
 
     const netAmount = invoice.amount - discountAmount;
 
-    // We need an updateInvoice method, assuming it exists
     globalStore.updateInvoice(invoiceId, {
       discountId,
       discountAmount,
       netAmount
     });
 
-    // Accounting Entry for Discount
-    // Debit: Discount/Waiver Expense (مصروف خصميات مسموح بها)
-    // Credit: Accounts Receivable (خفض الذمم)
-    const academicYearId = invoice.academicYearId || globalStore.academicYears.find(y => y.isCurrent)?.id || "AY-1";
+    const academicYearId = invoice.academicYearId || (globalStore.allAcademicYears || []).find((y: any) => y.isCurrent)?.id || "AY-1";
     
     postAutomaticEntry(
       `تطبيق خصم (${discount.name}) على فاتورة الطالب ${invoice.studentName}`,

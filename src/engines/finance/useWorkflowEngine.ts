@@ -19,24 +19,14 @@ export function useWorkflowEngine() {
     newStatus: WorkflowStatus, 
     approverId?: string
   ) => {
-    const expense = globalStore.allExpenses?.find(e => e.id === expenseId);
+    const expense = (globalStore.allExpenses || []).find((e: any) => e.id === expenseId);
     if (!expense) throw new Error("طلب الصرف غير موجود");
 
-    // 1. Validate Transition
-    // Example: Draft -> Submitted -> Reviewed -> Approved -> Paid
-    // For simplicity, we just allow the transition here but we can enforce strict rules
+    globalStore.updateExpense(expenseId, { status: newStatus as any });
 
-    // 2. Perform Transition
-    // Assume globalStore has updateExpense
-    globalStore.updateExpense(expenseId, { status: newStatus });
-
-    // 3. Trigger Actions Based on New Status
-    const academicYearId = expense.academicYearId || globalStore.academicYears.find(y => y.isCurrent)?.id || "AY-1";
+    const academicYearId = expense.academicYearId || (globalStore.allAcademicYears || []).find((y: any) => y.isCurrent)?.id || "AY-1";
 
     if (newStatus === "approved") {
-      // Create Accrual Accounting Entry
-      // Debit: Specific Expense Account (based on CategoryId)
-      // Credit: Accounts Payable (ذمم دائنة - موردين)
       postAutomaticEntry(
         `اعتماد طلب صرف: ${expense.title}`,
         expense.id,
@@ -49,9 +39,6 @@ export function useWorkflowEngine() {
     }
 
     if (newStatus === "paid") {
-      // Create Payment Accounting Entry
-      // Debit: Accounts Payable (تخفيض الذمم)
-      // Credit: Treasury/Bank (نقص النقدية)
       postAutomaticEntry(
         `تنفيذ وصرف الدفعة لطلب: ${expense.title}`,
         expense.id,
@@ -71,7 +58,6 @@ export function useWorkflowEngine() {
     payrollId: string,
     newStatus: WorkflowStatus
   ) => {
-    // Similar logic for payroll
     console.log("Transition payroll", payrollId, "to", newStatus);
   };
 

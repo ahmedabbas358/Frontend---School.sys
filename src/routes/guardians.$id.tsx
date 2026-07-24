@@ -90,7 +90,7 @@ function GuardianProfile() {
         currency
       };
     });
-    const payments = allPayments.filter(p => studentIds.includes(p.studentId)).map(p => {
+    const payments = allPayments.filter(p => p.studentId && studentIds.includes(p.studentId)).map(p => {
       const student = guardianData.students.find(s => s.id === p.studentId);
       return {
         id: `pay-${p.id}`,

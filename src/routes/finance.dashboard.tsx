@@ -3,7 +3,7 @@ import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { useMemo, useState } from "react";
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Users, ArrowUpRight, ArrowDownRight, Printer, AlertTriangle, FileText, Plus, ArrowRight, User } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Users, ArrowUpRight, ArrowDownRight, Printer, AlertTriangle, FileText, Plus, ArrowRight, User, Building2 } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialCard, FinancialTimeline, ProgressRing, FinancialSummaryCard, FilterBar, AcademicYearSelector, EmptyState } from "@/components/financial-components";
 import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
@@ -26,8 +26,8 @@ function FinanceDashboard() {
 
   // Command Center Metrics
   const commandStats = useMemo(() => {
-    const totalTreasury = allTreasuries.filter(t => t.status === "active").reduce((sum, t) => sum + t.balance, 0);
-    const totalBank = allBankAccounts.filter(b => b.status === "active").reduce((sum, b) => sum + b.balance, 0);
+    const totalTreasury = (allTreasuries || []).filter(t => t.status === "active").reduce((sum, t) => sum + t.balance, 0);
+    const totalBank = (allBankAccounts || []).filter(b => b.status === "active").reduce((sum, b) => sum + b.balance, 0);
     
     // Receivables: Unpaid invoices
     const totalReceivables = filteredInvoices.reduce((sum, inv) => {
@@ -36,8 +36,8 @@ function FinanceDashboard() {
     }, 0);
 
     // Payables: Unpaid expenses + Vendor balances
-    const unpaidExpenses = allExpenses.filter(e => e.status !== "posted" && e.status !== "cancelled" && e.status !== "paid").reduce((sum, e) => sum + e.amount, 0);
-    const vendorBalances = allVendors.reduce((sum, v) => sum + v.balance, 0);
+    const unpaidExpenses = (allExpenses || []).filter(e => e.status !== "posted" && e.status !== "paid").reduce((sum, e) => sum + e.amount, 0);
+    const vendorBalances = (allVendors || []).reduce((sum, v) => sum + v.balance, 0);
     const totalPayables = unpaidExpenses + vendorBalances;
 
     return { totalTreasury, totalBank, totalReceivables, totalPayables, unpaidExpenses };
@@ -46,7 +46,7 @@ function FinanceDashboard() {
   const netBalance = commandStats.totalTreasury + commandStats.totalBank;
 
   const recentTransactions = useMemo(() => {
-    const payments = allPayments.map(p => {
+    const payments = (allPayments || []).map(p => {
       const invoice = activeStageInvoices.find(i => i.id === p.invoiceId);
       return {
         id: `p-${p.id}`,
@@ -60,7 +60,7 @@ function FinanceDashboard() {
         link: "/finance/invoices"
       };
     });
-    const expenses = allExpenses.map(e => ({
+    const expenses = (allExpenses || []).map(e => ({
       id: `e-${e.id}`,
       date: e.date,
       title: e.title,
@@ -83,12 +83,17 @@ function FinanceDashboard() {
     });
 
     return months.map(m => {
-      const income = allPayments.filter(p => {
+      const income = (allPayments || []).filter(p => {
         const d = new Date(p.date);
         return d.getMonth() === m.month && d.getFullYear() === m.year;
       }).reduce((sum, p) => sum + p.amount, 0);
 
-      return { month: m.label, income, allExpenses, balance: income - expense };
+      const expense = (allExpenses || []).filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === m.month && d.getFullYear() === m.year;
+      }).reduce((sum, e) => sum + e.amount, 0);
+
+      return { month: m.label, income, expense, balance: income - expense };
     });
   }, [allPayments, allExpenses]);
 
@@ -105,6 +110,9 @@ function FinanceDashboard() {
     });
     return Array.from(map.values()).sort((a, b) => b.amount - a.amount).slice(0, 5);
   }, [filteredInvoices]);
+
+  const totalCollectedPayments = useMemo(() => (allPayments || []).reduce((sum, p) => sum + p.amount, 0), [allPayments]);
+  const totalExpensesSum = useMemo(() => (allExpenses || []).reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
 
   return (
     <AppShell
@@ -129,7 +137,7 @@ function FinanceDashboard() {
         </FilterBar>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Link to="/finance/students" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all group">
             <div className="p-2 bg-primary/10 text-primary rounded-xl group-hover:scale-110 transition-transform"><Users className="w-5 h-5" /></div>
             <div className="font-bold text-sm">المالية الطلابية</div>
@@ -146,14 +154,17 @@ function FinanceDashboard() {
             <div className="p-2 bg-warning/10 text-warning rounded-xl group-hover:scale-110 transition-transform"><Users className="w-5 h-5" /></div>
             <div className="font-bold text-sm">مسير الرواتب</div>
           </Link>
-          <button onClick={() => { generateBulkData(100); toast.success("تم توليد 100 سجل محاكاة بنجاح"); }} className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all group text-right">
-            <div className="p-2 bg-primary/10 text-primary rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
-            <div className="font-bold text-sm">توليد بيانات تجريبية (100)</div>
+          <button onClick={() => { generateBulkData(1000); toast.success("تم توليد بيانات المحاكاة الكثيفة لـ 1,000 طالب و 500 موظف بنجاح!"); }} className="flex items-center gap-3 p-4 bg-card border border-primary/40 rounded-2xl hover:border-primary hover:bg-primary/10 transition-all group text-right">
+            <div className="p-2 bg-primary/20 text-primary rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
+            <div>
+              <div className="font-black text-xs text-primary">اختبار الأداء الكثيف</div>
+              <div className="text-[10px] text-muted-foreground">توليد (10,000 طالب و 500 موظف)</div>
+            </div>
           </button>
         </div>
 
         {/* Core KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <FinancialCard 
             title="رصيد الخزائن النقدية" 
             value={commandStats.totalTreasury} 
@@ -165,7 +176,7 @@ function FinanceDashboard() {
             title="رصيد الحسابات البنكية" 
             value={commandStats.totalBank} 
             currency={currency} 
-            icon={Building} 
+            icon={Building2} 
             colorClass="text-blue-600 bg-blue-500" 
           />
           <FinancialCard 
@@ -289,11 +300,11 @@ function FinanceDashboard() {
                   </div>
                   <div className="border p-4 rounded-xl bg-green-50 text-center">
                     <p className="text-sm text-gray-500 font-bold mb-1">إجمالي التحصيلات</p>
-                    <p className="text-2xl font-black text-green-600">{[].totalPaid.toLocaleString()} {currency}</p>
+                    <p className="text-2xl font-black text-green-600">{totalCollectedPayments.toLocaleString()} {currency}</p>
                   </div>
                   <div className="border p-4 rounded-xl bg-red-50 text-center">
                     <p className="text-sm text-gray-500 font-bold mb-1">إجمالي المصروفات</p>
-                    <p className="text-2xl font-black text-red-600">{[].totalExpenses.toLocaleString()} {currency}</p>
+                    <p className="text-2xl font-black text-red-600">{totalExpensesSum.toLocaleString()} {currency}</p>
                   </div>
                 </div>
 

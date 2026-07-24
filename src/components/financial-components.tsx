@@ -18,27 +18,43 @@ export function FinancialCard({
   icon: React.ComponentType<{ className?: string }>;
   colorClass: string;
 }) {
+  const isPrimary = colorClass.includes("primary");
+  const isSuccess = colorClass.includes("success") || colorClass.includes("emerald");
+  const isDanger = colorClass.includes("danger") || colorClass.includes("rose");
+  const isWarning = colorClass.includes("warning") || colorClass.includes("amber");
+
+  const badgeBg = isPrimary ? "bg-primary/10 text-primary" : 
+                  isSuccess ? "bg-emerald-500/10 text-emerald-600" : 
+                  isDanger ? "bg-rose-500/10 text-rose-600" : 
+                  isWarning ? "bg-amber-500/10 text-amber-600" : 
+                  "bg-muted text-muted-foreground";
+
+  const numColor = isPrimary ? "text-primary" : 
+                   isSuccess ? "text-emerald-600" : 
+                   isDanger ? "text-rose-600" : 
+                   isWarning ? "text-amber-600" : 
+                   "text-foreground";
+
   return (
-    <div className={`bg-card border border-border/50 rounded-3xl p-6 shadow-sm overflow-hidden relative group`}>
-      <div className={`absolute top-0 right-0 w-32 h-32 opacity-5 rounded-full blur-2xl -mr-10 -mt-10 ${colorClass.split(" ")[0]}`}></div>
-      <div className="flex items-center gap-3 mb-4 relative z-10">
-        <div className={`p-3 rounded-2xl ${colorClass.includes("primary") ? "bg-primary/10" : colorClass.includes("success") ? "bg-success/10" : colorClass.includes("danger") ? "bg-danger/10" : "bg-muted/50"}`}>
-          <Icon className={`h-6 w-6 ${colorClass.split(" ")[0]}`} />
+    <div className="bg-card border border-border/60 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between h-full min-h-[110px]">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="text-xs sm:text-sm font-bold text-muted-foreground leading-tight line-clamp-2">{title}</h3>
+        <div className={`p-2.5 rounded-xl shrink-0 ${badgeBg}`}>
+          <Icon className="h-5 w-5" />
         </div>
-        <h3 className="text-sm font-bold text-muted-foreground">{title}</h3>
       </div>
-      <p className={`text-3xl font-black tabular-nums relative z-10 ${colorClass.split(" ")[0]}`}>
-        {value.toLocaleString()} {currency && <span className="text-lg font-bold">{currency}</span>}
-      </p>
-      {trend && (
-        <div className="mt-4 flex items-center gap-2 text-sm font-bold relative z-10">
-          <span className={`flex items-center gap-1 ${trend.isPositive ? "text-success" : "text-danger"}`}>
-            {trend.isPositive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+
+      <div className="flex items-baseline justify-between gap-1 mt-auto">
+        <div className={`text-xl sm:text-2xl font-black tabular-nums whitespace-nowrap ${numColor}`}>
+          {value.toLocaleString()} {currency && <span className="text-xs sm:text-sm font-extrabold text-muted-foreground mr-1">{currency}</span>}
+        </div>
+        {trend && (
+          <span className={`text-xs font-bold flex items-center gap-0.5 shrink-0 ${trend.isPositive ? "text-emerald-600" : "text-rose-600"}`}>
+            {trend.isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
             {trend.value}%
           </span>
-          <span className="text-muted-foreground">{trend.label}</span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -317,20 +333,16 @@ export function EmptyState({ title, description, icon: Icon, actionLabel, onActi
 
 export function FilterBar({ children, onClear }: { children: React.ReactNode; onClear?: () => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 p-3 bg-card border border-border/50 rounded-xl shadow-sm mb-6">
-      <div className="flex items-center gap-2 text-muted-foreground pl-3 border-l border-border/50">
-        <Filter className="w-4 h-4" />
-        <span className="text-sm font-bold">تصفية:</span>
-      </div>
-      <div className="flex flex-wrap flex-1 items-center gap-2">
+    <div className="bg-card border border-border/60 rounded-2xl p-3.5 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex-1 w-full">
         {children}
       </div>
       {onClear && (
         <button 
           onClick={onClear}
-          className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+          className="text-xs font-extrabold text-rose-600 hover:bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl transition-all shrink-0 self-end md:self-center"
         >
-          إلغاء التصفية
+          إعادة ضبط التصفية ✕
         </button>
       )}
     </div>

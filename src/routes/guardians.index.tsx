@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
-import { useGlobalStore } from "@/contexts/GlobalStoreContext";
+import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { DataTable } from "@/components/data-table";
 import { getGradesForStage } from "@/lib/school-structure";
@@ -28,26 +28,84 @@ function GuardiansList() {
   const [filterGrade, setFilterGrade] = useState<string>("all");
   const [filterSection, setFilterSection] = useState<string>("all");
 
+  const [isPending, startTransition] = useTransition();
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      startTransition(() => {
+        setDebouncedSearchQuery(searchQuery);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const activeGuardians = useMemo(() => allGuardians.filter(g => !g.isDeleted), [allGuardians]);
 
+  // Fast pre-computed index maps (O(N))
+  const studentsByPhoneMap = useMemo(() => {
+    const map = new Map<string, Student[]>();
+    for (let i = 0; i < allStudents.length; i++) {
+      const s = allStudents[i];
+      if (s.guardianPhone) {
+        let list = map.get(s.guardianPhone);
+        if (!list) {
+          list = [];
+          map.set(s.guardianPhone, list);
+        }
+        list.push(s);
+      }
+    }
+    return map;
+  }, [allStudents]);
+
+  const studentsByNameMap = useMemo(() => {
+    const map = new Map<string, Student[]>();
+    for (let i = 0; i < allStudents.length; i++) {
+      const s = allStudents[i];
+      if (s.guardianName) {
+        let list = map.get(s.guardianName);
+        if (!list) {
+          list = [];
+          map.set(s.guardianName, list);
+        }
+        list.push(s);
+      }
+    }
+    return map;
+  }, [allStudents]);
+
+  const unpaidDuesByStudentIdMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (let i = 0; i < allInvoices.length; i++) {
+      const inv = allInvoices[i];
+      if (inv.status !== "paid" && inv.status !== "cancelled" && inv.studentId) {
+        const remaining = (inv.netAmount || inv.amount) - (inv.paid || 0);
+        if (remaining > 0) {
+          map.set(inv.studentId, (map.get(inv.studentId) || 0) + remaining);
+        }
+      }
+    }
+    return map;
+  }, [allInvoices]);
+
   const guardiansWithStudents = useMemo(() => {
+    const q = debouncedSearchQuery.trim().toLowerCase();
+
     let result = activeGuardians.map(g => {
-      // Find students linked to this guardian either by guardianId or matching phone/name (legacy support)
-      const students = allStudents.filter(s => 
-        (s.guardianPhone === g.phone && s.guardianPhone) || 
-        (s.guardianName === g.name && s.guardianName)
-      );
-      
-      // Calculate total financial dues for this guardian's students
-      const studentIds = students.map(s => s.id);
-      const studentInvoices = allInvoices.filter(inv => studentIds.includes(inv.studentId) && inv.status !== "paid" && inv.status !== "cancelled");
-      const totalDue = studentInvoices.reduce((sum, inv) => sum + ((inv.netAmount || inv.amount) - (inv.paid || 0)), 0);
+      const studentsByPhone = g.phone ? studentsByPhoneMap.get(g.phone) : undefined;
+      const studentsByName = g.name ? studentsByNameMap.get(g.name) : undefined;
+      const students = studentsByPhone || studentsByName || [];
+
+      let totalDue = 0;
+      for (let i = 0; i < students.length; i++) {
+        totalDue += unpaidDuesByStudentIdMap.get(students[i].id) || 0;
+      }
 
       return { ...g, students, totalDue };
     });
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (q) {
       result = result.filter(g => 
         g.name.toLowerCase().includes(q) || 
         g.phone.includes(q) || 
@@ -61,7 +119,7 @@ function GuardiansList() {
       result = result.filter(g => g.totalDue === 0);
     }
 
-    result = result.filter(g => g.students.some(s => s.stage === stage));
+    result = result.filter(g => g.students.length === 0 || g.students.some(s => s.stage === stage));
     
     if (filterGrade !== "all") {
       result = result.filter(g => g.students.some(s => s.grade === filterGrade));
@@ -83,7 +141,7 @@ function GuardiansList() {
     });
 
     return result;
-  }, [activeGuardians, allStudents, allInvoices, searchQuery, sortBy, filterDues, stage, filterGrade, filterSection]);
+  }, [activeGuardians, studentsByPhoneMap, studentsByNameMap, unpaidDuesByStudentIdMap, debouncedSearchQuery, sortBy, filterDues, stage, filterGrade, filterSection]);
 
   const totalOutstandingDues = useMemo(() => guardiansWithStudents.reduce((sum, g) => sum + g.totalDue, 0), [guardiansWithStudents]);
 

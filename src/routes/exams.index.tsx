@@ -82,7 +82,7 @@ function ExamsPeriodView() {
           <div className="bg-primary/10 text-primary p-3 rounded-xl"><CalendarDays className="w-6 h-6" /></div>
           <div>
             <p className="text-sm text-muted-foreground font-bold">إجمالي الفترات</p>
-            <p className="text-2xl font-black">{activeStageExams.length}</p>
+            <p className="text-2xl font-black">{(activeStageExams || []).length}</p>
           </div>
         </div>
       </div>
@@ -97,7 +97,7 @@ function ExamsPeriodView() {
         }
       >
         <DataTable
-          rows={activeStageExams}
+          rows={activeStageExams || []}
           columns={[
             { key: "name", header: "الاسم", cell: row => <span className="font-black text-primary">{row.name}</span> },
             { key: "term", header: "الفصل", cell: row => <span className="font-bold">{row.term}</span> },
@@ -217,7 +217,7 @@ function ExamSubjectsScheduleView() {
     setIsModalOpen(false);
   };
 
-  const filteredSubjects = activeStageExamSubjects.filter(es => !selectedExamId || es.examId === selectedExamId);
+  const filteredSubjects = (activeStageExamSubjects || []).filter(es => !selectedExamId || es.examId === selectedExamId);
 
   return (
     <div className="space-y-6">
@@ -234,15 +234,15 @@ function ExamSubjectsScheduleView() {
           <label className="text-sm font-bold text-muted-foreground ml-2">تصفية حسب الاختبار:</label>
           <select value={selectedExamId} onChange={e => setSelectedExamId(e.target.value)} className="h-11 rounded-xl border border-border/50 bg-background px-4 font-bold min-w-[250px]">
             <option value="">كل الاختبارات</option>
-            {activeStageExams.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
+            {(activeStageExams || []).map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
           </select>
         </div>
 
         <DataTable
           rows={filteredSubjects.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())}
           columns={[
-            { key: "exam", header: "الاختبار", cell: row => <span className="font-bold">{activeStageExams.find(e => e.id === row.examId)?.name || "-"}</span> },
-            { key: "subject", header: "المادة", cell: row => <span className="font-black text-primary">{activeStageSubjects.find(s => s.id === row.subjectId)?.name || "-"}</span> },
+            { key: "exam", header: "الاختبار", cell: row => <span className="font-bold">{(activeStageExams || []).find(e => e.id === row.examId)?.name || "-"}</span> },
+            { key: "subject", header: "المادة", cell: row => <span className="font-black text-primary">{(activeStageSubjects || []).find(s => s.id === row.subjectId)?.name || "-"}</span> },
             { key: "grade", header: "الصف", cell: row => <span className="font-bold text-muted-foreground">{row.grade}</span> },
             { key: "date", header: "تاريخ الاختبار", cell: row => <span className="tabular-nums" dir="ltr">{row.date}</span> },
             { key: "score", header: "الدرجة", cell: row => <span className="text-sm">{row.passScore} / {row.maxScore} (وزن {row.weight}%)</span> },
@@ -268,7 +268,7 @@ function ExamSubjectsScheduleView() {
                 <label className="mb-2 block text-sm font-bold text-muted-foreground">اختر الاختبار <span className="text-danger">*</span></label>
                 <select required value={formData.examId} onChange={e => setFormData(prev => ({ ...prev, examId: e.target.value }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
                   <option value="">-- اختر --</option>
-                  {activeStageExams.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
+                  {(activeStageExams || []).map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
                 </select>
               </div>
               
@@ -284,7 +284,7 @@ function ExamSubjectsScheduleView() {
                   <label className="mb-2 block text-sm font-bold text-muted-foreground">المادة <span className="text-danger">*</span></label>
                   <select required value={formData.subjectId} onChange={e => setFormData(prev => ({ ...prev, subjectId: e.target.value }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
                     <option value="">-- اختر --</option>
-                    {activeStageSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    {(activeStageSubjects || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Save, UserPlus, Phone, HeartPulse, MapPin, ChevronRight, ChevronLeft, LayoutGrid } from "lucide-react";
+import { Save, UserPlus, Phone, HeartPulse, MapPin, ChevronRight, ChevronLeft, LayoutGrid, Bus, CheckCircle2, Sparkles, RefreshCw, Sun, Sunset, ShieldCheck, CreditCard } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/students/new")({
@@ -29,6 +29,10 @@ const baseSchema = z.object({
   
   bloodType: z.string().optional(),
   medicalNotes: z.string().optional(),
+
+  wantsTransport: z.boolean(),
+  transportRouteId: z.string().optional(),
+  transportDirection: z.enum(["round-trip", "going", "returning"]),
 });
 
 const kindergartenSchema = baseSchema.extend({
@@ -44,7 +48,10 @@ const highSchoolSchema = baseSchema.extend({
 
 function StudentRegistrationWizard() {
   const { stage, getStageLabel } = useStage();
-  const { addStudent, allSections, activeStageStudents, allGuardians, allStudents, currentAcademicYearId } = useGlobalStore();
+  const { 
+    addStudent, allSections, activeStageStudents, allGuardians, allStudents, 
+    currentAcademicYearId, transportRoutes, addTransportSubscription, currency 
+  } = useGlobalStore();
   const { generateEnrollmentFees } = useFeeEngine();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -71,11 +78,20 @@ function StudentRegistrationWizard() {
     defaultValues: {
       gender: "ذكر",
       specialCare: false,
+      wantsTransport: false,
+      transportDirection: "round-trip"
     } as any,
   });
 
   const selectedGrade = watch("grade");
   const availableSections = allSections.filter(sec => sec.stage === stage && sec.grade === selectedGrade);
+
+  const wantsTransport = watch("wantsTransport" as any);
+  const selectedTransportRouteId = watch("transportRouteId" as any);
+  const selectedTransportDirection = watch("transportDirection" as any);
+  const selectedRouteObj = transportRoutes.find(r => r.id === selectedTransportRouteId);
+  const calculatedTransportFee = selectedRouteObj ? (selectedTransportDirection === "round-trip" ? selectedRouteObj.feeAmount : Math.round(selectedRouteObj.feeAmount * 0.6)) : 0;
+  const selectedDirectionText = selectedTransportDirection === "round-trip" ? "ذهاب وعودة" : selectedTransportDirection === "going" ? "ذهاب فقط" : "عودة فقط";
 
   const onSubmit = (data: FormValues) => {
     // Check for strict duplicate constraint in the CURRENT academic year
@@ -100,7 +116,25 @@ function StudentRegistrationWizard() {
       generateEnrollmentFees(newStudentId, stage, data.grade, currentAcademicYearId);
     }
 
-    toast.success(`تم تسجيل الطالب ${data.name} بنجاح!`);
+    // Auto-register transport subscription if selected
+    if (data.wantsTransport && data.transportRouteId && newStudentId) {
+      const selectedRouteObj = transportRoutes.find(r => r.id === data.transportRouteId);
+      if (selectedRouteObj) {
+        const calculatedFee = data.transportDirection === "round-trip" 
+          ? selectedRouteObj.feeAmount 
+          : Math.round(selectedRouteObj.feeAmount * 0.6);
+
+        addTransportSubscription({
+          studentId: newStudentId,
+          routeId: data.transportRouteId,
+          direction: data.transportDirection as any,
+          fee: calculatedFee,
+          status: "active"
+        });
+      }
+    }
+
+    toast.success(`تم تسجيل الطالب ${data.name} وتوليد الفواتير والاشتراكات المباشرة بنجاح!`);
     
     // Redirect to students list
     navigate({ to: "/students" });
@@ -128,13 +162,14 @@ function StudentRegistrationWizard() {
     { id: 1, title: "البيانات الأساسية", fields: ["name", "nationalId", "dob", "gender", "grade", "sectionId"] },
     { id: 2, title: "التواصل وولي الأمر", fields: ["guardianName", "guardianRelation", "guardianPhone", "address"] },
     { id: 3, title: "الملف الصحي والمتقدم", fields: ["bloodType", "medicalNotes", "pickupPersons", "allergies", "specialCare", "major", "elective"] },
+    { id: 4, title: "النقل المدرسي والتراحيل", fields: ["wantsTransport", "transportRouteId", "transportDirection"] },
   ];
 
   const handleNext = async () => {
     const currentFields = steps.find(s => s.id === currentStep)?.fields || [];
     const isStepValid = await trigger(currentFields as any);
     if (isStepValid) {
-      setCurrentStep(prev => prev === 1 ? 2 : 3);
+      setCurrentStep(prev => Math.min(prev + 1, 4));
     } else {
       toast.error("يرجى إكمال الحقول المطلوبة قبل الانتقال للخطوة التالية");
     }
@@ -480,6 +515,221 @@ function StudentRegistrationWizard() {
               </div>
             </div>
 
+            {/* STEP 4: Transport & Bus Setup */}
+            <div className={currentStep === 4 ? "block animate-in fade-in slide-in-from-right-4 duration-300 space-y-6" : "hidden"}>
+              <div className="flex items-center justify-between border-b border-border/50 pb-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">4</span>
+                  خدمات النقل المدرسي والتراحيل
+                </h2>
+                <span className="text-xs font-bold text-muted-foreground bg-accent px-3 py-1 rounded-lg">إعدادات الاشتراك السنوي</span>
+              </div>
+
+              {/* Main Subscription Decision Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  onClick={() => setValue("wantsTransport" as any, true)}
+                  className={`cursor-pointer p-5 rounded-2xl border-2 transition-all duration-300 flex items-start gap-4 ${
+                    wantsTransport
+                      ? "border-primary bg-primary/5 shadow-md shadow-primary/5 ring-2 ring-primary/20 scale-[1.01]"
+                      : "border-border/60 bg-card hover:border-primary/40 hover:bg-accent/30"
+                  }`}
+                >
+                  <div className={`p-3 rounded-2xl transition-colors ${wantsTransport ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                    <Bus className="h-7 w-7" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-extrabold text-base">نعم، يرغب بالاشتراك في الترحيل 🚌</h3>
+                      {wantsTransport && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium leading-relaxed">
+                      تأمين مقعد للطالب في حافلة المدرسة مع إصدار فاتورة نقل تلقائية وربطها بالملف المالي.
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setValue("wantsTransport" as any, false);
+                    setValue("transportRouteId" as any, "");
+                  }}
+                  className={`cursor-pointer p-5 rounded-2xl border-2 transition-all duration-300 flex items-start gap-4 ${
+                    !wantsTransport
+                      ? "border-primary/60 bg-muted/30 shadow-sm"
+                      : "border-border/60 bg-card hover:border-primary/40 hover:bg-accent/30"
+                  }`}
+                >
+                  <div className={`p-3 rounded-2xl transition-colors ${!wantsTransport ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"}`}>
+                    <ShieldCheck className="h-7 w-7" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-extrabold text-base">لا يرغب بالترحيل (نقل خاص) 🚶</h3>
+                      {!wantsTransport && <CheckCircle2 className="h-5 w-5 text-secondary" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium leading-relaxed">
+                      حضور الطالب وغيابه يتم عبر ولي الأمر أو الوسائل الخاصة بدون إضافة رسوم نقل.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transport Form & Direction Selection */}
+              {wantsTransport && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pt-2">
+                  
+                  {/* Step A: Route Selection Dropdown & Quick Info */}
+                  <div className="bg-card p-6 rounded-2xl border border-border/60 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-extrabold text-foreground flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary" /> اختر خط الترحيل / المسار الجغرافي <span className="text-danger">*</span>
+                      </label>
+                      <span className="text-xs font-bold text-primary">المسارات المتاحة ({transportRoutes.length})</span>
+                    </div>
+
+                    <select
+                      {...register("transportRouteId" as any)}
+                      className="w-full rounded-xl border-2 border-border/60 bg-background px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold text-sm cursor-pointer"
+                    >
+                      <option value="">-- اختر خط الترحيل المخصص لمنطقة الطالب --</option>
+                      {transportRoutes.map((rt: any) => (
+                        <option key={rt.id} value={rt.id}>
+                          📌 {rt.name} — ({rt.feeAmount.toLocaleString()} {currency}) {rt.driverName ? `[السائق: ${rt.driverName}]` : ""}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Active Route Details Preview Card */}
+                    {selectedRouteObj && (
+                      <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs animate-in fade-in">
+                        <div className="flex items-center gap-2">
+                          <Bus className="h-4 w-4 text-primary shrink-0" />
+                          <div>
+                            <span className="text-muted-foreground block font-medium">اسم المسار:</span>
+                            <span className="font-extrabold text-foreground">{selectedRouteObj.name}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="h-4 w-4 text-primary shrink-0" />
+                          <div>
+                            <span className="text-muted-foreground block font-medium">السائق المسند:</span>
+                            <span className="font-extrabold text-foreground">{selectedRouteObj.driverName || "لم يحدد بعد"}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-primary shrink-0" />
+                          <div>
+                            <span className="text-muted-foreground block font-medium">الرسوم السنوية الأصلية:</span>
+                            <span className="font-extrabold text-primary">{selectedRouteObj.feeAmount.toLocaleString()} {currency}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Step B: Trip Direction Selection Cards */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-extrabold text-foreground block">
+                      حدد نوع الترحيل والاتجاه المطلوبة <span className="text-danger">*</span>
+                    </label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* Round Trip */}
+                      <div
+                        onClick={() => setValue("transportDirection" as any, "round-trip")}
+                        className={`cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 text-center space-y-2 ${
+                          selectedTransportDirection === "round-trip"
+                            ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20 scale-[1.02]"
+                            : "border-border/60 bg-card hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="mx-auto w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center">
+                          <RefreshCw className="h-5 w-5" />
+                        </div>
+                        <h4 className="font-extrabold text-sm">ذهاب وعودة</h4>
+                        <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-md bg-primary text-primary-foreground">
+                          100% من قيمة الرسوم
+                        </span>
+                        <p className="text-[11px] text-muted-foreground font-medium">توصيل صباحي للكلية وعودة مسائية للمنزل</p>
+                      </div>
+
+                      {/* Morning Going */}
+                      <div
+                        onClick={() => setValue("transportDirection" as any, "going")}
+                        className={`cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 text-center space-y-2 ${
+                          selectedTransportDirection === "going"
+                            ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20 scale-[1.02]"
+                            : "border-border/60 bg-card hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="mx-auto w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center">
+                          <Sun className="h-5 w-5" />
+                        </div>
+                        <h4 className="font-extrabold text-sm">ذهاب فقط (صباحي)</h4>
+                        <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700">
+                          60% من قيمة الرسوم
+                        </span>
+                        <p className="text-[11px] text-muted-foreground font-medium">اصطحاب الطالب من المنزل إلى المدرسة فقط</p>
+                      </div>
+
+                      {/* Afternoon Returning */}
+                      <div
+                        onClick={() => setValue("transportDirection" as any, "returning")}
+                        className={`cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 text-center space-y-2 ${
+                          selectedTransportDirection === "returning"
+                            ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20 scale-[1.02]"
+                            : "border-border/60 bg-card hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="mx-auto w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-600 flex items-center justify-center">
+                          <Sunset className="h-5 w-5" />
+                        </div>
+                        <h4 className="font-extrabold text-sm">عودة فقط (مسائي)</h4>
+                        <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-700">
+                          60% من قيمة الرسوم
+                        </span>
+                        <p className="text-[11px] text-muted-foreground font-medium">إعادة الطالب من المدرسة للمنزل فقط نهاية اليوم</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Real-time Calculation & General Ledger Notice Card */}
+                  {selectedRouteObj ? (
+                    <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background p-6 rounded-2xl border-2 border-primary/30 shadow-md space-y-3 animate-in fade-in">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-primary/15 pb-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-primary" />
+                            <h4 className="font-black text-base text-foreground">الحساب المالي النهائي لخدمة التراحيل</h4>
+                          </div>
+                          <p className="text-xs text-muted-foreground font-bold mt-1">
+                            مسار: <span className="text-primary font-extrabold">{selectedRouteObj.name}</span> | الاتجاه المحدد: <span className="text-primary font-extrabold">{selectedDirectionText}</span>
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-3xl font-black text-primary tabular-nums">
+                            {calculatedTransportFee.toLocaleString()} <span className="text-sm">{currency}</span>
+                          </div>
+                          <span className="text-[11px] font-extrabold text-muted-foreground block">رسوم ترحيل سنوية صافية</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-bold">
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                        <span>سيتم التوليد التلقائي لفاتورة مستحقات الترحيل وتسجيلها بالدفتر العام فور الضغط على زر الحفظ والتسجيل.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-muted/40 border border-border/50 text-xs font-bold text-muted-foreground text-center">
+                      👈 يرجى اختيار خط الترحيل من القائمة أعلاه لعرض حساب السعر النهائي وتفاصيل التوصيل.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Stepper Navigation */}
             <div className="flex justify-between items-center mt-10 pt-6 border-t border-border/50">
               <button
@@ -502,7 +752,7 @@ function StudentRegistrationWizard() {
               ) : (
                 <button
                   type="button"
-                  onClick={handleSubmit(onSubmit, handleFormError)}
+                  onClick={handleSubmit(onSubmit as any, handleFormError)}
                   disabled={isSubmitting}
                   className="flex items-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-all shadow-md hover:shadow-primary/20 hover:scale-105 disabled:opacity-50"
                 >

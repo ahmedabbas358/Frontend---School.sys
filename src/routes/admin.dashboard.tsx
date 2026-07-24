@@ -285,7 +285,7 @@ function AdminDashboard() {
                     <div>
                       <div className="text-sm font-bold text-warning-foreground">فواتير متأخرة السداد</div>
                       <div className="text-xs text-muted-foreground">يوجد {allInvoices.filter(inv => inv.status !== "paid" && new Date(inv.dueDate) < new Date()).length} فاتورة تجاوزت تاريخ الاستحقاق ولم تسدد بالكامل.</div>
-                      <Link to="/finance/invoices" className="text-xs font-bold text-primary mt-1 block">مراجعة الفواتير</Link>
+                      <Link to="/finance/students" className="text-xs font-bold text-primary mt-1 block">مراجعة الفواتير</Link>
                     </div>
                   </li>
                 )}

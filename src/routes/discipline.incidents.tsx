@@ -87,11 +87,16 @@ function DisciplineIncidents() {
     reset();
   };
 
-  const studentOptions: SearchableSelectOption[] = activeStageStudents.map(st => ({
-    id: st.id,
-    title: st.name,
-    subtitle: `${st.grade} ${st.sectionId ? `- شعبة ${activeStageSections.find(s => s.id === st.sectionId)?.name || ''}` : ''}`
-  }));
+  const studentOptions: SearchableSelectOption[] = activeStageStudents.map(st => {
+    const enrollment = allStudentEnrollments.find(e => e.studentId === st.id && e.academicYearId === currentAcademicYearId);
+    const secId = enrollment?.sectionId || st.sectionId;
+    const secName = activeStageSections.find(s => s.id === secId)?.name || '';
+    return {
+      id: st.id,
+      title: st.name,
+      subtitle: `${st.grade} ${secId ? `- شعبة ${secName}` : ''}`
+    };
+  });
 
   const uniqueGrades = useMemo(() => Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean), [activeStageSections]);
 
@@ -108,7 +113,7 @@ function DisciplineIncidents() {
       if (filterDateFrom && tx.date < filterDateFrom) return false;
       if (filterDateTo && tx.date > filterDateTo) return false;
       if (filterGrade && student.grade !== filterGrade) return false;
-      if (filterSection && student.sectionId !== filterSection) return false;
+      if (filterSection && (enrollment.sectionId || student.sectionId) !== filterSection) return false;
 
       return true;
     }).map(tx => {

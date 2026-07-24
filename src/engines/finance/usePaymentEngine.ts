@@ -21,14 +21,10 @@ export function usePaymentEngine() {
     referenceNo?: string,
     notes?: string
   ) => {
-    const invoice = globalStore.allInvoices.find(i => i.id === invoiceId);
+    const invoice = (globalStore.allInvoices || []).find((i: any) => i.id === invoiceId);
     if (!invoice) throw new Error("الفاتورة غير موجودة");
 
-    // Find the active cash session for the treasury (if cash/card/etc and linked to a treasury)
-    const activeSession = globalStore.allCashSessions.find(s => s.status === "open"); // This might need refinement to match destinationAccount to treasury, but for now take the first open or specific one.
-
-
-    const academicYearId = invoice.academicYearId || globalStore.academicYears.find(y => y.isCurrent)?.id;
+    const academicYearId = invoice.academicYearId || (globalStore.allAcademicYears || []).find((y: any) => y.isCurrent)?.id;
     if (!academicYearId) throw new Error("لا توجد سنة دراسية محددة");
 
     // 1. Record the Payment Entity
@@ -36,25 +32,15 @@ export function usePaymentEngine() {
       invoiceId: invoice.id,
       studentId: invoice.studentId,
       amount,
-      date: new Date().toISOString(),
+      date: new Date().toISOString().split("T")[0],
       method,
       referenceNo,
       notes,
-      sessionId: activeSession?.id,
     };
     
     globalStore.addPayment(paymentRecord);
     
-    // If it's cash and there's an active session, update the treasury balance (if not handled via GL strictly)
-    // Actually, in an ERP, the GL handles everything. But we should also update the treasury balance directly for quick dashboarding.
-    if (activeSession) {
-       // update treasury balance natively if needed, but usually GL is the source of truth.
-    }
-
     // 2. Generate Automated Accounting Entry
-    // Debit: Destination Account (Treasury/Bank)
-    // Credit: Accounts Receivable (الذمم المدينة للطلاب)
-    // Assuming a fixed Accounts Receivable GL ID for simplicity: 'gl-ar-students'
     const accountsReceivableGlId = "gl-ar-students";
     
     postAutomaticEntry(
@@ -79,9 +65,9 @@ export function usePaymentEngine() {
   ) => {
     let remaining = totalAmount;
     
-    const unpaidInvoices = globalStore.allInvoices
-      .filter(i => i.studentId === studentId && i.status !== "paid" && i.status !== "cancelled")
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()); // Oldest first
+    const unpaidInvoices = (globalStore.allInvoices || [])
+      .filter((i: any) => i.studentId === studentId && i.status !== "paid" && i.status !== "cancelled")
+      .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()); // Oldest first
     
     for (const inv of unpaidInvoices) {
       if (remaining <= 0) break;
@@ -94,7 +80,6 @@ export function usePaymentEngine() {
     }
 
     if (remaining > 0) {
-      // Handle overpayment (e.g., store as unallocated credit balance)
       console.warn("Lump sum payment exceeded total unpaid balance. Remaining credit:", remaining);
     }
   };

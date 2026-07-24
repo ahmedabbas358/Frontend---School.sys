@@ -105,7 +105,7 @@ function TeacherSelect({
 
 // --- Section Detail View ---
 function SectionDetailView({ sectionId, onBack }: { sectionId: string, onBack: () => void }) {
-  const { currency, activeStageSections, activeStageStudents, assignStudentToSection, allInvoices, allPayments  } = useGlobalStore();
+  const { currency, activeStageSections, activeStageStudents, assignStudentToSection, allInvoices, allPayments, allRooms, assignSectionToRoom } = useGlobalStore();
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -121,7 +121,7 @@ function SectionDetailView({ sectionId, onBack }: { sectionId: string, onBack: (
   const sectionStudentIds = useMemo(() => new Set(sectionStudents.map(s => s.id)), [sectionStudents]);
   const sectionInvoices = useMemo(() => allInvoices.filter(inv => sectionStudentIds.has(inv.studentId)), [allInvoices, sectionStudentIds]);
   const sectionInvoiceIds = useMemo(() => new Set(sectionInvoices.map(i => i.id)), [sectionInvoices]);
-  const sectionPayments = useMemo(() => allPayments.filter(p => sectionInvoiceIds.has(p.invoiceId)), [allPayments, sectionInvoiceIds]);
+  const sectionPayments = useMemo(() => allPayments.filter(p => p.invoiceId && sectionInvoiceIds.has(p.invoiceId)), [allPayments, sectionInvoiceIds]);
   
   const financeStats = useMemo(() => {
     const totalExpected = sectionInvoices.reduce((sum, inv) => sum + (inv.netAmount ?? inv.amount), 0);
@@ -168,7 +168,28 @@ function SectionDetailView({ sectionId, onBack }: { sectionId: string, onBack: (
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-3xl font-extrabold">{section.grade} - شعبة {section.name}</h1>
             </div>
-            <p className="text-muted-foreground font-bold">رائد الفصل: {section.homeroomTeacher || "غير محدد"}</p>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <p className="text-muted-foreground font-bold">رائد الفصل: {section.homeroomTeacher || "غير محدد"}</p>
+              <span className="text-border">•</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-muted-foreground">القاعة:</span>
+                <select 
+                  value={section.roomId || ""} 
+                  onChange={(e) => {
+                    assignSectionToRoom(section.id, e.target.value || undefined);
+                    toast.success("تم تحديث القاعة المخصصة للشعبة بنجاح");
+                  }}
+                  className="text-xs font-bold bg-background border border-border rounded-lg px-2.5 py-1 text-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="">-- بدون قاعة مخصصة --</option>
+                  {allRooms.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.building} - {r.floor}) {r.assignedSectionId && r.assignedSectionId !== section.id ? `[مشغولة بـ ${r.assignedSectionName}]` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 

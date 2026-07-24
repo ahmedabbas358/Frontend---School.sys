@@ -43,6 +43,10 @@ function TakeAttendance() {
     return days[d.getDay()];
   }, [date]);
 
+  const todaySchedule = useMemo(() => {
+    return allScheduleSlots.filter(s => s.sectionId === sectionId && s.day === dayOfWeekStr);
+  }, [sectionId, dayOfWeekStr, allScheduleSlots]);
+
   // Find subject from schedule automatically
   useMemo(() => {
     if (!sectionId || !period || !dayOfWeekStr) return;
@@ -54,8 +58,11 @@ function TakeAttendance() {
 
   const baseList = useMemo(() => {
     if (!selectedSection) return [];
-    return activeStageStudents.filter((s) => s.grade === selectedSection.grade);
-  }, [sectionId, selectedSection, activeStageStudents]);
+    return activeStageStudents.filter((s) => {
+      const enrollment = allStudentEnrollments.find(e => e.studentId === s.id && e.academicYearId === currentAcademicYearId);
+      return (enrollment?.sectionId === selectedSection.id) || (s.sectionId === selectedSection.id);
+    });
+  }, [selectedSection, activeStageStudents, allStudentEnrollments, currentAcademicYearId]);
 
   const list = useMemo(() => {
     let result = [...baseList];
@@ -164,7 +171,18 @@ function TakeAttendance() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3"/> رقم الحصة</label>
-                  <input type="number" min="1" max="10" value={period} onChange={(e) => setPeriod(e.target.value ? Number(e.target.value) : "")} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary text-primary" />
+                  <select value={period} onChange={(e) => setPeriod(e.target.value ? Number(e.target.value) : "")} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary text-primary">
+                    <option value="">-- اختر الحصة --</option>
+                    {[1,2,3,4,5,6,7,8,9,10].map(p => {
+                      const slot = todaySchedule.find(s => s.period === p);
+                      const subjectName = slot ? activeStageSubjects.find(sub => sub.id === slot.subjectId)?.name : null;
+                      return (
+                        <option key={p} value={p}>
+                          الحصة {p} {subjectName ? `- ${subjectName}` : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-muted-foreground">التاريخ</label>

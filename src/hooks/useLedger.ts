@@ -1,25 +1,25 @@
 import { useMemo } from 'react';
-import { useGlobalStore } from '@/contexts/GlobalStoreContext';
+import { useGlobalStore, Account, JournalLine, JournalEntry } from '@/contexts/GlobalStoreContext';
 
 export function useLedger() {
-  const { journalEntries, journalLines, accounts } = useGlobalStore();
+  const { allJournalEntries, allJournalLines, allAccounts } = useGlobalStore();
 
   // Get only posted lines
   const postedLines = useMemo(() => {
-    const postedEntryIds = new Set(journalEntries.filter(e => e.status === 'posted').map(e => e.id));
-    return journalLines.filter(line => postedEntryIds.has(line.journalEntryId));
-  }, [journalEntries, journalLines]);
+    const postedEntryIds = new Set((allJournalEntries || []).filter((e: JournalEntry) => e.status === 'posted').map((e: JournalEntry) => e.id));
+    return (allJournalLines || []).filter((line: JournalLine) => postedEntryIds.has(line.journalEntryId));
+  }, [allJournalEntries, allJournalLines]);
 
   // Calculate balance for a specific account
-  const getAccountBalance = (accountId: string) => {
-    const account = accounts.find(a => a.id === accountId);
+  const getAccountBalance = (accountId: string): number => {
+    const account = (allAccounts || []).find((a: Account) => a.id === accountId);
     if (!account) return 0;
 
     let balance = 0;
     
     // If it's a group account, sum up all children balances recursively
     if (account.isGroupAccount) {
-      const children = accounts.filter(a => a.parentId === accountId);
+      const children = (allAccounts || []).filter((a: Account) => a.parentId === accountId);
       for (const child of children) {
         balance += getAccountBalance(child.id);
       }
@@ -27,9 +27,9 @@ export function useLedger() {
     }
 
     // Direct account balance calculation
-    const lines = postedLines.filter(l => l.accountId === accountId);
-    const totalDebit = lines.reduce((sum, line) => sum + (line.debit || 0), 0);
-    const totalCredit = lines.reduce((sum, line) => sum + (line.credit || 0), 0);
+    const lines = postedLines.filter((l: JournalLine) => l.accountId === accountId);
+    const totalDebit = lines.reduce((sum: number, line: JournalLine) => sum + (line.debit || 0), 0);
+    const totalCredit = lines.reduce((sum: number, line: JournalLine) => sum + (line.credit || 0), 0);
 
     // Normal balance logic
     if (account.normalBalance === 'debit' || account.type === 'asset' || account.type === 'expense') {
@@ -43,13 +43,13 @@ export function useLedger() {
 
   // Get entity balance (Student, Vendor, Employee)
   // Positive means they owe us (Receivable), Negative means we owe them (Payable)
-  const getEntityBalance = (entityId: string, entityType?: string) => {
-    const lines = postedLines.filter(l => l.studentId === entityId || l.referenceId === entityId);
+  const getEntityBalance = (entityId: string, entityType?: string): number => {
+    const lines = postedLines.filter((l: JournalLine) => l.studentId === entityId || l.referenceId === entityId);
     
     let balance = 0;
     // We assume entity balances are primarily tracked in AP/AR accounts
-    lines.forEach(line => {
-      const account = accounts.find(a => a.id === line.accountId);
+    lines.forEach((line: JournalLine) => {
+      const account = (allAccounts || []).find((a: Account) => a.id === line.accountId);
       if (account) {
         if (account.type === 'asset') { // AR
           balance += (line.debit || 0) - (line.credit || 0);
@@ -64,7 +64,7 @@ export function useLedger() {
 
   // Get full trial balance
   const getTrialBalance = () => {
-    return accounts.map(account => {
+    return (allAccounts || []).map((account: Account) => {
       const balance = getAccountBalance(account.id);
       return {
         ...account,

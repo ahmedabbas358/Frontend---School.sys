@@ -28,7 +28,7 @@ const staffSchema = z.object({
   basicSalary: z.coerce.number().min(0).optional(),
   allowance: z.coerce.number().min(0).optional(),
   deduction: z.coerce.number().min(0).optional(),
-  paymentType: z.enum(["Monthly", "PerLesson", "Daily"]).optional(),
+  paymentType: z.enum(["Monthly", "Weekly", "PerLesson", "Daily"]).optional(),
 });
 
 type StaffForm = z.infer<typeof staffSchema>;
