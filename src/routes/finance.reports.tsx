@@ -2,10 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useMemo, useState } from "react";
-import { PieChart, TrendingUp, TrendingDown, Filter, FileText, User, Users, BarChart3, Wallet, CreditCard, Building2, ArrowUpRight, ArrowDownRight, Download, Printer, Calendar, Scale, Layers, Search, ChevronDown, ChevronUp, Info, Target, AlertTriangle, CheckCircle2, ArrowRightLeft } from "lucide-react";
+import { PieChart, TrendingUp, TrendingDown, Filter, FileText, User, Users, BarChart3, Wallet, CreditCard, Building2, ArrowUpRight, ArrowDownRight, Download, Printer, Calendar, Scale, Layers, Search, ChevronDown, ChevronUp, Info, Target, AlertTriangle, CheckCircle2, ArrowRightLeft, Truck, RotateCcw, Sparkles } from "lucide-react";
 import { FinancialCard, FilterBar, AcademicYearSelector } from "@/components/financial-components";
 import { DataTable } from "@/components/data-table";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { SearchableSelect } from "@/components/searchable-select";
 
 export const Route = createFileRoute("/finance/reports")({
   component: FinanceReports,
@@ -15,17 +16,46 @@ function FinanceReports() {
   const { 
     allJournalEntries, allJournalLines, allAccounts, 
     allAcademicYears, currentAcademicYearId, 
-    allStudents, allStaff, allPayments, allExpenses, allInvoices,
+    allStudents, allStaff, allVendors, allPayments, allExpenses, allInvoices,
     currency
   } = useGlobalStore();
   
   const [selectedYear, setSelectedYear] = useState(currentAcademicYearId);
   const [reportType, setReportType] = useState<"income" | "cashflow" | "entity" | "balancesheet" | "aging" | "collection">("income");
   const [selectedEntityId, setSelectedEntityId] = useState<string>("");
-  const [entityType, setEntityType] = useState<"student" | "staff">("student");
+  const [entityType, setEntityType] = useState<"student" | "staff" | "vendor">("student");
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [expandSections, setExpandSections] = useState<Set<string>>(new Set(["revenue", "expense", "operating", "investing"]));
+
+  const entityOptions = useMemo(() => {
+    if (entityType === "student") {
+      return (allStudents || []).map(s => ({
+        id: s.id,
+        title: s.name,
+        subtitle: `${s.grade || 'طالب'} ${s.nationalId ? '• الرقم الوطني: ' + s.nationalId : ''}`
+      }));
+    } else if (entityType === "staff") {
+      return (allStaff || []).filter(s => !s.isDeleted).map(s => ({
+        id: s.id,
+        title: s.name,
+        subtitle: `${s.role || 'موظف'} • ${s.department || ''}`
+      }));
+    } else {
+      return (allVendors || []).map(v => ({
+        id: v.id,
+        title: v.name,
+        subtitle: `مورد / جهة • ${v.phone || ''}`
+      }));
+    }
+  }, [entityType, allStudents, allStaff, allVendors]);
+
+  const selectedEntityObj = useMemo(() => {
+    if (!selectedEntityId) return null;
+    if (entityType === "student") return (allStudents || []).find(s => s.id === selectedEntityId);
+    if (entityType === "staff") return (allStaff || []).find(s => s.id === selectedEntityId);
+    return (allVendors || []).find(v => v.id === selectedEntityId);
+  }, [selectedEntityId, entityType, allStudents, allStaff, allVendors]);
 
   const toggleSection = (s: string) => {
     setExpandSections(prev => {
@@ -515,66 +545,165 @@ function FinanceReports() {
         {/* ─── Entity Reports ─── */}
         {reportType === "entity" && (
           <div className="space-y-6">
-            <FilterBar>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1 bg-background border border-border rounded-xl overflow-hidden">
-                  <button 
-                    onClick={() => { setEntityType("student"); setSelectedEntityId(""); }}
-                    className={`px-4 py-2 text-sm font-bold transition-all ${entityType === "student" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
-                  >
-                    <User className="w-4 h-4 inline-block ml-1" /> طلاب
-                  </button>
-                  <button 
-                    onClick={() => { setEntityType("staff"); setSelectedEntityId(""); }}
-                    className={`px-4 py-2 text-sm font-bold transition-all ${entityType === "staff" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
-                  >
-                    <Users className="w-4 h-4 inline-block ml-1" /> موظفون
-                  </button>
+            <PageCard className="p-6 border-2 border-primary/20 shadow-md bg-gradient-to-r from-primary/5 via-background to-background">
+              <div className="space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                      <Sparkles className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-lg text-foreground">كشوف حسابات الكيانات (الطلاب، الموظفون، والموردون)</h3>
+                      <p className="text-xs text-muted-foreground font-bold mt-0.5">البحث السريع والاستعراض المباشر للحركات المحاسبية والذمم المالية</p>
+                    </div>
+                  </div>
+
+                  {/* Entity Category Selector Pills */}
+                  <div className="flex items-center gap-1.5 bg-muted/60 p-1.5 rounded-2xl border border-border/50">
+                    <button
+                      type="button"
+                      onClick={() => { setEntityType("student"); setSelectedEntityId(""); }}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                        entityType === "student"
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      }`}
+                    >
+                      <User className="w-4 h-4" />
+                      <span>الطلاب ({allStudents.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setEntityType("staff"); setSelectedEntityId(""); }}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                        entityType === "staff"
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      }`}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>الموظفون والمعلمون ({allStaff.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setEntityType("vendor"); setSelectedEntityId(""); }}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                        entityType === "vendor"
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      }`}
+                    >
+                      <Truck className="w-4 h-4" />
+                      <span>الموردون والخدمات ({allVendors.length})</span>
+                    </button>
+                  </div>
                 </div>
-                <select 
-                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm font-bold min-w-[250px]"
-                  value={selectedEntityId}
-                  onChange={(e) => setSelectedEntityId(e.target.value)}
-                >
-                  <option value="">-- اختر {entityType === "student" ? "طالب" : "موظف"} --</option>
-                  {entityType === "student" 
-                    ? allStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
-                    : allStaff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
-                  }
-                </select>
+
+                {/* Searchable Entity Selector Dropdown */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-extrabold text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <Search className="w-3.5 h-3.5 text-primary" />
+                      اختر أو ابحث عن {entityType === "student" ? "طالب" : entityType === "staff" ? "موظف / معلم" : "مورد"}:
+                    </label>
+
+                    <SearchableSelect
+                      value={selectedEntityId}
+                      onChange={setSelectedEntityId}
+                      options={entityOptions}
+                      placeholder={`-- ابحث بالاسم، الرقم الوطني أو التخصص (من بين ${entityOptions.length} سجل) --`}
+                      searchPlaceholder="اكتب اسم الكيان أو الرقم للبحث المباشر..."
+                      allowClear
+                    />
+                  </div>
+
+                  {selectedEntityId && (
+                    <div className="flex items-end justify-end">
+                      <button
+                        onClick={() => setSelectedEntityId("")}
+                        className="px-4 py-3 rounded-2xl border border-border/60 bg-background text-xs font-bold text-muted-foreground hover:text-danger hover:bg-danger/10 transition-all flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="w-4 h-4" /> إلغاء التحديد
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </FilterBar>
+            </PageCard>
 
-            {selectedEntityId ? (
-              <div className="space-y-4">
-                {/* Entity Balance Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FinancialCard title="إجمالي المدين" value={entityBalance.debit} currency={currency} icon={TrendingDown} colorClass="text-rose-600 bg-rose-500" />
-                  <FinancialCard title="إجمالي الدائن" value={entityBalance.credit} currency={currency} icon={TrendingUp} colorClass="text-emerald-600 bg-emerald-500" />
-                  <FinancialCard title="صافي الرصيد" value={entityBalance.net} currency={currency} icon={Scale} colorClass="text-primary bg-primary" />
+            {selectedEntityId && selectedEntityObj ? (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* Active Entity Header Card */}
+                <div className="bg-card p-6 rounded-3xl border-2 border-primary/20 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary font-black text-2xl flex items-center justify-center border border-primary/20 shrink-0">
+                      {selectedEntityObj.name?.slice(0, 2) || "ك"}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-xl text-foreground">{selectedEntityObj.name}</h3>
+                        <Badge tone="info" className="text-xs font-black">
+                          {entityType === "student" ? "طالب مسجل 🎓" : entityType === "staff" ? "موظف / أستاذ 👨‍🏫" : "مورد / جهة 🚚"}
+                        </Badge>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground font-bold mt-1">
+                        {(selectedEntityObj as any).grade && <span>الصف: {(selectedEntityObj as any).grade}</span>}
+                        {(selectedEntityObj as any).role && <span>الوظيفة: {(selectedEntityObj as any).role}</span>}
+                        {(selectedEntityObj as any).nationalId && <span>• الرقم القومي: {(selectedEntityObj as any).nationalId}</span>}
+                        {(selectedEntityObj as any).phone && <span>• الهاتف: {(selectedEntityObj as any).phone}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right border-t md:border-t-0 md:border-r border-border/50 pt-3 md:pt-0 md:pr-6">
+                    <span className="text-xs font-bold text-muted-foreground block mb-0.5">صافي الرصيد الدفتري الحالي:</span>
+                    <span className={`text-2xl font-black tabular-nums ${entityBalance.net > 0 ? 'text-rose-600' : entityBalance.net < 0 ? 'text-emerald-600' : 'text-primary'}`}>
+                      {Math.abs(entityBalance.net).toLocaleString()} {currency}
+                    </span>
+                    <span className="text-[11px] font-bold block text-muted-foreground">
+                      {entityBalance.net > 0 ? "مدين (مستحق للمدرسة)" : entityBalance.net < 0 ? "دائن (مستحق للكيان)" : "حساب متزن بالكامل"}
+                    </span>
+                  </div>
                 </div>
 
-                <PageCard title="كشف الحركات المحاسبية التفصيلي">
+                {/* Entity Balance Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FinancialCard title="إجمالي حركات المدين (+)" value={entityBalance.debit} currency={currency} icon={TrendingDown} colorClass="text-rose-600 bg-rose-500" />
+                  <FinancialCard title="إجمالي حركات الدائن (-)" value={entityBalance.credit} currency={currency} icon={TrendingUp} colorClass="text-emerald-600 bg-emerald-500" />
+                  <FinancialCard title="صافي موقع الحساب" value={entityBalance.net} currency={currency} icon={Scale} colorClass="text-primary bg-primary" />
+                </div>
+
+                {/* Ledger Transactions Table */}
+                <PageCard title="كشف الحركات المحاسبية التفصيلي للكيان بالدفتر العام">
                   <DataTable 
                     rows={entityTransactions}
                     columns={[
                       { key: "date", header: "التاريخ", cell: (r) => <span className="font-bold text-sm tabular-nums">{r.date}</span> },
-                      { key: "accountName", header: "الحساب", cell: (r) => <span className="font-bold text-xs bg-muted px-2 py-1 rounded-lg">{r.accountName}</span> },
-                      { key: "description", header: "البيان", cell: (r) => <span className="text-sm font-bold">{r.description}</span> },
-                      { key: "debit", header: "مدين", cell: (r) => r.debit > 0 ? <span className="text-rose-600 font-black tabular-nums">{r.debit.toLocaleString()}</span> : <span className="text-muted-foreground/30">-</span> },
-                      { key: "credit", header: "دائن", cell: (r) => r.credit > 0 ? <span className="text-emerald-600 font-black tabular-nums">{r.credit.toLocaleString()}</span> : <span className="text-muted-foreground/30">-</span> },
+                      { key: "accountName", header: "الحساب الفرعي", cell: (r) => <span className="font-bold text-xs bg-muted px-2.5 py-1 rounded-lg border border-border/40">{r.accountName}</span> },
+                      { key: "description", header: "بيان الحركة", cell: (r) => <span className="text-sm font-bold text-foreground">{r.description}</span> },
+                      { key: "debit", header: "مدين (+)", cell: (r) => r.debit > 0 ? <span className="text-rose-600 font-black tabular-nums text-sm">+{r.debit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
+                      { key: "credit", header: "دائن (-)", cell: (r) => r.credit > 0 ? <span className="text-emerald-600 font-black tabular-nums text-sm">-{r.credit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
                     ]}
+                    pageSize={15}
+                    pageSizeOptions={[10, 15, 25, 50]}
+                    empty="لا توجد قيود حركية مسجلة لهذا الكيان في الدفتر العام"
                   />
                 </PageCard>
               </div>
             ) : (
               <PageCard>
                 <div className="py-16 text-center flex flex-col items-center justify-center text-muted-foreground">
-                  <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-                    <User className="w-10 h-10 opacity-30" />
+                  <div className="w-20 h-20 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-4 shadow-sm border border-primary/20">
+                    <Search className="w-10 h-10" />
                   </div>
-                  <p className="font-black text-lg">اختر كياناً لعرض كشف حسابه</p>
-                  <p className="text-sm font-bold mt-1">حدد طالباً أو موظفاً لاستعراض جميع حركاته المالية بالتفصيل</p>
+                  <h4 className="font-black text-xl text-foreground">اختر كياناً من شريط البحث أعلاه لاستعراض كشف الحساب</h4>
+                  <p className="text-xs font-bold text-muted-foreground mt-1 max-w-md">
+                    يمكنك البحث بالاسم أو الرقم الوطني للطلاب ({allStudents.length})، أو المعلمين والموظفين ({allStaff.length})، أو الموردين والخدمات ({allVendors.length}).
+                  </p>
                 </div>
               </PageCard>
             )}
