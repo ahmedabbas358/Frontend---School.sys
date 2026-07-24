@@ -65,7 +65,6 @@ import { Route as FinanceDashboardRouteImport } from './routes/finance.dashboard
 import { Route as FinanceCostCentersRouteImport } from './routes/finance.cost-centers'
 import { Route as FinanceBudgetsRouteImport } from './routes/finance.budgets'
 import { Route as FinanceBanksRouteImport } from './routes/finance.banks'
-import { Route as FinanceAdvancedRouteImport } from './routes/finance.advanced'
 import { Route as FinanceAccountsRouteImport } from './routes/finance.accounts'
 import { Route as FacilitiesRoomsRouteImport } from './routes/facilities.rooms'
 import { Route as FacilitiesMaintenanceRouteImport } from './routes/facilities.maintenance'
@@ -372,11 +371,6 @@ const FinanceBanksRoute = FinanceBanksRouteImport.update({
   path: '/banks',
   getParentRoute: () => FinanceRoute,
 } as any)
-const FinanceAdvancedRoute = FinanceAdvancedRouteImport.update({
-  id: '/advanced',
-  path: '/advanced',
-  getParentRoute: () => FinanceRoute,
-} as any)
 const FinanceAccountsRoute = FinanceAccountsRouteImport.update({
   id: '/accounts',
   path: '/accounts',
@@ -546,7 +540,6 @@ export interface FileRoutesByFullPath {
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
   '/finance/accounts': typeof FinanceAccountsRoute
-  '/finance/advanced': typeof FinanceAdvancedRoute
   '/finance/banks': typeof FinanceBanksRoute
   '/finance/budgets': typeof FinanceBudgetsRoute
   '/finance/cost-centers': typeof FinanceCostCentersRoute
@@ -625,7 +618,6 @@ export interface FileRoutesByTo {
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
   '/finance/accounts': typeof FinanceAccountsRoute
-  '/finance/advanced': typeof FinanceAdvancedRoute
   '/finance/banks': typeof FinanceBanksRoute
   '/finance/budgets': typeof FinanceBudgetsRoute
   '/finance/cost-centers': typeof FinanceCostCentersRoute
@@ -710,7 +702,6 @@ export interface FileRoutesById {
   '/facilities/maintenance': typeof FacilitiesMaintenanceRoute
   '/facilities/rooms': typeof FacilitiesRoomsRoute
   '/finance/accounts': typeof FinanceAccountsRoute
-  '/finance/advanced': typeof FinanceAdvancedRoute
   '/finance/banks': typeof FinanceBanksRoute
   '/finance/budgets': typeof FinanceBudgetsRoute
   '/finance/cost-centers': typeof FinanceCostCentersRoute
@@ -796,7 +787,6 @@ export interface FileRouteTypes {
     | '/facilities/maintenance'
     | '/facilities/rooms'
     | '/finance/accounts'
-    | '/finance/advanced'
     | '/finance/banks'
     | '/finance/budgets'
     | '/finance/cost-centers'
@@ -875,7 +865,6 @@ export interface FileRouteTypes {
     | '/facilities/maintenance'
     | '/facilities/rooms'
     | '/finance/accounts'
-    | '/finance/advanced'
     | '/finance/banks'
     | '/finance/budgets'
     | '/finance/cost-centers'
@@ -959,7 +948,6 @@ export interface FileRouteTypes {
     | '/facilities/maintenance'
     | '/facilities/rooms'
     | '/finance/accounts'
-    | '/finance/advanced'
     | '/finance/banks'
     | '/finance/budgets'
     | '/finance/cost-centers'
@@ -1418,13 +1406,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceBanksRouteImport
       parentRoute: typeof FinanceRoute
     }
-    '/finance/advanced': {
-      id: '/finance/advanced'
-      path: '/advanced'
-      fullPath: '/finance/advanced'
-      preLoaderRoute: typeof FinanceAdvancedRouteImport
-      parentRoute: typeof FinanceRoute
-    }
     '/finance/accounts': {
       id: '/finance/accounts'
       path: '/accounts'
@@ -1714,7 +1695,6 @@ const FacilitiesRouteWithChildren = FacilitiesRoute._addFileChildren(
 
 interface FinanceRouteChildren {
   FinanceAccountsRoute: typeof FinanceAccountsRoute
-  FinanceAdvancedRoute: typeof FinanceAdvancedRoute
   FinanceBanksRoute: typeof FinanceBanksRoute
   FinanceBudgetsRoute: typeof FinanceBudgetsRoute
   FinanceCostCentersRoute: typeof FinanceCostCentersRoute
@@ -1734,7 +1714,6 @@ interface FinanceRouteChildren {
 
 const FinanceRouteChildren: FinanceRouteChildren = {
   FinanceAccountsRoute: FinanceAccountsRoute,
-  FinanceAdvancedRoute: FinanceAdvancedRoute,
   FinanceBanksRoute: FinanceBanksRoute,
   FinanceBudgetsRoute: FinanceBudgetsRoute,
   FinanceCostCentersRoute: FinanceCostCentersRoute,

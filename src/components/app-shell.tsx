@@ -111,7 +111,7 @@ const NAV: Item[] = [
   {
     kind: "group",
     group: {
-      label: "المركز المالي (ERP)",
+      label: "المالية والقيود",
       icon: DollarSign,
       items: [
         { to: "/finance", label: "لوحة العمليات" },
@@ -120,6 +120,9 @@ const NAV: Item[] = [
         { to: "/finance/banks", label: "الحسابات البنكية" },
         { to: "/hr/payroll", label: "مسير الرواتب" },
         { to: "/finance/expenses", label: "المصروفات والموردين" },
+        { to: "/finance/accounts", label: "الدليل المحاسبي" },
+        { to: "/finance/ledger", label: "سجل القيود اليومية" },
+        { to: "/finance/trial-balance", label: "ميزان المراجعة" },
         { to: "/finance/reports", label: "التقارير المالية" },
       ],
     },
@@ -172,19 +175,6 @@ const NAV: Item[] = [
         { to: "/admin/activity-log", label: "سجل الأنشطة" },
         { to: "/admin/backup", label: "النسخ الاحتياطي" },
         { to: "/admin/notifications", label: "الإشعارات" },
-      ],
-    },
-  },
-  {
-    kind: "group",
-    group: {
-      label: "المحاسبة المتقدمة",
-      icon: Layers3,
-      items: [
-        { to: "/finance/advanced", label: "المركز المحاسبي" },
-        { to: "/finance/accounts", label: "الدليل المحاسبي" },
-        { to: "/finance/ledger", label: "سجل القيود اليومية" },
-        { to: "/finance/trial-balance", label: "ميزان المراجعة" },
       ],
     },
   },

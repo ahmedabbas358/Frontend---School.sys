@@ -81,11 +81,27 @@ function FinanceHub() {
       color: "bg-teal-500/10 text-teal-600",
     },
     {
-      id: "advanced-accounting",
-      title: "المحاسبة المتقدمة",
-      description: "دفتر الأستاذ، ميزان المراجعة، وتدقيق العمليات (GL)",
+      id: "accounts",
+      title: "الدليل المحاسبي",
+      description: "إدارة شجرة الحسابات (Chart of Accounts) والأرصدة",
+      icon: <FolderTree className="w-8 h-8 text-indigo-500" />,
+      href: "/finance/accounts",
+      color: "bg-indigo-500/10 text-indigo-600",
+    },
+    {
+      id: "ledger",
+      title: "سجل القيود اليومية",
+      description: "إدارة وتدقيق القيود المحاسبية التلقائية واليدوية (General Ledger)",
+      icon: <FileText className="w-8 h-8 text-blue-500" />,
+      href: "/finance/ledger",
+      color: "bg-blue-500/10 text-blue-600",
+    },
+    {
+      id: "trial-balance",
+      title: "ميزان المراجعة",
+      description: "توازن الحسابات، الأرصدة الافتتاحية والميزانية العمومية",
       icon: <ShieldCheck className="w-8 h-8 text-slate-500" />,
-      href: "/finance/advanced", 
+      href: "/finance/trial-balance",
       color: "bg-slate-500/10 text-slate-600",
     }
   ];
