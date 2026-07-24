@@ -52,12 +52,10 @@ import { Route as HrContractsRouteImport } from './routes/hr.contracts'
 import { Route as HrAttendanceRouteImport } from './routes/hr.attendance'
 import { Route as GuardiansIdRouteImport } from './routes/guardians.$id'
 import { Route as FinanceVendorsRouteImport } from './routes/finance.vendors'
-import { Route as FinanceTrialBalanceRouteImport } from './routes/finance.trial-balance'
 import { Route as FinanceTreasuryRouteImport } from './routes/finance.treasury'
 import { Route as FinanceStudentsRouteImport } from './routes/finance.students'
 import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
 import { Route as FinancePaymentsRouteImport } from './routes/finance.payments'
-import { Route as FinanceLedgerRouteImport } from './routes/finance.ledger'
 import { Route as FinanceFeesRouteImport } from './routes/finance.fees'
 import { Route as FinanceExpensesRouteImport } from './routes/finance.expenses'
 import { Route as FinanceDiscountsRouteImport } from './routes/finance.discounts'
@@ -306,11 +304,6 @@ const FinanceVendorsRoute = FinanceVendorsRouteImport.update({
   path: '/vendors',
   getParentRoute: () => FinanceRoute,
 } as any)
-const FinanceTrialBalanceRoute = FinanceTrialBalanceRouteImport.update({
-  id: '/trial-balance',
-  path: '/trial-balance',
-  getParentRoute: () => FinanceRoute,
-} as any)
 const FinanceTreasuryRoute = FinanceTreasuryRouteImport.update({
   id: '/treasury',
   path: '/treasury',
@@ -329,11 +322,6 @@ const FinanceReportsRoute = FinanceReportsRouteImport.update({
 const FinancePaymentsRoute = FinancePaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
-  getParentRoute: () => FinanceRoute,
-} as any)
-const FinanceLedgerRoute = FinanceLedgerRouteImport.update({
-  id: '/ledger',
-  path: '/ledger',
   getParentRoute: () => FinanceRoute,
 } as any)
 const FinanceFeesRoute = FinanceFeesRouteImport.update({
@@ -547,12 +535,10 @@ export interface FileRoutesByFullPath {
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
-  '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/students': typeof FinanceStudentsRoute
   '/finance/treasury': typeof FinanceTreasuryRoute
-  '/finance/trial-balance': typeof FinanceTrialBalanceRoute
   '/finance/vendors': typeof FinanceVendorsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
@@ -625,12 +611,10 @@ export interface FileRoutesByTo {
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
-  '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/students': typeof FinanceStudentsRoute
   '/finance/treasury': typeof FinanceTreasuryRoute
-  '/finance/trial-balance': typeof FinanceTrialBalanceRoute
   '/finance/vendors': typeof FinanceVendorsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
@@ -709,12 +693,10 @@ export interface FileRoutesById {
   '/finance/discounts': typeof FinanceDiscountsRoute
   '/finance/expenses': typeof FinanceExpensesRoute
   '/finance/fees': typeof FinanceFeesRoute
-  '/finance/ledger': typeof FinanceLedgerRoute
   '/finance/payments': typeof FinancePaymentsRoute
   '/finance/reports': typeof FinanceReportsRoute
   '/finance/students': typeof FinanceStudentsRoute
   '/finance/treasury': typeof FinanceTreasuryRoute
-  '/finance/trial-balance': typeof FinanceTrialBalanceRoute
   '/finance/vendors': typeof FinanceVendorsRoute
   '/guardians/$id': typeof GuardiansIdRoute
   '/hr/attendance': typeof HrAttendanceRoute
@@ -794,12 +776,10 @@ export interface FileRouteTypes {
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
-    | '/finance/ledger'
     | '/finance/payments'
     | '/finance/reports'
     | '/finance/students'
     | '/finance/treasury'
-    | '/finance/trial-balance'
     | '/finance/vendors'
     | '/guardians/$id'
     | '/hr/attendance'
@@ -872,12 +852,10 @@ export interface FileRouteTypes {
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
-    | '/finance/ledger'
     | '/finance/payments'
     | '/finance/reports'
     | '/finance/students'
     | '/finance/treasury'
-    | '/finance/trial-balance'
     | '/finance/vendors'
     | '/guardians/$id'
     | '/hr/attendance'
@@ -955,12 +933,10 @@ export interface FileRouteTypes {
     | '/finance/discounts'
     | '/finance/expenses'
     | '/finance/fees'
-    | '/finance/ledger'
     | '/finance/payments'
     | '/finance/reports'
     | '/finance/students'
     | '/finance/treasury'
-    | '/finance/trial-balance'
     | '/finance/vendors'
     | '/guardians/$id'
     | '/hr/attendance'
@@ -1315,13 +1291,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceVendorsRouteImport
       parentRoute: typeof FinanceRoute
     }
-    '/finance/trial-balance': {
-      id: '/finance/trial-balance'
-      path: '/trial-balance'
-      fullPath: '/finance/trial-balance'
-      preLoaderRoute: typeof FinanceTrialBalanceRouteImport
-      parentRoute: typeof FinanceRoute
-    }
     '/finance/treasury': {
       id: '/finance/treasury'
       path: '/treasury'
@@ -1348,13 +1317,6 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/finance/payments'
       preLoaderRoute: typeof FinancePaymentsRouteImport
-      parentRoute: typeof FinanceRoute
-    }
-    '/finance/ledger': {
-      id: '/finance/ledger'
-      path: '/ledger'
-      fullPath: '/finance/ledger'
-      preLoaderRoute: typeof FinanceLedgerRouteImport
       parentRoute: typeof FinanceRoute
     }
     '/finance/fees': {
@@ -1702,12 +1664,10 @@ interface FinanceRouteChildren {
   FinanceDiscountsRoute: typeof FinanceDiscountsRoute
   FinanceExpensesRoute: typeof FinanceExpensesRoute
   FinanceFeesRoute: typeof FinanceFeesRoute
-  FinanceLedgerRoute: typeof FinanceLedgerRoute
   FinancePaymentsRoute: typeof FinancePaymentsRoute
   FinanceReportsRoute: typeof FinanceReportsRoute
   FinanceStudentsRoute: typeof FinanceStudentsRoute
   FinanceTreasuryRoute: typeof FinanceTreasuryRoute
-  FinanceTrialBalanceRoute: typeof FinanceTrialBalanceRoute
   FinanceVendorsRoute: typeof FinanceVendorsRoute
   FinanceIndexRoute: typeof FinanceIndexRoute
 }
@@ -1721,12 +1681,10 @@ const FinanceRouteChildren: FinanceRouteChildren = {
   FinanceDiscountsRoute: FinanceDiscountsRoute,
   FinanceExpensesRoute: FinanceExpensesRoute,
   FinanceFeesRoute: FinanceFeesRoute,
-  FinanceLedgerRoute: FinanceLedgerRoute,
   FinancePaymentsRoute: FinancePaymentsRoute,
   FinanceReportsRoute: FinanceReportsRoute,
   FinanceStudentsRoute: FinanceStudentsRoute,
   FinanceTreasuryRoute: FinanceTreasuryRoute,
-  FinanceTrialBalanceRoute: FinanceTrialBalanceRoute,
   FinanceVendorsRoute: FinanceVendorsRoute,
   FinanceIndexRoute: FinanceIndexRoute,
 }

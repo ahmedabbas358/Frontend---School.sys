@@ -111,7 +111,7 @@ const NAV: Item[] = [
   {
     kind: "group",
     group: {
-      label: "المالية والقيود",
+      label: "المركز المالي",
       icon: DollarSign,
       items: [
         { to: "/finance", label: "لوحة العمليات" },
@@ -121,8 +121,6 @@ const NAV: Item[] = [
         { to: "/hr/payroll", label: "مسير الرواتب" },
         { to: "/finance/expenses", label: "المصروفات والموردين" },
         { to: "/finance/accounts", label: "الدليل المحاسبي" },
-        { to: "/finance/ledger", label: "سجل القيود اليومية" },
-        { to: "/finance/trial-balance", label: "ميزان المراجعة" },
         { to: "/finance/reports", label: "التقارير المالية" },
       ],
     },

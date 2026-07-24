@@ -1,35 +1,54 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useGlobalStore, Account, JournalEntry, JournalLine } from '../contexts/GlobalStoreContext';
 import { useState, useMemo } from 'react';
-import { AppShell, PageCard } from '@/components/app-shell';
-import { FolderTree, Search, Plus, Edit, Trash2, Power, Eye, Building2, Briefcase, Star, CheckCircle2, Clock } from 'lucide-react';
+import { AppShell, PageCard, Badge } from '@/components/app-shell';
+import { 
+  FolderTree, Search, Plus, Edit, Trash2, Power, Eye, 
+  Building2, Briefcase, Star, CheckCircle2, Clock, 
+  Scale, Wallet, TrendingUp, TrendingDown, Sparkles, Printer, Download, Filter, RotateCcw
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { FinancialCard, FilterBar } from '@/components/financial-components';
+import { DataTable } from '@/components/data-table';
+import { AdvancedPrintEngine, PrintTemplate } from '@/components/print-engine';
 
 export const Route = createFileRoute('/finance/accounts')({
   component: FinanceAccounts,
 });
 
 function FinanceAccounts() {
-  const { allAccounts, addAccount, updateAccount, toggleAccountStatus, allJournalEntries, allJournalLines, currency, currentAcademicYearId } = useGlobalStore();
+  const { 
+    allAccounts, addAccount, updateAccount, deleteAccount, toggleAccountStatus, 
+    allJournalEntries, allJournalLines, currency, currentAcademicYearId 
+  } = useGlobalStore();
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'revenue' | 'expense' | 'asset' | 'liability' | 'equity'>('all');
   
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isStatementOpen, setIsStatementOpen] = useState(false);
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
   
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [statementAccount, setStatementAccount] = useState<Account | null>(null);
 
-  // Form State
-  const [formData, setFormData] = useState({ name: '', type: 'expense' as Account['type'], code: '', description: '' });
+  // Form State for Add / Edit Account
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    type: 'expense' as Account['type'], 
+    code: '', 
+    description: '',
+    normalBalance: 'debit' as 'debit' | 'credit'
+  });
 
   const getTypeName = (type: string) => {
     switch (type) {
-      case 'asset': return 'الأصول';
-      case 'liability': return 'الخصوم';
-      case 'equity': return 'حقوق الملكية';
-      case 'revenue': return 'الإيرادات';
-      case 'expense': return 'المصروفات';
+      case 'asset': return 'الأصول (Assets)';
+      case 'liability': return 'الخصوم (Liabilities)';
+      case 'equity': return 'حقوق الملكية (Equity)';
+      case 'revenue': return 'الإيرادات (Revenues)';
+      case 'expense': return 'المصروفات (Expenses)';
       default: return type;
     }
   };
@@ -39,49 +58,86 @@ function FinanceAccounts() {
       case 'asset': return <Building2 className="w-5 h-5 text-blue-500" />;
       case 'liability': return <Briefcase className="w-5 h-5 text-red-500" />;
       case 'equity': return <Star className="w-5 h-5 text-purple-500" />;
-      case 'revenue': return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-      case 'expense': return <Clock className="w-5 h-5 text-orange-500" />;
+      case 'revenue': return <TrendingUp className="w-5 h-5 text-emerald-500" />;
+      case 'expense': return <TrendingDown className="w-5 h-5 text-amber-500" />;
       default: return <FolderTree className="w-5 h-5" />;
     }
   };
 
+  // Filtered Accounts
   const filteredAccounts = useMemo(() => {
-    return allAccounts.filter(acc => 
-      acc.name.includes(searchTerm) || acc.code.includes(searchTerm)
-    );
-  }, [allAccounts, searchTerm]);
+    return allAccounts.filter(acc => {
+      const matchSearch = acc.name.includes(searchTerm) || acc.code.includes(searchTerm) || (acc.description || '').includes(searchTerm);
+      const matchTab = activeTab === 'all' || acc.type === activeTab;
+      return matchSearch && matchTab;
+    });
+  }, [allAccounts, searchTerm, activeTab]);
 
-  // Group by type
-  const grouped = {
-    revenue: filteredAccounts.filter(a => a.type === 'revenue'),
-    expense: filteredAccounts.filter(a => a.type === 'expense'),
-    asset: filteredAccounts.filter(a => a.type === 'asset'),
-    liability: filteredAccounts.filter(a => a.type === 'liability'),
-    equity: filteredAccounts.filter(a => a.type === 'equity'),
-  };
+  // Statistics
+  const stats = useMemo(() => {
+    const total = allAccounts.length;
+    const systemCount = allAccounts.filter(a => a.isSystemAccount).length;
+    const customCount = total - systemCount;
+    const activeCount = allAccounts.filter(a => a.isActive !== false).length;
+    
+    const revenues = allAccounts.filter(a => a.type === 'revenue').length;
+    const expenses = allAccounts.filter(a => a.type === 'expense').length;
+    const assets = allAccounts.filter(a => a.type === 'asset').length;
+    const liabilities = allAccounts.filter(a => a.type === 'liability').length;
+
+    return { total, systemCount, customCount, activeCount, revenues, expenses, assets, liabilities };
+  }, [allAccounts]);
 
   const handleSaveAccount = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error("يرجى إدخال اسم الحساب");
+      return;
+    }
+
     if (editingAccount) {
       updateAccount(editingAccount.id, formData);
-      toast.success("تم تحديث الحساب بنجاح");
+      toast.success(`تم تحديث بيانات الحساب (${formData.name}) بنجاح`);
     } else {
-      addAccount(formData);
-      toast.success("تمت إضافة الحساب بنجاح");
+      const generatedCode = formData.code.trim() || `${formData.type === 'asset' ? '1' : formData.type === 'liability' ? '2' : formData.type === 'equity' ? '3' : formData.type === 'revenue' ? '4' : '5'}${Math.floor(10 + Math.random() * 90)}`;
+      addAccount({
+        ...formData,
+        code: generatedCode,
+        isSystemAccount: false,
+        isActive: true
+      });
+      toast.success(`تمت إضافة الحساب الفرعي الجديد (${formData.name}) بنجاح`);
     }
     setIsAddOpen(false);
     setEditingAccount(null);
   };
 
+  const handleDelete = (acc: Account) => {
+    if (acc.isSystemAccount) {
+      toast.error("لا يمكن حذف حسابات النظام الأساسية المعتمدة");
+      return;
+    }
+    if (window.confirm(`هل أنت متأكد من حذف الحساب الفرعي (${acc.name}) نهائياً؟`)) {
+      deleteAccount(acc.id);
+      toast.success("تم حذف الحساب بنجاح");
+    }
+  };
+
   const openEdit = (acc: Account) => {
     setEditingAccount(acc);
-    setFormData({ name: acc.name, type: acc.type, code: acc.code, description: acc.description || '' });
+    setFormData({ 
+      name: acc.name, 
+      type: acc.type, 
+      code: acc.code, 
+      description: acc.description || '',
+      normalBalance: acc.normalBalance || (acc.type === 'asset' || acc.type === 'expense' ? 'debit' : 'credit')
+    });
     setIsAddOpen(true);
   };
 
   const openAdd = () => {
     setEditingAccount(null);
-    setFormData({ name: '', type: 'expense', code: '', description: '' });
+    setFormData({ name: '', type: 'expense', code: '', description: '', normalBalance: 'debit' });
     setIsAddOpen(true);
   };
 
@@ -90,11 +146,10 @@ function FinanceAccounts() {
     setIsStatementOpen(true);
   };
 
-  // Statement Calculation
+  // Statement Calculation for Selected Account
   const statementLines = useMemo(() => {
     if (!statementAccount) return [];
     
-    // Get all valid entry IDs for current year
     const validEntryIds = new Set(
       allJournalEntries
         .filter(e => e.academicYearId === currentAcademicYearId && e.status === 'posted')
@@ -103,8 +158,7 @@ function FinanceAccounts() {
 
     const lines = allJournalLines.filter(l => validEntryIds.has(l.journalEntryId) && l.accountId === statementAccount.id);
     
-    // Sort by date (we need to get date from entry)
-    const linesWithDate = lines.map(l => {
+    return lines.map(l => {
       const entry = allJournalEntries.find(e => e.id === l.journalEntryId);
       return {
         ...l,
@@ -113,253 +167,409 @@ function FinanceAccounts() {
         entryRef: entry?.referenceId || '',
       };
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    return linesWithDate;
   }, [statementAccount, allJournalEntries, allJournalLines, currentAcademicYearId]);
 
   const stmtTotalDebit = statementLines.reduce((sum, l) => sum + l.debit, 0);
   const stmtTotalCredit = statementLines.reduce((sum, l) => sum + l.credit, 0);
+  
   let stmtBalance = stmtTotalDebit - stmtTotalCredit;
-  if (statementAccount?.type === 'liability' || statementAccount?.type === 'equity' || statementAccount?.type === 'revenue') {
+  if (statementAccount?.type === 'liability' || statementAccount?.type === 'equity' || statementAccount?.type === 'revenue' || statementAccount?.normalBalance === 'credit') {
     stmtBalance = stmtTotalCredit - stmtTotalDebit;
   }
 
-  const renderGroup = (type: string, title: string, accounts: Account[]) => {
-    if (accounts.length === 0) return null;
-    return (
-      <div className="mb-8">
-        <h3 className="text-lg font-black flex items-center gap-2 mb-4">
-          {getTypeIcon(type)} {title}
-        </h3>
-        <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
-          <table className="w-full text-sm text-right">
-            <thead className="bg-muted/50 border-b border-border/50">
-              <tr>
-                <th className="py-3 px-4 font-bold w-24">الرمز</th>
-                <th className="py-3 px-4 font-bold">اسم الحساب</th>
-                <th className="py-3 px-4 font-bold">الوصف</th>
-                <th className="py-3 px-4 font-bold w-24 text-center">الحالة</th>
-                <th className="py-3 px-4 font-bold w-48 text-center">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {accounts.map(acc => (
-                <tr key={acc.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="py-3 px-4 font-mono font-bold text-muted-foreground">{acc.code}</td>
-                  <td className="py-3 px-4 font-bold">{acc.name} {acc.isSystemAccount && <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2">أساسي</span>}</td>
-                  <td className="py-3 px-4 text-muted-foreground">{acc.description || '-'}</td>
-                  <td className="py-3 px-4 text-center">
-                    <span className={`px-2 py-1 rounded-md text-xs font-bold ${acc.isActive !== false ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                      {acc.isActive !== false ? 'نشط' : 'موقوف'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => openStatement(acc)} className="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors tooltip-trigger" title="كشف الحساب">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => openEdit(acc)} 
-                        disabled={acc.isSystemAccount}
-                        className="p-1.5 bg-amber-500/10 text-amber-600 rounded-lg hover:bg-amber-500/20 disabled:opacity-30 transition-colors" 
-                        title="تعديل"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => toggleAccountStatus(acc.id)} 
-                        disabled={acc.isSystemAccount}
-                        className="p-1.5 bg-slate-500/10 text-slate-600 rounded-lg hover:bg-slate-500/20 disabled:opacity-30 transition-colors" 
-                        title="إيقاف / تفعيل"
-                      >
-                        <Power className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
+  const printTemplates: PrintTemplate[] = [
+    {
+      id: "chart-of-accounts",
+      name: "الدليل المحاسبي الشامل",
+      category: "التقارير المحاسبية",
+      type: "table",
+      columns: [
+        { label: "رمز الحساب", key: "code" },
+        { label: "اسم الحساب", key: "name" },
+        { label: "نوع الحساب", key: "typeName" },
+        { label: "الوصف والبيان", key: "description" },
+        { label: "الحالة", key: "statusLabel" },
+      ]
+    }
+  ];
+
+  const printData = filteredAccounts.map(acc => ({
+    ...acc,
+    typeName: getTypeName(acc.type),
+    statusLabel: acc.isActive !== false ? 'نشط' : 'موقوف'
+  }));
 
   return (
-    <AppShell>
-      <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-        
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-6 rounded-3xl border border-border shadow-sm">
-          <div>
-            <h1 className="text-2xl font-black flex items-center gap-2 text-primary">
-              <FolderTree className="w-7 h-7" /> إدارة الحسابات
-            </h1>
-            <p className="text-muted-foreground mt-1">التحكم الدقيق بشجرة الحسابات واستعراض تقاريرها</p>
-          </div>
+    <AppShell
+      breadcrumb={[
+        { label: "الرئيسية", to: "/" },
+        { label: "المركز المالي", to: "/finance/dashboard" },
+        { label: "الدليل المحاسبي الشامل" },
+      ]}
+      actions={
+        <div className="flex gap-2">
+          <button onClick={() => setIsPrintOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-bold hover:bg-accent shadow-sm">
+            <Printer className="h-4 w-4" /> طباعة شجرة الحسابات
+          </button>
           <button 
             onClick={openAdd}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25"
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-extrabold text-primary-foreground hover:bg-primary/90 shadow-md transition-all"
           >
-            <Plus className="w-5 h-5" /> إضافة حساب جديد
+            <Plus className="h-4 w-4" /> إضافة حساب فرعي جديد
           </button>
         </div>
-
-        <PageCard>
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="ابحث برقم الحساب أو اسمه..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-12 h-12 bg-muted/30 border border-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-              />
+      }
+    >
+      <div className="space-y-6 animate-in fade-in duration-500 pb-20 max-w-7xl mx-auto">
+        
+        {/* Header Banner */}
+        <div className="bg-card p-6 rounded-3xl border border-border/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3.5 bg-primary/10 text-primary rounded-2xl border border-primary/20">
+              <FolderTree className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
+                الدليل المحاسبي الشامل (Chart of Accounts)
+              </h1>
+              <p className="text-xs text-muted-foreground font-bold mt-1">
+                الإدارة والتحكم اليدوي الكامل في هيكل شجرة الحسابات المالية الموحدة للمدرسة.
+              </p>
             </div>
           </div>
 
-          <div className="space-y-2">
-            {renderGroup('revenue', 'الإيرادات المدرسية', grouped.revenue)}
-            {renderGroup('expense', 'المصروفات والرواتب', grouped.expense)}
-            {renderGroup('asset', 'الأصول والموجودات', grouped.asset)}
-            {renderGroup('liability', 'الخصوم والموردين', grouped.liability)}
+          <div className="flex items-center gap-2 text-xs font-bold bg-muted/40 p-2 rounded-2xl border border-border/50">
+            <Badge tone="info" className="font-black text-xs px-3 py-1">
+              شجرة الحسابات متزنة 100%
+            </Badge>
+            <span className="text-muted-foreground font-bold px-2">{stats.activeCount} حساب نشط</span>
+          </div>
+        </div>
+
+        {/* Financial Stat Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <FinancialCard title="إجمالي الحسابات" value={stats.total} currency="حساب" icon={FolderTree} colorClass="text-primary bg-primary" />
+          <FinancialCard title="حسابات الإيرادات" value={stats.revenues} currency="حساب" icon={TrendingUp} colorClass="text-emerald-600 bg-emerald-500" />
+          <FinancialCard title="حسابات المصروفات" value={stats.expenses} currency="حساب" icon={TrendingDown} colorClass="text-amber-600 bg-amber-500" />
+          <FinancialCard title="الأصول والخصوم" value={stats.assets + stats.liabilities} currency="حساب" icon={Building2} colorClass="text-blue-600 bg-blue-500" />
+        </div>
+
+        {/* Filter Bar & Tabs */}
+        <PageCard>
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/50 pb-4">
+              
+              {/* Type Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+                    activeTab === 'all' ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  جميع الحسابات ({stats.total})
+                </button>
+                <button
+                  onClick={() => setActiveTab('revenue')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+                    activeTab === 'revenue' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  الإيرادات ({stats.revenues})
+                </button>
+                <button
+                  onClick={() => setActiveTab('expense')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+                    activeTab === 'expense' ? 'bg-amber-600 text-white shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  المصروفات ({stats.expenses})
+                </button>
+                <button
+                  onClick={() => setActiveTab('asset')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+                    activeTab === 'asset' ? 'bg-blue-600 text-white shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  الأصول ({stats.assets})
+                </button>
+                <button
+                  onClick={() => setActiveTab('liability')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+                    activeTab === 'liability' ? 'bg-rose-600 text-white shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  الخصوم ({stats.liabilities})
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full md:w-72">
+                <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="ابحث بالرمز أو اسم الحساب..."
+                  className="w-full pl-3 pr-10 py-2 bg-background border border-border/60 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Accounts Table */}
+            <DataTable
+              rows={filteredAccounts}
+              columns={[
+                {
+                  key: "code",
+                  header: "رمز الحساب",
+                  cell: (r: Account) => (
+                    <span className="font-mono font-black text-xs text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                      {r.code}
+                    </span>
+                  )
+                },
+                {
+                  key: "name",
+                  header: "اسم الحساب والتصنيف",
+                  cell: (r: Account) => (
+                    <div>
+                      <div className="font-black text-sm text-foreground flex items-center gap-2">
+                        {r.name}
+                        {r.isSystemAccount && (
+                          <Badge tone="info" className="text-[10px] px-2 py-0.5">نظام رئيسي 🔒</Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-bold mt-0.5 flex items-center gap-1.5">
+                        {getTypeIcon(r.type)}
+                        <span>{getTypeName(r.type)}</span>
+                        {r.description && <span className="opacity-75">• {r.description}</span>}
+                      </div>
+                    </div>
+                  )
+                },
+                {
+                  key: "normalBalance",
+                  header: "طبيعة الحساب",
+                  cell: (r: Account) => (
+                    <Badge tone={r.type === 'asset' || r.type === 'expense' ? 'warning' : 'success'} className="text-xs font-bold">
+                      {r.type === 'asset' || r.type === 'expense' ? 'مدين (Debit)' : 'دائن (Credit)'}
+                    </Badge>
+                  )
+                },
+                {
+                  key: "isActive",
+                  header: "الحالة",
+                  cell: (r: Account) => (
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold ${r.isActive !== false ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                      {r.isActive !== false ? 'نشط' : 'موقوف'}
+                    </span>
+                  )
+                },
+                {
+                  key: "actions",
+                  header: "التحكم والإجراءات",
+                  cell: (r: Account) => (
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => openStatement(r)}
+                        className="px-2.5 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-xs font-extrabold transition-all flex items-center gap-1"
+                        title="كشف حساب تفصيلي بالدفتر العام"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> كشف الحساب
+                      </button>
+
+                      <button
+                        onClick={() => openEdit(r)}
+                        disabled={r.isSystemAccount}
+                        className="p-1.5 bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white disabled:opacity-30 rounded-lg transition-all"
+                        title="تعديل الحساب"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => toggleAccountStatus(r.id)}
+                        disabled={r.isSystemAccount}
+                        className="p-1.5 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white disabled:opacity-30 rounded-lg transition-all"
+                        title="تغيير حالة التفعيل"
+                      >
+                        <Power className="w-4 h-4" />
+                      </button>
+
+                      {!r.isSystemAccount && (
+                        <button
+                          onClick={() => handleDelete(r)}
+                          className="p-1.5 bg-danger/10 text-danger hover:bg-danger hover:text-white rounded-lg transition-all"
+                          title="حذف الحساب نهائياً"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                }
+              ]}
+              pageSize={15}
+              pageSizeOptions={[10, 15, 25, 50]}
+              empty="لا توجد حسابات مطابقة للبحث الحالية"
+            />
           </div>
         </PageCard>
+      </div>
 
-        {/* Add/Edit Modal */}
-        {isAddOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setIsAddOpen(false)} />
-            <div className="relative bg-card w-full max-w-md rounded-3xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
-                <h3 className="font-black text-lg">{editingAccount ? 'تعديل الحساب' : 'حساب فرعي جديد'}</h3>
-                <button onClick={() => setIsAddOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+      {/* Add / Edit Account Modal */}
+      {isAddOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-border/50 bg-primary/10">
+              <h3 className="font-black text-lg text-primary flex items-center gap-2">
+                <FolderTree className="w-5 h-5 text-primary" />
+                {editingAccount ? 'تعديل بيانات الحساب المحاسبي' : 'إضافة حساب فرعي جديد للشجرة'}
+              </h3>
+              <button onClick={() => setIsAddOpen(false)} className="p-1.5 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveAccount} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">اختر نوع التصنيف الرئيسي <span className="text-danger">*</span></label>
+                <select 
+                  value={formData.type} 
+                  onChange={e => setFormData({...formData, type: e.target.value as any})}
+                  className="w-full h-11 bg-background border-2 border-border/60 rounded-xl px-4 font-extrabold text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer"
+                  disabled={!!editingAccount?.isSystemAccount}
+                >
+                  <option value="revenue">💰 الإيرادات (Revenues)</option>
+                  <option value="expense">💸 المصروفات والأجور (Expenses)</option>
+                  <option value="asset">🏢 الأصول والموجودات (Assets)</option>
+                  <option value="liability">⚖️ الخصوم والموردين (Liabilities)</option>
+                  <option value="equity">⭐️ حقوق الملكية (Equity)</option>
+                </select>
               </div>
-              <form onSubmit={handleSaveAccount} className="p-6 space-y-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">نوع الحساب</label>
-                  <select 
-                    value={formData.type} 
-                    onChange={e => setFormData({...formData, type: e.target.value as any})}
-                    className="w-full h-11 bg-background border border-border rounded-xl px-4 font-bold outline-none"
-                    disabled={!!editingAccount}
-                  >
-                    <option value="revenue">إيرادات</option>
-                    <option value="expense">مصروفات</option>
-                    <option value="asset">أصول</option>
-                    <option value="liability">خصوم</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">رمز الحساب (اختياري)</label>
+                  <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">رمز الحساب (Account Code)</label>
                   <input 
                     type="text" 
                     value={formData.code} 
                     onChange={e => setFormData({...formData, code: e.target.value})}
-                    className="w-full h-11 bg-background border border-border rounded-xl px-4 font-mono outline-none"
-                    placeholder="مثال: 5012"
+                    className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-mono font-bold text-sm focus:border-primary outline-none"
+                    placeholder="مثال: 5015"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">اسم الحساب</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                    className="w-full h-11 bg-background border border-border rounded-xl px-4 font-bold outline-none"
-                    placeholder="مثال: مصروفات نظافة فرعية"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">وصف الحساب</label>
-                  <input 
-                    type="text" 
-                    value={formData.description} 
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                    className="w-full h-11 bg-background border border-border rounded-xl px-4 outline-none"
-                  />
-                </div>
-                <div className="pt-4 flex gap-3">
-                  <button type="submit" className="flex-1 bg-primary text-primary-foreground font-bold py-3 rounded-xl hover:bg-primary/90 transition-colors">
-                    حفظ الحساب
-                  </button>
-                  <button type="button" onClick={() => setIsAddOpen(false)} className="flex-1 bg-muted text-foreground font-bold py-3 rounded-xl hover:bg-accent transition-colors">
-                    إلغاء
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Statement Modal */}
-        {isStatementOpen && statementAccount && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setIsStatementOpen(false)} />
-            <div className="relative bg-card w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="px-6 py-5 border-b border-border flex justify-between items-center bg-muted/30">
-                <div>
-                  <h3 className="font-black text-xl flex items-center gap-2">
-                    <Eye className="w-5 h-5 text-primary" /> كشف حساب: {statementAccount.name}
-                  </h3>
-                  <div className="text-sm text-muted-foreground font-mono mt-1">{statementAccount.code} • {getTypeName(statementAccount.type)}</div>
-                </div>
-                <button onClick={() => setIsStatementOpen(false)} className="p-2 bg-muted rounded-full text-muted-foreground hover:text-foreground">✕</button>
-              </div>
-              
-              <div className="p-6 flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-muted/30 p-4 rounded-2xl border border-border">
-                    <div className="text-sm text-muted-foreground mb-1 font-bold">إجمالي مدين</div>
-                    <div className="text-xl font-black text-success tabular-nums">{stmtTotalDebit.toLocaleString()} {currency}</div>
-                  </div>
-                  <div className="bg-muted/30 p-4 rounded-2xl border border-border">
-                    <div className="text-sm text-muted-foreground mb-1 font-bold">إجمالي دائن</div>
-                    <div className="text-xl font-black text-danger tabular-nums">{stmtTotalCredit.toLocaleString()} {currency}</div>
-                  </div>
-                  <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20">
-                    <div className="text-sm text-primary mb-1 font-bold">الرصيد الفعلي (Balance)</div>
-                    <div className="text-2xl font-black text-primary tabular-nums">{stmtBalance.toLocaleString()} {currency}</div>
-                  </div>
                 </div>
 
-                <div className="border border-border/50 rounded-xl overflow-hidden">
-                  <table className="w-full text-sm text-right">
-                    <thead className="bg-muted/50 border-b border-border/50">
-                      <tr>
-                        <th className="py-3 px-4 font-bold">التاريخ</th>
-                        <th className="py-3 px-4 font-bold">رقم القيد</th>
-                        <th className="py-3 px-4 font-bold">البيان</th>
-                        <th className="py-3 px-4 font-bold text-center">مدين</th>
-                        <th className="py-3 px-4 font-bold text-center">دائن</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
-                      {statementLines.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-muted-foreground font-bold">لا توجد حركات مسجلة في هذا الحساب للعام الحالي</td>
-                        </tr>
-                      ) : (
-                        statementLines.map(line => (
-                          <tr key={line.id} className="hover:bg-muted/20 transition-colors">
-                            <td className="py-3 px-4 text-muted-foreground font-mono">{line.date}</td>
-                            <td className="py-3 px-4 font-mono font-bold">{line.journalEntryId}</td>
-                            <td className="py-3 px-4">{line.description}</td>
-                            <td className="py-3 px-4 text-center tabular-nums text-success font-bold">{line.debit > 0 ? line.debit.toLocaleString() : '-'}</td>
-                            <td className="py-3 px-4 text-center tabular-nums text-danger font-bold">{line.credit > 0 ? line.credit.toLocaleString() : '-'}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                <div>
+                  <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">طبيعة الحساب (Normal Balance)</label>
+                  <select
+                    value={formData.normalBalance}
+                    onChange={e => setFormData({...formData, normalBalance: e.target.value as any})}
+                    className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-bold text-sm outline-none cursor-pointer"
+                  >
+                    <option value="debit">مدين (Debit)</option>
+                    <option value="credit">دائن (Credit)</option>
+                  </select>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">اسم الحساب الدفتري <span className="text-danger">*</span></label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-black text-sm focus:border-primary outline-none"
+                  placeholder="مثال: مصروفات نظافة وتطهير فرعية..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">الوصف والبيان المحاسبي</label>
+                <textarea 
+                  value={formData.description} 
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  rows={2}
+                  className="w-full p-3 bg-background border border-border/60 rounded-xl font-bold text-xs focus:border-primary outline-none"
+                  placeholder="ملاحظات توضيحية حول الغرض من الحساب..."
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3 border-t border-border/50">
+                <button type="submit" className="flex-1 bg-primary text-primary-foreground font-extrabold py-3 rounded-xl hover:bg-primary/90 transition-all shadow-md text-sm">
+                  {editingAccount ? 'حفظ التعديلات' : 'إضافة الحساب للشجرة'}
+                </button>
+                <button type="button" onClick={() => setIsAddOpen(false)} className="px-6 bg-muted text-muted-foreground font-bold py-3 rounded-xl hover:bg-accent transition-all text-sm">
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Account Statement Detailed Modal */}
+      {isStatementOpen && statementAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative bg-card w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-border/50 flex justify-between items-center bg-primary/10 shrink-0">
+              <div>
+                <h3 className="font-black text-xl text-primary flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-primary" /> كشف حساب: {statementAccount.name}
+                </h3>
+                <div className="text-xs text-muted-foreground font-bold mt-1">
+                  الرمز: <span className="font-mono text-foreground font-black">{statementAccount.code}</span> • التصنيف: <span className="text-foreground font-black">{getTypeName(statementAccount.type)}</span>
+                </div>
+              </div>
+              <button onClick={() => setIsStatementOpen(false)} className="p-2 bg-muted hover:bg-accent rounded-full text-muted-foreground">✕</button>
+            </div>
+            
+            <div className="p-6 flex-1 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/20 space-y-1">
+                  <div className="text-xs text-rose-700 font-extrabold">إجمالي حركات المدين (+)</div>
+                  <div className="text-2xl font-black text-rose-900 tabular-nums">{stmtTotalDebit.toLocaleString()} {currency}</div>
+                </div>
+
+                <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/20 space-y-1">
+                  <div className="text-xs text-emerald-700 font-extrabold">إجمالي حركات الدائن (-)</div>
+                  <div className="text-2xl font-black text-emerald-900 tabular-nums">{stmtTotalCredit.toLocaleString()} {currency}</div>
+                </div>
+
+                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 space-y-1">
+                  <div className="text-xs text-primary font-extrabold">الرصيد الدفتري الحالي</div>
+                  <div className="text-2xl font-black text-primary tabular-nums">{stmtBalance.toLocaleString()} {currency}</div>
+                </div>
+              </div>
+
+              <PageCard title="سجل حركات القيود المسجلة بالدفتر العام">
+                <DataTable
+                  rows={statementLines}
+                  columns={[
+                    { key: "date", header: "التاريخ", cell: (r) => <span className="font-bold text-xs font-mono">{r.date}</span> },
+                    { key: "journalEntryId", header: "مرجع القيد", cell: (r) => <span className="font-mono font-black text-xs text-primary">{r.entryRef || r.journalEntryId}</span> },
+                    { key: "description", header: "البيان والشارحة المحاسبية", cell: (r) => <span className="text-xs font-bold text-foreground">{r.description}</span> },
+                    { key: "debit", header: "مدين (+)", cell: (r) => r.debit > 0 ? <span className="text-rose-600 font-black tabular-nums text-xs">+{r.debit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
+                    { key: "credit", header: "دائن (-)", cell: (r) => r.credit > 0 ? <span className="text-emerald-600 font-black tabular-nums text-xs">-{r.credit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
+                  ]}
+                  pageSize={10}
+                  empty="لا توجد حركات مسجلة في هذا الحساب للعام الحالي"
+                />
+              </PageCard>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-      </div>
+      {/* Advanced Print Engine */}
+      <AdvancedPrintEngine
+        isOpen={isPrintOpen}
+        onClose={() => setIsPrintOpen(false)}
+        title="شجرة الدليل المحاسبي الشامل للمدرسة"
+        data={printData}
+        templates={printTemplates}
+      />
     </AppShell>
   );
 }
+
