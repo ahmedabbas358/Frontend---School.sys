@@ -3,6 +3,7 @@ import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
+import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 import { FileBadge, Plus, Calendar, Settings, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -26,6 +27,9 @@ function ContractsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(new Date(Date.now() + 365 * 86400000).toISOString().split("T")[0]);
+
   const activeStaff = useMemo(() => activeStageStaff.filter(s => !s.isDeleted), [activeStageStaff]);
   const activeStaffIds = useMemo(() => new Set(activeStaff.map(item => item.id)), [activeStaff]);
   const scopedContracts = useMemo(() => {
@@ -48,14 +52,17 @@ function ContractsPage() {
     const staffId = formData.get("staffId") as string;
     const staff = activeStaff.find(s => s.id === staffId);
     
-    if (!staff) return;
+    if (!staff) {
+      toast.error("يرجى اختيار الموظف");
+      return;
+    }
 
     addStaffContract({
       staffId,
       staffName: staff.name,
       type: formData.get("type") as any,
-      startDate: formData.get("startDate") as string,
-      endDate: formData.get("endDate") as string,
+      startDate,
+      endDate,
       basicSalary: Number(formData.get("basicSalary")) || 0,
       status: formData.get("status") as any,
     });
@@ -129,12 +136,20 @@ function ContractsPage() {
                   <input name="basicSalary" type="number" required className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" placeholder="الراتب المتفق عليه بالعقد" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1 block">تاريخ بداية العقد</label>
-                  <input name="startDate" type="date" required className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                  <ArabicDatePicker
+                    label="تاريخ بداية العقد"
+                    required
+                    value={startDate}
+                    onChange={setStartDate}
+                  />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1 block">تاريخ نهاية العقد</label>
-                  <input name="endDate" type="date" required className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                  <ArabicDatePicker
+                    label="تاريخ نهاية العقد"
+                    required
+                    value={endDate}
+                    onChange={setEndDate}
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-muted-foreground mb-1 block">الحالة</label>

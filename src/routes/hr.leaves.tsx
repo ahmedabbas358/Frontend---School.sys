@@ -3,6 +3,7 @@ import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore, StaffLeave } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
+import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 import { Calendar, Plus, Check, X, Search, Clock, UserCheck, UserX } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -73,13 +74,14 @@ function HrLeaves() {
     toast.success(status === "approved" ? "تم اعتماد الإجازة وربطها بسجل الموظف" : "تم رفض الإجازة وحفظ القرار في سجل الموظف");
   };
 
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
+
   const handleAdd = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const staffId = formData.get("staffId") as string;
     const staff = staffInScope.find(item => item.id === staffId);
-    const startDate = formData.get("startDate") as string;
-    const endDate = formData.get("endDate") as string;
     const days = countDays(startDate, endDate);
 
     if (!staff) {
@@ -92,17 +94,16 @@ function HrLeaves() {
     }
 
     addStaffLeave({
-      staffId,
+      staffId: staff.id,
       staffName: staff.name,
-      type: formData.get("type") as StaffLeave["type"],
+      type: (formData.get("type") as StaffLeave["type"]) || "annual",
       startDate,
       endDate,
       days,
       status: "pending",
-      notes: formData.get("notes") as string,
+      notes: (formData.get("notes") as string) || undefined,
     });
-
-    toast.success("تم تسجيل طلب الإجازة وإظهاره للمراجعة");
+    toast.success("تم تسجيل طلب الإجازة بنجاح وإرساله للاعتماد");
     setShowAdd(false);
     event.currentTarget.reset();
   };
@@ -173,12 +174,20 @@ function HrLeaves() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-muted-foreground">من</label>
-                  <input name="startDate" type="date" required className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm" />
+                  <ArabicDatePicker
+                    label="من تاريخ"
+                    required
+                    value={startDate}
+                    onChange={setStartDate}
+                  />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-muted-foreground">إلى</label>
-                  <input name="endDate" type="date" required className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm" />
+                  <ArabicDatePicker
+                    label="إلى تاريخ"
+                    required
+                    value={endDate}
+                    onChange={setEndDate}
+                  />
                 </div>
               </div>
               <textarea name="notes" rows={2} placeholder="ملاحظات الطلب..." className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />

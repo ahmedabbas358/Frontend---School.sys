@@ -6,6 +6,7 @@ import { useStage } from "@/contexts/StageContext";
 import { FileWarning, Save, Users, BookOpen, Clock, AlertTriangle, Search, Printer, CalendarDays, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 
 export const Route = createFileRoute("/attendance/take")({
   component: TakeAttendance,
@@ -185,8 +186,12 @@ function TakeAttendance() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-muted-foreground">التاريخ</label>
-                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary" />
+                  <ArabicDatePicker
+                    label="تاريخ الرصد"
+                    value={date}
+                    onChange={(newVal) => setDate(newVal)}
+                    showAgeCalculator={false}
+                  />
                 </div>
               </div>
             </PageCard>

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
+import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 import { useGlobalStore, Exam, ExamSubject } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
@@ -161,12 +162,22 @@ function ExamsPeriodView() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">تاريخ البداية <span className="text-danger">*</span></label>
-                  <input type="date" required value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary" />
+                  <ArabicDatePicker
+                    label="تاريخ البداية"
+                    required
+                    value={formData.startDate}
+                    onChange={(val) => setFormData({ ...formData, startDate: val })}
+                    showAgeCalculator={false}
+                  />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">تاريخ النهاية <span className="text-danger">*</span></label>
-                  <input type="date" required min={formData.startDate} value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary" />
+                  <ArabicDatePicker
+                    label="تاريخ النهاية"
+                    required
+                    value={formData.endDate}
+                    onChange={(val) => setFormData({ ...formData, endDate: val })}
+                    showAgeCalculator={false}
+                  />
                 </div>
               </div>
 
@@ -290,8 +301,13 @@ function ExamSubjectsScheduleView() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-muted-foreground">تاريخ الاختبار للمادة <span className="text-danger">*</span></label>
-                <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary" />
+                <ArabicDatePicker
+                  label="تاريخ الاختبار للمادة"
+                  required
+                  value={formData.date}
+                  onChange={(val) => setFormData({ ...formData, date: val })}
+                  showAgeCalculator={false}
+                />
               </div>
 
               <div className="grid grid-cols-3 gap-4">

@@ -3,6 +3,7 @@ import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore, StaffAttendanceRecord } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
+import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 import { Clock, Download, Check, X, Printer, CalendarDays, Filter, TrendingDown, AlertTriangle, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
@@ -217,12 +218,12 @@ function HrAttendance() {
                 <Clock className="h-5 w-5" />
                 <h2 className="text-lg font-bold">رصد اليوم</h2>
               </div>
-              <input
-                type="date"
-                value={dailyDate}
-                onChange={event => setDailyDate(event.target.value)}
-                className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none focus:border-primary"
-              />
+              <div className="w-56">
+                <ArabicDatePicker
+                  value={dailyDate}
+                  onChange={setDailyDate}
+                />
+              </div>
             </div>
 
             <DataTable
@@ -264,17 +265,17 @@ function HrAttendance() {
                 <Clock className="h-5 w-5" />
                 <h2 className="text-lg font-bold">رصد حصص المعلمين</h2>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={lessonDate}
-                  onChange={event => setLessonDate(event.target.value)}
-                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none focus:border-primary"
-                />
+              <div className="flex items-center gap-2">
+                <div className="w-56">
+                  <ArabicDatePicker
+                    value={lessonDate}
+                    onChange={setLessonDate}
+                  />
+                </div>
                 <select
                   value={lessonNumber}
                   onChange={event => setLessonNumber(event.target.value)}
-                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none focus:border-primary"
+                  className="h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
                 >
                   {[1,2,3,4,5,6,7].map(num => (
                     <option key={num} value={num.toString()}>الحصة {num}</option>
@@ -319,9 +320,18 @@ function HrAttendance() {
                 <h2 className="text-lg font-bold">التتبع الأسبوعي</h2>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <input type="date" value={dateRange.start} onChange={event => setDateRange(prev => ({ ...prev, start: event.target.value }))} className="h-9 rounded-lg border border-input bg-background px-3 text-sm" />
-                <input type="date" value={dateRange.end} onChange={event => setDateRange(prev => ({ ...prev, end: event.target.value }))} className="h-9 rounded-lg border border-input bg-background px-3 text-sm" />
-                <button className="grid h-9 w-9 place-items-center rounded-lg bg-muted hover:bg-accent" title="تطبيق الفلتر"><Filter className="h-4 w-4" /></button>
+                <div className="w-48">
+                  <ArabicDatePicker
+                    value={dateRange.start}
+                    onChange={val => setDateRange(prev => ({ ...prev, start: val }))}
+                  />
+                </div>
+                <div className="w-48">
+                  <ArabicDatePicker
+                    value={dateRange.end}
+                    onChange={val => setDateRange(prev => ({ ...prev, end: val }))}
+                  />
+                </div>
               </div>
             </div>
 

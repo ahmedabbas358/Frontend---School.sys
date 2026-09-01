@@ -1,12 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, Calculator, Calendar, Users, Settings, Briefcase, Wrench, Shield, CreditCard } from 'lucide-react';
+import { 
+  Search, 
+  Users, 
+  Settings, 
+  Briefcase, 
+  Wrench, 
+  Shield, 
+  CreditCard,
+  PanelRightOpen,
+  PanelRightClose,
+  Maximize2,
+  Minimize2,
+  GraduationCap,
+  Sparkles,
+  Sun,
+  Moon,
+  ChevronLeft
+} from 'lucide-react';
 import { useGlobalStore } from '@/contexts/GlobalStoreContext';
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [deferredQuery, setDeferredQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const globalStore = useGlobalStore();
@@ -38,48 +56,106 @@ export function CommandPalette() {
       setTimeout(() => inputRef.current?.focus(), 100);
       setQuery('');
       setDeferredQuery('');
+      setSelectedIndex(0);
     }
   }, [isOpen]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDeferredQuery(query), 150);
+    const timer = setTimeout(() => {
+      setDeferredQuery(query);
+      setSelectedIndex(0);
+    }, 100);
     return () => clearTimeout(timer);
   }, [query]);
 
-  if (!isOpen) return null;
+  // Static quick actions and main sections
+  const systemActions = [
+    { 
+      id: 'sidebar-exp', 
+      category: 'التحكم في العرض',
+      title: 'الشريط الجانبي: الوضع الكامل (Expanded)', 
+      icon: PanelRightOpen, 
+      action: () => {
+        localStorage.setItem("darasi_sidebar_mode", "expanded");
+        window.dispatchEvent(new Event("storage"));
+        window.location.reload();
+      }, 
+      keywords: 'sidebar expand شريط كامل عرض' 
+    },
+    { 
+      id: 'sidebar-rail', 
+      category: 'التحكم في العرض',
+      title: 'الشريط الجانبي: وضع الأيقونات (Rail)', 
+      icon: Minimize2, 
+      action: () => {
+        localStorage.setItem("darasi_sidebar_mode", "rail");
+        window.dispatchEvent(new Event("storage"));
+        window.location.reload();
+      }, 
+      keywords: 'sidebar rail ايقونات مصغر مدمج' 
+    },
+    { 
+      id: 'sidebar-full', 
+      category: 'التحكم في العرض',
+      title: 'الشريط الجانبي: وضع ملء الشاشة (Zen)', 
+      icon: Maximize2, 
+      action: () => {
+        localStorage.setItem("darasi_sidebar_mode", "fullscreen");
+        window.dispatchEvent(new Event("storage"));
+        window.location.reload();
+      }, 
+      keywords: 'sidebar fullscreen كامل شاشة إخفاء' 
+    },
+  ];
 
-  // Static routes
   const staticCommands = [
-    { id: '1', title: 'لوحة التحكم الإدارية', icon: Shield, to: '/admin/dashboard', keywords: 'admin dashboard إدارة' },
-    { id: '2', title: 'إعدادات النظام المركزية', icon: Settings, to: '/settings', keywords: 'settings اعدادات إعدادات' },
-    { id: '3', title: 'المرافق والخدمات', icon: Wrench, to: '/facilities/dashboard', keywords: 'facilities صيانة مرافق' },
-    { id: '4', title: 'الموارد البشرية (HR)', icon: Briefcase, to: '/hr/dashboard', keywords: 'hr موظفين رواتب' },
-    { id: '5', title: 'السجل المالي', icon: CreditCard, to: '/finance', keywords: 'finance مالية رسوم' },
+    { id: '1', category: 'الأقسام الرئيسية', title: 'لوحة التحكم الرئيسية', icon: Sparkles, to: '/', keywords: 'home dashboard رئيسية لوحة' },
+    { id: '2', category: 'الأقسام الرئيسية', title: 'سجل الطلاب والتسجيل', icon: Users, to: '/students', keywords: 'students طلاب تسجيل جديد' },
+    { id: '3', category: 'الأقسام الرئيسية', title: 'المركز المالي والحسابات', icon: CreditCard, to: '/finance', keywords: 'finance مالية رسوم سندات خزينة' },
+    { id: '4', category: 'الأقسام الرئيسية', title: 'شؤون الموظفين والرواتب', icon: Briefcase, to: '/hr/dashboard', keywords: 'hr موظفين رواتب إجازات' },
+    { id: '5', category: 'الأقسام الرئيسية', title: 'الإدارة الأكاديمية والصفوف', icon: GraduationCap, to: '/academic/classes', keywords: 'academic صفوف مواد اسناد' },
+    { id: '6', category: 'الأقسام الرئيسية', title: 'المرافق والصيانة', icon: Wrench, to: '/facilities/dashboard', keywords: 'facilities صيانة مرافق مستودعات' },
+    { id: '7', category: 'الأقسام الرئيسية', title: 'إعدادات النظام المركزية', icon: Settings, to: '/settings', keywords: 'settings اعدادات إعدادات تخصيص' },
   ];
 
   // Dynamic search from GlobalStore
   const dynamicCommands: any[] = [];
   
-  if (deferredQuery.length > 1) {
+  if (deferredQuery.length > 0) {
     const q = deferredQuery.toLowerCase();
+    
     // Search Students
     let count = 0;
-    for (let i = 0; i < globalStore.allStudents.length; i++) {
-      if (count > 5) break; // Optimization: Stop after 5 matches
+    for (let i = 0; i < (globalStore.allStudents || []).length; i++) {
+      if (count >= 4) break;
       const s = globalStore.allStudents[i];
-      if (s.name.includes(q) || s.id.toLowerCase().includes(q)) {
-        dynamicCommands.push({ id: `stu-${s.id}`, title: `الطالب: ${s.name}`, icon: Users, to: `/students/${s.id}`, keywords: '' });
+      if (s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q) || (s.nationalId && s.nationalId.includes(q))) {
+        dynamicCommands.push({ 
+          id: `stu-${s.id}`, 
+          category: 'الطلاب',
+          title: `الطالب: ${s.name} (${s.grade || 'طالب'})`, 
+          icon: Users, 
+          to: `/students/${s.id}`, 
+          keywords: '' 
+        });
         count++;
       }
     }
     
     // Search Staff
     count = 0;
-    for (let i = 0; i < globalStore.allStaff.length; i++) {
-      if (count > 3) break;
+    for (let i = 0; i < (globalStore.allStaff || []).length; i++) {
+      if (count >= 3) break;
       const s = globalStore.allStaff[i];
-      if (s.name.includes(q) || s.id.toLowerCase().includes(q)) {
-        dynamicCommands.push({ id: `staff-${s.id}`, title: `الموظف: ${s.name} (${s.role})`, icon: Briefcase, to: `/hr/evaluations`, keywords: '' });
+      if (s.name.toLowerCase().includes(q) || (s.role && s.role.toLowerCase().includes(q))) {
+        dynamicCommands.push({ 
+          id: `staff-${s.id}`, 
+          category: 'الكادر التعليمي والإداري',
+          title: `الموظف: ${s.name} — ${s.role}`, 
+          icon: Briefcase, 
+          to: `/hr/staff/${s.id}`, 
+          keywords: '' 
+        });
         count++;
       }
     }
@@ -88,70 +164,134 @@ export function CommandPalette() {
     count = 0;
     const rooms = globalStore.allRooms || [];
     for (let i = 0; i < rooms.length; i++) {
-      if (count > 2) break;
+      if (count >= 2) break;
       const r = rooms[i];
-      if (r.name.includes(q) || r.type.includes(q)) {
-        dynamicCommands.push({ id: `room-${r.id}`, title: `المرفق: ${r.name}`, icon: Wrench, to: `/facilities/rooms`, keywords: '' });
+      if (r.name.toLowerCase().includes(q) || (r.type && r.type.toLowerCase().includes(q))) {
+        dynamicCommands.push({ 
+          id: `room-${r.id}`, 
+          category: 'المرافق والقاعات',
+          title: `المرفق: ${r.name} (${r.type})`, 
+          icon: Wrench, 
+          to: `/facilities/rooms`, 
+          keywords: '' 
+        });
         count++;
       }
     }
   }
 
-  const allCommands = [...staticCommands, ...dynamicCommands].filter(cmd => {
-    if (!deferredQuery) return staticCommands.includes(cmd); // show static by default
+  const allCommands = [...systemActions, ...staticCommands, ...dynamicCommands].filter(cmd => {
+    if (!deferredQuery) return true;
     const q = deferredQuery.toLowerCase();
-    return cmd.title.toLowerCase().includes(q) || cmd.keywords.includes(q);
-  }).slice(0, 10); // limit results
+    return (
+      cmd.title.toLowerCase().includes(q) || 
+      (cmd.keywords && cmd.keywords.toLowerCase().includes(q)) ||
+      cmd.category.toLowerCase().includes(q)
+    );
+  }).slice(0, 12);
 
-  const handleSelect = (to: string) => {
+  const handleSelect = (item: any) => {
     setIsOpen(false);
-    navigate({ to });
+    if (item.action) {
+      item.action();
+    } else if (item.to) {
+      navigate({ to: item.to });
+    }
   };
 
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev + 1) % Math.max(allCommands.length, 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev - 1 + allCommands.length) % Math.max(allCommands.length, 1));
+    } else if (e.key === 'Enter' && allCommands[selectedIndex]) {
+      e.preventDefault();
+      handleSelect(allCommands[selectedIndex]);
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[999] flex items-start justify-center pt-[15vh] sm:pt-[20vh] bg-black/50 backdrop-blur-sm" onClick={() => setIsOpen(false)} dir="rtl">
+    <div 
+      className="fixed inset-0 z-[999] flex items-start justify-center pt-[10vh] sm:pt-[15vh] bg-black/60 backdrop-blur-md animate-in fade-in duration-200" 
+      onClick={() => setIsOpen(false)} 
+      dir="rtl"
+    >
       <div 
-        className="w-full max-w-xl bg-background/80 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_-10px_rgba(0,0,0,0.3)] border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-xl bg-card border border-border shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
       >
-        <div className="flex items-center px-4 border-b border-border">
-          <Search className="w-5 h-5 text-muted-foreground shrink-0" />
+        {/* Search Header */}
+        <div className="flex items-center px-4 py-3.5 border-b border-border bg-muted/20 gap-3">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary shrink-0">
+            <Search className="w-5 h-5" />
+          </div>
           <input
             ref={inputRef}
-            className="flex h-14 w-full bg-transparent px-3 py-3 text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="ابحث عن صفحات، طلاب، موظفين... (أو اضغط Esc للإلغاء)"
+            className="flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground text-foreground"
+            placeholder="ابحث عن صفحات، طلاب، موظفين، أو أوامر تحكم... (Esc للإلغاء)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <div className="text-[10px] font-bold text-muted-foreground border px-1.5 py-0.5 rounded shrink-0">ESC</div>
+          <div className="text-[10px] font-extrabold text-muted-foreground border border-border bg-muted px-2 py-1 rounded-lg shrink-0">
+            ESC
+          </div>
         </div>
         
-        <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-2">
+        {/* Command List */}
+        <div className="overflow-y-auto custom-scrollbar p-2 space-y-1 max-h-[420px]">
           {allCommands.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">لا توجد نتائج مطابقة لبحثك.</div>
-          ) : (
-            <div className="space-y-1">
-              {allCommands.map((cmd) => {
-                const Icon = cmd.icon;
-                return (
-                  <button
-                    key={cmd.id}
-                    onClick={() => handleSelect(cmd.to)}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-right hover:bg-primary hover:text-primary-foreground transition-all duration-200 focus:bg-primary focus:text-primary-foreground focus:outline-none group"
-                  >
-                    <div className="bg-muted group-hover:bg-primary-foreground/20 p-2 rounded-lg transition-colors"><Icon className="w-4 h-4 opacity-70 group-hover:opacity-100" /></div>
-                    {cmd.title}
-                  </button>
-                );
-              })}
+            <div className="py-10 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
+              <Search className="w-8 h-8 opacity-30" />
+              <span>لا توجد نتائج مطابقة لبحثك.</span>
             </div>
+          ) : (
+            allCommands.map((cmd, idx) => {
+              const Icon = cmd.icon;
+              const isSelected = idx === selectedIndex;
+              return (
+                <button
+                  key={cmd.id}
+                  onClick={() => handleSelect(cmd)}
+                  onMouseEnter={() => setSelectedIndex(idx)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold text-right transition-all duration-150 ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-[0.99]'
+                      : 'hover:bg-accent text-foreground'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-xl transition-colors shrink-0 ${
+                      isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-foreground'
+                    }`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-extrabold">{cmd.title}</div>
+                      <div className={`text-[10px] truncate ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                        {cmd.category}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronLeft className={`w-4 h-4 shrink-0 transition-transform ${isSelected ? '-translate-x-1' : 'opacity-40'}`} />
+                </button>
+              );
+            })
           )}
         </div>
         
-        <div className="border-t border-border p-2 bg-muted/30 flex items-center gap-4 text-xs text-muted-foreground font-medium justify-center">
-           <span>استخدم الأسهم للتنقل</span>
+        {/* Footer shortcuts hint */}
+        <div className="border-t border-border p-2.5 bg-muted/20 flex items-center gap-4 text-[11px] text-muted-foreground font-semibold justify-center">
+           <span>↑↓ للتنقل</span>
            <span>•</span>
            <span>Enter للاختيار</span>
+           <span>•</span>
+           <span>Ctrl+B لتبديل الشريط الجانبي</span>
         </div>
       </div>
     </div>

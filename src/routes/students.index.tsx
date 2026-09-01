@@ -1,329 +1,602 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useTransition, useEffect } from "react";
-import { AppShell, Badge, PageCard } from "@/components/app-shell";
-import { DataTable } from "@/components/data-table";
-import { useGlobalStore } from "@/contexts/GlobalStoreContext";
+import { AppShell, Badge, PageCard, formatCurrency } from "@/components/app-shell";
+import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
+import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
-import { Download, Filter, Plus, Search, Eye, Pencil, Trash2, LayoutGrid, List, Printer, ShieldCheck, MapPin, Undo2, AlertCircle } from "lucide-react";
+import { 
+  Download, 
+  Filter, 
+  Plus, 
+  Search, 
+  Eye, 
+  Pencil, 
+  Trash2, 
+  LayoutGrid, 
+  List, 
+  Printer, 
+  ShieldCheck, 
+  MapPin, 
+  Undo2, 
+  AlertCircle,
+  Phone,
+  MessageSquare,
+  Users,
+  Layers3,
+  Calendar,
+  DollarSign,
+  ChevronLeft,
+  ChevronRight,
+  CheckSquare,
+  Square,
+  GraduationCap,
+  Sparkles,
+  ArrowRightLeft,
+  X,
+  Check,
+  CreditCard,
+  HeartHandshake,
+  UserCheck,
+  FileSpreadsheet,
+  MoreHorizontal
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/students/")({
   head: () => ({
     meta: [
-      { title: "قائمة الطلاب | منصة مدارس" },
-      { name: "description", content: "إدارة بيانات الطلاب: البحث، التصفية، التصدير والإجراءات الجماعية." },
+      { title: "سجل وملفات الطلاب | منصة مدارس" },
+      { name: "description", content: "إدارة بيانات الطلاب والصفوف والشعب والملفات الشاملة لآلاف الطلاب." },
     ],
   }),
   component: StudentsListPage,
 });
 
 function StudentsListPage() {
-  const { activeStageStudents, allDeletedStudents, allSections, softDeleteStudent, restoreStudent, hardDeleteStudent } = useGlobalStore();
+  const { 
+    activeStageStudents, 
+    allDeletedStudents, 
+    allSections, 
+    allInvoices,
+    allPayments,
+    allGuardians,
+    currency,
+    softDeleteStudent, 
+    restoreStudent, 
+    hardDeleteStudent,
+    updateStudent
+  } = useGlobalStore();
+
   const { stage, getStageLabel } = useStage();
+
+  // Search & Filters
   const [q, setQ] = useState("");
-  const [sortBy, setSortBy] = useState("name"); // "name" | "grade" | "id"
-  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "active" | "inactive" | "trash"
+  const [selectedGrade, setSelectedGrade] = useState<string>("all");
+  const [selectedSectionId, setSelectedSectionId] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active"); // "active" | "all" | "inactive" | "trash"
+  const [genderFilter, setGenderFilter] = useState<string>("all"); // "all" | "ذكر" | "أنثى"
+  const [financialFilter, setFinancialFilter] = useState<string>("all"); // "all" | "paid" | "due"
+  const [sortBy, setSortBy] = useState<string>("name"); // "name" | "grade" | "id" | "recent"
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  
+  // Pagination State for Handling Thousands of Students
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(25);
+
+  // Bulk Selection State
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPrintOpen, setIsPrintOpen] = useState(false);
-  
-  // UX for Massive Datasets (Millions of records)
-  const [isPending, startTransition] = useTransition();
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [targetTransferSectionId, setTargetTransferSectionId] = useState("");
+
+  // Quick 360° Student Profile & Edit Modal State
+  const [selectedStudentForView, setSelectedStudentForView] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<Student>>({});
+
+  // Debounced search for massive performance
   const [debouncedQ, setDebouncedQ] = useState(q);
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       startTransition(() => {
         setDebouncedQ(q);
+        setCurrentPage(1);
       });
-    }, 300);
+    }, 200);
     return () => clearTimeout(timer);
   }, [q]);
 
-  const baseStudents = statusFilter === "trash" ? allDeletedStudents.filter(s => s.stage === stage) : activeStageStudents;
+  // Available grades in current stage
+  const availableGrades = useMemo(() => {
+    const gradesSet = new Set<string>();
+    activeStageStudents.forEach(s => {
+      if (s.grade) gradesSet.add(s.grade);
+    });
+    return Array.from(gradesSet).sort();
+  }, [activeStageStudents]);
 
-  const filtered = useMemo(() => {
+  // Filter sections by selected grade
+  const availableSections = useMemo(() => {
+    let secs = allSections.filter(s => s.stage === stage);
+    if (selectedGrade !== "all") {
+      secs = secs.filter(s => s.grade === selectedGrade);
+    }
+    return secs;
+  }, [allSections, stage, selectedGrade]);
+
+  // Base list depending on trash vs active stage
+  const baseStudents = useMemo(() => {
+    return statusFilter === "trash" 
+      ? allDeletedStudents.filter(s => s.stage === stage) 
+      : activeStageStudents;
+  }, [statusFilter, allDeletedStudents, stage, activeStageStudents]);
+
+  // Filtered dataset
+  const filteredStudents = useMemo(() => {
     let result = baseStudents.filter((s) => {
-      if (debouncedQ && !s.name.includes(debouncedQ) && !s.id.includes(debouncedQ)) return false;
+      // Text Search
+      if (debouncedQ) {
+        const query = debouncedQ.trim().toLowerCase();
+        const matchName = s.name?.toLowerCase().includes(query);
+        const matchId = s.id?.toLowerCase().includes(query);
+        const matchNat = s.nationalId?.includes(query);
+        const matchGuardian = s.guardianName?.toLowerCase().includes(query);
+        const matchPhone = s.guardianPhone?.includes(query);
+        if (!matchName && !matchId && !matchNat && !matchGuardian && !matchPhone) {
+          return false;
+        }
+      }
+
+      // Grade Filter
+      if (selectedGrade !== "all" && s.grade !== selectedGrade) return false;
+
+      // Section Filter
+      if (selectedSectionId !== "all" && s.sectionId !== selectedSectionId) return false;
+
+      // Gender Filter
+      if (genderFilter !== "all" && s.gender !== genderFilter) return false;
+
+      // Status Filter
       if (statusFilter === "active" && s.status !== "نشط") return false;
       if (statusFilter === "inactive" && s.status === "نشط") return false;
+
       return true;
     });
 
+    // Sorting
     result.sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
-      if (sortBy === "grade") return a.grade.localeCompare(b.grade);
+      if (sortBy === "name") return a.name.localeCompare(b.name, "ar");
+      if (sortBy === "grade") return (a.grade || "").localeCompare(b.grade || "", "ar");
       if (sortBy === "id") return a.id.localeCompare(b.id);
       return 0;
     });
 
     return result;
-  }, [debouncedQ, sortBy, statusFilter, baseStudents]);
+  }, [baseStudents, debouncedQ, selectedGrade, selectedSectionId, genderFilter, statusFilter, sortBy]);
 
-  const printTemplates: PrintTemplate[] = useMemo(() => [
-    {
-      id: "all-students",
-      name: "قائمة الطلاب الشاملة",
-      category: "الطلاب",
-      type: "table",
-      description: "طباعة قائمة بجميع الطلاب",
-      columns: [
-        { label: "رقم القيد", key: "id" },
-        { label: "اسم الطالب", key: "name" },
-        { label: "الصف", key: "grade" },
-        { label: "الشعبة", key: "sectionId", render: (r) => allSections.find(x => x.id === r.sectionId)?.name || "-" },
-        { label: "حالة القيد", key: "status" },
-        { label: "ولي الأمر", key: "guardianName" },
-        { label: "الجوال", key: "guardianPhone" },
-      ]
-    },
-    {
-      id: "student-ids",
-      name: "بطاقات الطلاب (ID Cards)",
-      category: "الطلاب",
-      type: "cards",
-      description: "طباعة بطاقات الهوية المدرسية للطلاب",
-      columns: [
-        { label: "الرقم الجامعي", key: "id" },
-        { label: "اسم الطالب", key: "name" },
-        { label: "الصف", key: "grade" },
-      ]
-    },
-    {
-      id: "student-warning",
-      name: "إشعار / إنذار غياب",
-      category: "المراسلات",
-      type: "document",
-      description: "طباعة نموذج إنذار غياب مخصص لكل طالب",
-      renderDocument: (options, data) => {
-        const row = data[0]; // because it iterates over filteredData and passes [row]
-        return (
-          <div className="p-8 max-w-3xl mx-auto space-y-8 bg-white border-4 border-double border-primary/20 min-h-[600px]">
-            <h1 className="text-3xl font-black text-center text-primary underline mb-12">إشعار غياب / تنبيه أكاديمي</h1>
-            
-            <div className="text-lg space-y-6 leading-relaxed">
-              <p>المكرم ولي أمر الطالب / <span className="font-bold border-b-2 border-dashed border-primary px-4">{row.name}</span> المحترم،</p>
-              
-              <p>
-                نفيدكم علماً بأن ابنكم المقيد بالصف (<span className="font-bold text-primary">{row.grade}</span>) 
-                شعبة (<span className="font-bold text-primary">{row.sectionId || "غير محدد"}</span>) 
-                قد تجاوز نسبة الغياب المسموح بها حسب لوائح وزارة التعليم.
-              </p>
-              
-              <p>
-                نأمل منكم مراجعة إدارة شؤون الطلاب في المدرسة في أقرب وقت ممكن لتوضيح الأسباب، 
-                تفادياً لتطبيق الإجراءات النظامية والتي قد تصل إلى طي القيد.
-              </p>
-              
-              <p className="mt-8">شاكرين ومقدرين حسن تعاونكم،،،</p>
-            </div>
-          </div>
-        );
-      }
-    },
-    {
-      id: "official-letter",
-      name: "خطاب رسمي",
-      category: "المراسلات",
-      type: "document",
-      description: "طباعة خطاب رسمي مخصص",
-      renderDocument: (options, data) => {
-        const row = data[0];
-        return (
-          <div className="p-8 max-w-3xl mx-auto space-y-8 bg-white border-4 border-double border-primary/20 min-h-[600px]">
-            <h1 className="text-3xl font-black text-center text-primary mb-12">خطاب رسمي</h1>
-            <div className="text-lg space-y-6 leading-relaxed">
-              <p>التاريخ: {new Date().toLocaleDateString('ar-SA')}</p>
-              <p>الموضوع: خطاب رسمي بخصوص الطالب <span className="font-bold border-b-2 border-dashed border-primary px-4">{row.name}</span></p>
-              <p>إلى من يهمه الأمر،</p>
-              <p className="min-h-[150px]">
-                نأمل الإحاطة بأن الطالب المذكور أعلاه مقيد في صف (<span className="font-bold text-primary">{row.grade}</span>).
-                وهذا الخطاب بناء على طلب ولي الأمر دون أدنى مسؤولية على المدرسة.
-              </p>
-              <p className="mt-8">وتفضلوا بقبول فائق الاحترام والتقدير،،،</p>
-            </div>
-          </div>
-        );
-      }
-    },
-    {
-      id: "student-certificate",
-      name: "إفادة انتظام طالب",
-      category: "الطلاب",
-      type: "document",
-      description: "إصدار إفادة بانتظام الطالب في المدرسة",
-      renderDocument: (options, data) => {
-        const row = data[0];
-        return (
-          <div className="p-8 max-w-3xl mx-auto space-y-8 bg-white border-4 border-double border-primary/20 min-h-[600px]">
-            <h1 className="text-3xl font-black text-center text-primary underline mb-12">إفادة انتظام دراسي</h1>
-            <div className="text-lg space-y-6 leading-relaxed text-center">
-              <p>تشهد إدارة المدرسة بأن الطالب / <span className="font-bold text-xl px-4">{row.name}</span></p>
-              <p>رقم السجل: <span className="font-bold px-2">{row.id}</span></p>
-              <p>منتظم بالدراسة للعام الدراسي الحالي في الصف (<span className="font-bold text-primary">{row.grade}</span>) - شعبة (<span className="font-bold text-primary">{row.sectionId || "غير محدد"}</span>).</p>
-              <p className="mt-12 text-sm text-muted-foreground text-right">أعطيت له هذه الإفادة بناءً على طلبه لتقديمها إلى الجهات المختصة.</p>
-            </div>
-          </div>
-        );
-      }
+  // Total pages
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
+
+  // Current page slice
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredStudents.slice(start, start + pageSize);
+  }, [filteredStudents, currentPage, pageSize]);
+
+  // Grade Counts for quick chips
+  const gradeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: baseStudents.length };
+    baseStudents.forEach(s => {
+      if (s.grade) counts[s.grade] = (counts[s.grade] || 0) + 1;
+    });
+    return counts;
+  }, [baseStudents]);
+
+  // Bulk selection helpers
+  const handleToggleSelectAllPage = () => {
+    const next = new Set(selected);
+    const allPageSelected = paginatedStudents.every(s => next.has(s.id));
+    if (allPageSelected) {
+      paginatedStudents.forEach(s => next.delete(s.id));
+    } else {
+      paginatedStudents.forEach(s => next.add(s.id));
     }
-  ], [allSections]);
+    setSelected(next);
+  };
 
+  const handleToggleSelectStudent = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  };
+
+  // Bulk actions
   const handleBulkSoftDelete = () => {
-    if (confirm(`هل أنت متأكد من نقل ${selected.size} طالب إلى سلة المهملات؟`)) {
-      selected.forEach(id => softDeleteStudent(id));
-      setSelected(new Set());
-      toast.success("تم نقل الطلاب إلى سلة المهملات بنجاح");
-    }
+    if (!confirm(`هل أنت متأكد من نقل ${selected.size} طالب إلى سلة المهملات؟`)) return;
+    selected.forEach(id => softDeleteStudent(id));
+    setSelected(new Set());
+    toast.success(`تم نقل ${selected.size} طالب إلى سلة المهملات`);
   };
 
   const handleBulkRestore = () => {
-    if (confirm(`هل أنت متأكد من استعادة ${selected.size} طالب؟`)) {
-      selected.forEach(id => restoreStudent(id));
-      setSelected(new Set());
-      toast.success("تم استعادة الطلاب بنجاح");
-    }
+    selected.forEach(id => restoreStudent(id));
+    setSelected(new Set());
+    toast.success(`تمت استعادة ${selected.size} طالب بنجاح`);
   };
 
   const handleBulkHardDelete = () => {
-    if (confirm(`تحذير خطير: سيتم حذف ${selected.size} طالب بشكل نهائي مع كافة بياناتهم. هل أنت متأكد؟`)) {
-      selected.forEach(id => hardDeleteStudent(id));
-      setSelected(new Set());
-      toast.success("تم الحذف النهائي بنجاح");
+    if (!confirm(`تحذير نهائي: هل تريد حذف ${selected.size} طالب نهائياً من قاعدة البيانات؟`)) return;
+    selected.forEach(id => hardDeleteStudent(id));
+    setSelected(new Set());
+    toast.success(`تم الحذف النهائي لـ ${selected.size} طالب`);
+  };
+
+  const handleBulkTransfer = () => {
+    if (!targetTransferSectionId) {
+      toast.error("يرجى اختيار الشعبة المستهدفة لنقل الطلاب");
+      return;
     }
+    const targetSec = allSections.find(s => s.id === targetTransferSectionId);
+    selected.forEach(id => {
+      updateStudent(id, { sectionId: targetTransferSectionId });
+    });
+    setIsTransferModalOpen(false);
+    setSelected(new Set());
+    toast.success(`تم نقل ${selected.size} طالب بنجاح إلى شعبة (${targetSec?.name || ""})`);
+  };
+
+  // Quick Edit Save
+  const handleSaveStudentEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    updateStudent(editingStudent.id, editFormData);
+    toast.success("تم تحديث وتعديل بيانات ملف الطالب بنجاح!");
+    setEditingStudent(null);
+  };
+
+  const openEditModal = (student: Student) => {
+    setEditingStudent(student);
+    setEditFormData({
+      name: student.name,
+      nationalId: student.nationalId,
+      dob: student.dob,
+      gender: student.gender,
+      grade: student.grade,
+      sectionId: student.sectionId,
+      guardianName: student.guardianName,
+      guardianPhone: student.guardianPhone,
+      guardianRelationship: student.guardianRelationship,
+      status: student.status,
+    });
+  };
+
+  // Export CSV
+  const handleExportCSV = () => {
+    const headers = ["رقم القيد", "اسم الطالب", "الرقم الوطني", "الصف", "الشعبة", "ولي الأمر", "هاتف ولي الأمر", "الحالة"];
+    const rows = filteredStudents.map(s => [
+      s.id,
+      `"${s.name}"`,
+      s.nationalId || "-",
+      s.grade || "-",
+      allSections.find(x => x.id === s.sectionId)?.name || "-",
+      `"${s.guardianName || "-"}"`,
+      s.guardianPhone || "-",
+      s.status || "نشط"
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `students_${stage}_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("تم تصدير كشف الطلاب بنجاح (CSV / Excel)");
   };
 
   return (
     <AppShell
-      breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الطلاب" }]}
+      title={`سجل وملفات الطلاب — ${getStageLabel(stage)}`}
+      breadcrumb={[
+        { label: "الرئيسية", to: "/" },
+        { label: "الطلاب وأولياء الأمور", to: "/students" },
+        { label: "قائمة الطلاب" },
+      ]}
       actions={
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-card border border-border rounded-lg p-1 mr-2">
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
-              title="عرض كقائمة"
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
-              title="عرض كبطاقات"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border/80 bg-card text-xs font-bold hover:bg-accent text-foreground transition-colors shadow-xs"
+            title="تصدير كشف Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+            <span className="hidden sm:inline">تصدير كشف</span>
+          </button>
+
           <button
             onClick={() => setIsPrintOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-bold hover:bg-accent transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border/80 bg-card text-xs font-bold hover:bg-accent text-foreground transition-colors shadow-xs"
           >
-            <Printer className="h-4 w-4" /> طباعة متقدمة
+            <Printer className="w-4 h-4 text-blue-500" />
+            <span className="hidden sm:inline">طباعة وبطاقات</span>
           </button>
+
           <Link
             to="/students/new"
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-xs font-black rounded-xl hover:bg-primary/90 transition-all shadow-md glow-primary"
           >
-            <Plus className="h-4 w-4" /> تسجيل طالب
+            <Plus className="h-4 w-4" />
+            <span>تسجيل طالب جديد</span>
           </Link>
         </div>
       }
     >
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-5 animate-in fade-in duration-300">
         
-        {/* Advanced Filter Bar */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm glass">
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+        {/* =========================================================
+            Grade Filtering Navigation Bar (الصفوف الدراسية)
+            ========================================================= */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+          <button
+            onClick={() => {
+              setSelectedGrade("all");
+              setSelectedSectionId("all");
+              setCurrentPage(1);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all shadow-xs ${
+              selectedGrade === "all"
+                ? "bg-primary text-primary-foreground shadow-md glow-primary scale-[1.02]"
+                : "bg-card hover:bg-accent border border-border/70 text-foreground"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>جميع الصفوف</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
+              selectedGrade === "all" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+            }`}>
+              {gradeCounts.all || 0}
+            </span>
+          </button>
+
+          {availableGrades.map((g) => {
+            const count = gradeCounts[g] || 0;
+            const isSelected = selectedGrade === g;
+            return (
+              <button
+                key={g}
+                onClick={() => {
+                  setSelectedGrade(g);
+                  setSelectedSectionId("all");
+                  setCurrentPage(1);
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all shadow-xs ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-md glow-primary scale-[1.02]"
+                    : "bg-card hover:bg-accent border border-border/70 text-foreground"
+                }`}
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>{g}</span>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
+                  isSelected ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* =========================================================
+            Section Chips Bar (الشُعب التابعة للصف المحدد)
+            ========================================================= */}
+        {availableSections.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto p-2 rounded-2xl bg-card/60 border border-border/60 custom-scrollbar">
+            <span className="text-[11px] font-bold text-muted-foreground shrink-0 px-2 flex items-center gap-1.5">
+              <Layers3 className="w-3.5 h-3.5 text-primary" />
+              <span>الشعبة:</span>
+            </span>
+
+            <button
+              onClick={() => {
+                setSelectedSectionId("all");
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                selectedSectionId === "all"
+                  ? "bg-primary text-primary-foreground font-black"
+                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              كل الشُعب ({availableSections.length})
+            </button>
+
+            {availableSections.map((sec) => {
+              const count = baseStudents.filter(s => s.sectionId === sec.id).length;
+              const isSelected = selectedSectionId === sec.id;
+              return (
+                <button
+                  key={sec.id}
+                  onClick={() => {
+                    setSelectedSectionId(sec.id);
+                    setCurrentPage(1);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground font-black"
+                      : "bg-muted/40 hover:bg-muted text-foreground border border-border/40"
+                  }`}
+                >
+                  <span>شعبة {sec.name}</span>
+                  <span className="text-[10px] opacity-80 tabular-nums">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* =========================================================
+            Unified Search, Filter Controls & Bulk Actions Toolbar
+            ========================================================= */}
+        <div className="p-4 rounded-3xl border border-border/70 glass-card space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            
+            {/* Realtime Search Input */}
+            <div className="md:col-span-5 relative">
+              <Search className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
+                type="text"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder={`البحث في طلاب ${getStageLabel(stage)} بالاسم أو الهوية...`}
-                className="h-12 w-full rounded-xl border border-border/50 bg-background/50 pr-10 pl-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                placeholder="بحث سريع باسم الطالب، رقم القيد، الهوية، أو ولي الأمر..."
+                className="w-full h-11 rounded-2xl border border-input bg-background/80 pr-10 pl-4 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               />
+              {q && (
+                <button
+                  onClick={() => setQ("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-muted text-muted-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-            
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="h-12 rounded-xl border border-border/50 bg-background/50 px-4 focus:border-primary focus:outline-none transition-all cursor-pointer font-medium"
-              >
-                <option value="name">ترتيب بالاسم</option>
-                <option value="grade">ترتيب بالصف الدراسي</option>
-                <option value="id">ترتيب برقم القيد</option>
-              </select>
 
+            {/* Gender Filter */}
+            <div className="md:col-span-2">
+              <select
+                value={genderFilter}
+                onChange={(e) => {
+                  setGenderFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full h-11 rounded-2xl border border-input bg-background/80 px-3 text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
+              >
+                <option value="all">الجنس: الكل</option>
+                <option value="ذكر">بنين (ذكور)</option>
+                <option value="أنثى">بنات (إناث)</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="md:col-span-2">
               <select
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
-                  setSelected(new Set()); // Reset selection when changing tabs
+                  setSelected(new Set());
+                  setCurrentPage(1);
                 }}
-                className={`h-12 rounded-xl border px-4 focus:outline-none transition-all cursor-pointer font-bold ${
-                  statusFilter === "trash" ? "bg-danger/10 border-danger/30 text-danger" : "border-border/50 bg-background/50"
+                className={`w-full h-11 rounded-2xl border px-3 text-xs font-extrabold outline-none cursor-pointer ${
+                  statusFilter === "trash"
+                    ? "bg-danger/10 border-danger/30 text-danger"
+                    : "border-input bg-background/80 text-foreground"
                 }`}
               >
-                <option value="all">الكل (نشطين وغير نشطين)</option>
-                <option value="active">النشطين فقط</option>
-                <option value="inactive">غير النشطين (إيقاف قيد)</option>
-                <option value="trash">سلة المهملات (المحذوفين)</option>
+                <option value="active">الطلاب النشطون</option>
+                <option value="all">الكل (نشط وغير نشط)</option>
+                <option value="inactive">إيقاف قيد / منقطع</option>
+                <option value="trash">🗑️ سلة المهملات</option>
               </select>
+            </div>
 
-              <button
-                onClick={() => {
-                  setQ("");
-                  setSelected(new Set());
-                  setStatusFilter("all");
-                  setSortBy("name");
-                }}
-                className="h-12 w-12 flex items-center justify-center rounded-xl border border-border/50 bg-background/50 hover:bg-danger/10 hover:text-danger transition-colors shrink-0"
-                title="إعادة ضبط"
+            {/* Sort Order */}
+            <div className="md:col-span-2">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full h-11 rounded-2xl border border-input bg-background/80 px-3 text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
               >
-                <Filter className="h-5 w-5" />
+                <option value="name">ترتيب أبجدي (الاسم)</option>
+                <option value="grade">ترتيب بالصف</option>
+                <option value="id">ترتيب برقم القيد</option>
+              </select>
+            </div>
+
+            {/* View Mode Toggle (Table / Grid) */}
+            <div className="md:col-span-1 flex items-center justify-end gap-1">
+              <button
+                onClick={() => setViewMode("list")}
+                className={`grid h-11 w-11 place-items-center rounded-2xl border transition-all ${
+                  viewMode === "list"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-background border-input text-muted-foreground hover:bg-muted"
+                }`}
+                title="عرض الجدول"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`grid h-11 w-11 place-items-center rounded-2xl border transition-all ${
+                  viewMode === "grid"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-background border-input text-muted-foreground hover:bg-muted"
+                }`}
+                title="عرض البطاقات"
+              >
+                <LayoutGrid className="w-4 h-4" />
               </button>
             </div>
           </div>
 
+          {/* Bulk Selection Operations Action Strip */}
           {selected.size > 0 && (
-            <div className={`mt-4 flex flex-wrap items-center justify-between gap-4 p-3 rounded-xl border animate-in slide-in-from-top-2 ${
-              statusFilter === "trash" ? "border-danger/20 bg-danger/5" : "border-primary/20 bg-primary/5"
-            }`}>
-              <span className={`font-bold flex items-center gap-2 ${statusFilter === "trash" ? "text-danger" : "text-primary"}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${statusFilter === "trash" ? "bg-danger" : "bg-primary"}`}>{selected.size}</span>
-                طلاب محددين
-              </span>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-primary/10 border border-primary/20 animate-in fade-in duration-150">
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary text-primary-foreground text-xs font-black">
+                  {selected.size}
+                </span>
+                <span className="text-xs font-extrabold text-foreground">طلاب محددين للإجراء الجماعي</span>
+              </div>
+
+              <div className="flex items-center gap-2">
                 {statusFilter === "trash" ? (
                   <>
                     <button
                       onClick={handleBulkRestore}
-                      className="rounded-lg bg-success/10 text-success px-4 py-2 text-sm font-bold hover:bg-success/20 transition-colors flex items-center gap-2"
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5"
                     >
-                      <Undo2 className="h-4 w-4" /> استعادة المحددين
+                      <Undo2 className="w-3.5 h-3.5" />
+                      <span>استعادة المحددين</span>
                     </button>
                     <button
                       onClick={handleBulkHardDelete}
-                      className="rounded-lg bg-danger text-danger-foreground px-4 py-2 text-sm font-bold hover:bg-danger/90 transition-colors flex items-center gap-2"
+                      className="px-3.5 py-1.5 rounded-xl bg-danger hover:bg-danger/90 text-white text-xs font-bold transition-colors flex items-center gap-1.5"
                     >
-                      <AlertCircle className="h-4 w-4" /> حذف نهائي
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>حذف نهائي</span>
                     </button>
                   </>
                 ) : (
                   <>
                     <button
-                      onClick={() => setIsPrintOpen(true)}
-                      className="rounded-lg bg-background border border-border px-4 py-2 text-sm font-bold hover:bg-accent transition-colors flex items-center gap-2"
+                      onClick={() => setIsTransferModalOpen(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-card border border-border hover:bg-accent text-foreground text-xs font-bold transition-colors flex items-center gap-1.5"
                     >
-                      <Printer className="h-4 w-4" /> طباعة المحددين
+                      <ArrowRightLeft className="w-3.5 h-3.5 text-primary" />
+                      <span>نقل لشعبة أخرى</span>
                     </button>
+
+                    <button
+                      onClick={() => setIsPrintOpen(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-card border border-border hover:bg-accent text-foreground text-xs font-bold transition-colors flex items-center gap-1.5"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-blue-500" />
+                      <span>طباعة بطاقات الهوية</span>
+                    </button>
+
                     <button
                       onClick={handleBulkSoftDelete}
-                      className="rounded-lg bg-danger/10 text-danger px-4 py-2 text-sm font-bold hover:bg-danger/20 transition-colors flex items-center gap-2"
+                      className="px-3.5 py-1.5 rounded-xl bg-danger/10 hover:bg-danger text-danger hover:text-white text-xs font-bold transition-colors flex items-center gap-1.5"
                     >
-                      <Trash2 className="h-4 w-4" /> نقل لسلة المهملات
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>نقل للمهملات</span>
                     </button>
                   </>
                 )}
@@ -332,218 +605,719 @@ function StudentsListPage() {
           )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold flex items-center gap-2">
-              {statusFilter === "trash" ? (
-                <><Trash2 className="h-5 w-5 text-danger" /> <span className="text-danger">سلة المهملات</span></>
-              ) : (
-                <>قائمة طلاب: <span className="text-primary">{getStageLabel(stage)}</span></>
-              )}
-            </h2>
-            <p className="text-muted-foreground mt-1 text-sm font-bold">إجمالي الطلاب المعروضين: {filtered.length} طالب</p>
+        {/* =========================================================
+            Data Results Statistics & Quick Pagination Header
+            ========================================================= */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+          <div className="text-xs font-bold text-muted-foreground">
+            عرض <span className="text-foreground font-black">{(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredStudents.length)}</span> من أصل <span className="text-primary font-black">{filteredStudents.length}</span> طالب
+          </div>
+
+          {/* Page Size Switcher */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-muted-foreground">العدد بالصفحة:</span>
+            {[25, 50, 100].map((size) => (
+              <button
+                key={size}
+                onClick={() => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+                className={`h-7 px-2.5 rounded-lg text-xs font-bold transition-colors ${
+                  pageSize === size
+                    ? "bg-primary text-primary-foreground font-black"
+                    : "bg-card border border-border/70 hover:bg-accent text-foreground"
+                }`}
+              >
+                {size}
+              </button>
+            ))}
           </div>
         </div>
 
-        {isPending ? (
-          <PageCard className="p-0 overflow-hidden shadow-sm border-border/50">
-            <div className="p-6 space-y-4">
-              <div className="h-10 bg-muted/50 rounded-lg animate-pulse"></div>
-              <div className="space-y-3">
-                {[1,2,3,4,5].map(i => (
-                  <div key={i} className="flex gap-4">
-                    <div className="h-12 w-12 bg-muted/50 rounded-full animate-pulse shrink-0"></div>
-                    <div className="h-12 w-full bg-muted/50 rounded-lg animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
+        {/* =========================================================
+            VIEW 1: High-Performance Data Table
+            ========================================================= */}
+        {viewMode === "list" ? (
+          <PageCard className="p-0 overflow-hidden border-border/70 shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground font-bold">
+                    <th className="py-3 px-3 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={paginatedStudents.length > 0 && paginatedStudents.every(s => selected.has(s.id))}
+                        onChange={handleToggleSelectAllPage}
+                        className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer accent-primary"
+                      />
+                    </th>
+                    <th className="py-3 px-3 font-bold">الطالب والملف</th>
+                    <th className="py-3 px-3 font-bold">رقم القيد / الهوية</th>
+                    <th className="py-3 px-3 font-bold">الصف والشعبة</th>
+                    <th className="py-3 px-3 font-bold">ولي الأمر والتواصل</th>
+                    <th className="py-3 px-3 font-bold text-center">الحالة</th>
+                    <th className="py-3 px-3 font-bold text-center">التحكم السريع</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {paginatedStudents.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-muted-foreground text-xs font-bold">
+                        لا توجد نتائج مطابقة لمعايير البحث في هذه المرحلة
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedStudents.map((s) => {
+                      const isSelected = selected.has(s.id);
+                      const sec = allSections.find(x => x.id === s.sectionId);
+                      return (
+                        <tr 
+                          key={s.id} 
+                          className={`hover:bg-muted/30 transition-colors ${isSelected ? "bg-primary/5 font-semibold" : ""}`}
+                        >
+                          {/* Checkbox */}
+                          <td className="py-3 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectStudent(s.id)}
+                              className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer accent-primary"
+                            />
+                          </td>
+
+                          {/* Student Avatar & Name */}
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 text-white font-extrabold text-xs shadow-xs shrink-0">
+                                {s.name ? s.name.split(" ").slice(0, 2).map(n => n[0]).join("") : "ط"}
+                              </div>
+                              <div className="min-w-0">
+                                <button
+                                  onClick={() => setSelectedStudentForView(s)}
+                                  className="font-extrabold text-foreground hover:text-primary transition-colors text-right truncate block max-w-[200px]"
+                                  title="فتح الملف الشامل"
+                                >
+                                  {s.name}
+                                </button>
+                                <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                  <span>{s.gender || "ذكر"}</span>
+                                  <span>•</span>
+                                  <span className="tabular-nums" dir="ltr">{s.dob || "-"}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* ID & National ID */}
+                          <td className="py-3 px-3">
+                            <div className="font-bold text-foreground tabular-nums text-xs" dir="ltr">{s.id}</div>
+                            <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5" dir="ltr">
+                              {s.nationalId ? `هوية: ${s.nationalId}` : "بدون هوية"}
+                            </div>
+                          </td>
+
+                          {/* Grade & Section */}
+                          <td className="py-3 px-3">
+                            <div className="font-extrabold text-foreground">{s.grade}</div>
+                            <div className="mt-0.5">
+                              {sec ? (
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[10px]">
+                                  شعبة {sec.name}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-amber-500 font-bold">غير محدد</span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Guardian & Phone */}
+                          <td className="py-3 px-3">
+                            <div className="font-bold text-foreground truncate max-w-[150px]">{s.guardianName || "-"}</div>
+                            {s.guardianPhone ? (
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <a
+                                  href={`tel:${s.guardianPhone}`}
+                                  className="text-[11px] font-bold text-primary hover:underline tabular-nums flex items-center gap-1"
+                                  dir="ltr"
+                                >
+                                  <Phone className="w-3 h-3" />
+                                  <span>{s.guardianPhone}</span>
+                                </a>
+                                <a
+                                  href={`https://wa.me/${s.guardianPhone.replace(/\D/g, "")}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-emerald-500 hover:text-emerald-600"
+                                  title="مراسلة واتساب"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">-</span>
+                            )}
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3 px-3 text-center">
+                            {s.isDeleted ? (
+                              <Badge tone="danger">محذوف</Badge>
+                            ) : s.status === "نشط" ? (
+                              <Badge tone="success">نشط</Badge>
+                            ) : (
+                              <Badge tone="neutral">{s.status || "منقطع"}</Badge>
+                            )}
+                          </td>
+
+                          {/* Quick Actions */}
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => setSelectedStudentForView(s)}
+                                className="p-1.5 rounded-lg border border-border/80 bg-card hover:bg-accent text-foreground transition-colors"
+                                title="عرض الملف الشامل (360°)"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-blue-500" />
+                              </button>
+
+                              <button
+                                onClick={() => openEditModal(s)}
+                                className="p-1.5 rounded-lg border border-border/80 bg-card hover:bg-accent text-foreground transition-colors"
+                                title="تعديل بيانات الطالب"
+                              >
+                                <Pencil className="w-3.5 h-3.5 text-amber-500" />
+                              </button>
+
+                              <Link
+                                to="/students/$id"
+                                params={{ id: s.id }}
+                                className="p-1.5 rounded-lg border border-border/80 bg-card hover:bg-accent text-foreground transition-colors"
+                                title="الصفحة الكاملة لملف الطالب"
+                              >
+                                <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </PageCard>
-        ) : viewMode === "list" ? (
-          <PageCard className="p-0 overflow-hidden shadow-sm border-border/50 animate-in fade-in duration-300">
-            <DataTable
-              rows={filtered}
-              columns={[
-                {
-                  key: "sel",
-                  header: "",
-                  className: "w-10",
-                  cell: (s) => (
-                    <input
-                      type="checkbox"
-                      checked={selected.has(s.id)}
-                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                      onChange={(e) => {
-                        const next = new Set(selected);
-                        e.target.checked ? next.add(s.id) : next.delete(s.id);
-                        setSelected(next);
-                      }}
-                    />
-                  ),
-                },
-                { key: "no", header: "المعرف", cell: (s) => <span className="font-bold text-muted-foreground text-xs">{s.id}</span> },
-                {
-                  key: "name",
-                  header: "الاسم",
-                  cell: (s) => (
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs shrink-0 font-bold">
-                        {s.name.split(" ").map(n=>n[0]).slice(0,2).join("")}
-                      </div>
-                      {statusFilter === "trash" ? (
-                        <span className="font-bold text-muted-foreground line-through opacity-70">{s.name}</span>
-                      ) : (
-                        <Link to="/students/$id" params={{ id: s.id }} className="font-bold hover:text-primary transition-colors">
-                          {s.name}
-                        </Link>
-                      )}
-                    </div>
-                  ),
-                },
-                { key: "gr", header: "الصف", cell: (s) => <span className="font-medium">{s.grade}</span> },
-                { 
-                  key: "sec", 
-                  header: "الشعبة", 
-                  cell: (s) => {
-                    const sec = allSections.find(x => x.id === s.sectionId);
-                    return sec ? <span className="bg-muted px-2 py-1 rounded-md text-xs font-bold">{sec.name}</span> : <span className="text-muted-foreground text-xs">-</span>;
-                  }
-                },
-                { key: "guardian", header: "ولي الأمر", cell: (s) => <span className="text-sm">{s.guardianName}</span> },
-                {
-                  key: "status",
-                  header: "الحالة",
-                  cell: (s) => (
-                    s.isDeleted ? (
-                      <span className="px-2 py-1 rounded-md text-xs font-bold bg-danger/10 text-danger flex items-center gap-1 w-max">
-                        <Trash2 className="h-3 w-3" /> محذوف
-                      </span>
-                    ) : (
-                      <span className={`px-2 py-1 rounded-md text-xs font-bold ${s.status === "نشط" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                        {s.status || "نشط"}
-                      </span>
-                    )
-                  ),
-                },
-                {
-                  key: "act",
-                  header: "",
-                  cell: (s) => (
-                    <div className="flex items-center gap-1 justify-end">
-                      {statusFilter === "trash" ? (
-                        <button 
-                          onClick={() => {
-                            if (confirm(`استعادة الطالب ${s.name}؟`)) restoreStudent(s.id);
-                          }}
-                          className="rounded-lg p-2 hover:bg-success/10 hover:text-success transition-colors" title="استعادة">
-                          <Undo2 className="h-4 w-4" />
-                        </button>
-                      ) : (
-                        <>
-                          <Link to="/students/$id" params={{ id: s.id }} className="rounded-lg p-2 hover:bg-primary/10 hover:text-primary transition-colors" aria-label="عرض">
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                          <button 
-                            onClick={() => {
-                              if (confirm(`نقل الطالب ${s.name} لسلة المهملات؟`)) softDeleteStudent(s.id);
-                            }}
-                            className="rounded-lg p-2 hover:bg-danger/10 hover:text-danger transition-colors text-muted-foreground" aria-label="نقل للمهملات">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-              empty={statusFilter === "trash" ? "سلة المهملات فارغة." : `لا توجد نتائج تطابق بحثك في مرحلة ${getStageLabel(stage)}.`}
-            />
-          </PageCard>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map(s => {
+          /* =========================================================
+              VIEW 2: High-End Luxury Cards Grid
+              ========================================================= */
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {paginatedStudents.map((s) => {
+              const isSelected = selected.has(s.id);
               const sec = allSections.find(x => x.id === s.sectionId);
               return (
-                <div key={s.id} className={`relative group rounded-3xl border border-border/50 p-5 shadow-sm hover:shadow-md transition-all ${s.isDeleted ? 'bg-danger/5' : 'bg-card hover:border-primary/30'}`}>
-                  <div className="absolute top-4 left-4">
+                <div
+                  key={s.id}
+                  className={`relative p-4 rounded-3xl border transition-all hover-lift ${
+                    isSelected
+                      ? "bg-primary/10 border-primary shadow-md glow-primary"
+                      : "bg-card border-border/70 hover:border-primary/50 shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-3">
                     <input
                       type="checkbox"
-                      checked={selected.has(s.id)}
-                      className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer opacity-50 group-hover:opacity-100 transition-opacity"
-                      onChange={(e) => {
-                        const next = new Set(selected);
-                        e.target.checked ? next.add(s.id) : next.delete(s.id);
-                        setSelected(next);
-                      }}
+                      checked={isSelected}
+                      onChange={() => handleToggleSelectStudent(s.id)}
+                      className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer accent-primary mt-1"
                     />
+
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-white font-black text-sm shadow-sm">
+                      {s.name ? s.name.split(" ").slice(0, 2).map(n => n[0]).join("") : "ط"}
+                    </div>
+
+                    <Badge tone={s.status === "نشط" ? "success" : "neutral"} className="text-[10px]">
+                      {s.status || "نشط"}
+                    </Badge>
                   </div>
-                  
-                  <div className="flex flex-col items-center text-center mt-2">
-                    <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-black mb-4 shadow-inner ${s.isDeleted ? 'bg-danger/10 text-danger' : 'bg-gradient-to-br from-primary/20 to-primary/5 text-primary'}`}>
-                      {s.name.split(" ").map(n=>n[0]).slice(0,2).join("")}
+
+                  <div className="text-center mb-3">
+                    <button
+                      onClick={() => setSelectedStudentForView(s)}
+                      className="font-black text-sm text-foreground hover:text-primary transition-colors block truncate w-full"
+                    >
+                      {s.name}
+                    </button>
+                    <div className="text-[10px] text-muted-foreground font-bold tabular-nums mt-0.5" dir="ltr">
+                      {s.id}
                     </div>
-                    {s.isDeleted ? (
-                      <div className="font-extrabold text-lg line-clamp-1 mb-1 text-muted-foreground line-through opacity-70">
-                        {s.name}
-                      </div>
-                    ) : (
-                      <Link to="/students/$id" params={{ id: s.id }} className="font-extrabold text-lg hover:text-primary transition-colors line-clamp-1 mb-1">
-                        {s.name}
-                      </Link>
-                    )}
-                    <span className="text-xs text-muted-foreground tabular-nums bg-accent px-2 py-0.5 rounded-md mb-4">{s.id}</span>
-                    
-                    <div className="w-full space-y-2 mt-2 pt-4 border-t border-border/50 text-right">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">الصف:</span>
-                        <span className="font-bold">{s.grade}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">الشعبة:</span>
-                        <span className="font-bold">{sec ? sec.name : "-"}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">الحالة:</span>
-                        {s.isDeleted ? (
-                          <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-danger/10 text-danger flex items-center gap-1"><Trash2 className="h-3 w-3"/> محذوف</span>
-                        ) : (
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${s.status === "نشط" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                            {s.status || "نشط"}
-                          </span>
-                        )}
-                      </div>
+                  </div>
+
+                  <div className="space-y-1.5 p-3 rounded-2xl bg-muted/30 border border-border/40 text-xs mb-3">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>الصف:</span>
+                      <span className="font-bold text-foreground">{s.grade}</span>
                     </div>
-                    
-                    {s.isDeleted ? (
-                      <button onClick={() => {
-                        if(confirm("استعادة الطالب؟")) restoreStudent(s.id);
-                      }} className="w-full mt-5 rounded-xl bg-success/10 text-success py-2.5 text-sm font-bold hover:bg-success hover:text-success-foreground transition-colors flex items-center justify-center gap-2">
-                        <Undo2 className="h-4 w-4" /> استعادة الطالب
-                      </button>
-                    ) : (
-                      <Link to="/students/$id" params={{ id: s.id }} className="w-full mt-5 rounded-xl bg-primary/10 text-primary py-2.5 text-sm font-bold hover:bg-primary hover:text-primary-foreground transition-colors flex items-center justify-center gap-2">
-                        <Eye className="h-4 w-4" /> عرض الملف
-                      </Link>
-                    )}
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>الشعبة:</span>
+                      <span className="font-bold text-foreground">{sec ? `شعبة ${sec.name}` : "-"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>ولي الأمر:</span>
+                      <span className="font-bold text-foreground truncate max-w-[120px]">{s.guardianName || "-"}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/40">
+                    <button
+                      onClick={() => setSelectedStudentForView(s)}
+                      className="h-8 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs font-bold transition-all flex items-center justify-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>الملف</span>
+                    </button>
+
+                    <button
+                      onClick={() => openEditModal(s)}
+                      className="h-8 rounded-xl border border-input bg-card hover:bg-accent text-foreground text-xs font-bold transition-all flex items-center justify-center gap-1"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>تعديل</span>
+                    </button>
                   </div>
                 </div>
               );
             })}
-            
-            {filtered.length === 0 && (
-              <div className="col-span-full py-12 text-center text-muted-foreground font-bold border border-dashed border-border/50 rounded-3xl">
-                لا توجد نتائج مطابقة للبحث في العرض الحالي.
-              </div>
-            )}
           </div>
         )}
+
+        {/* =========================================================
+            Modern Pagination Bar
+            ========================================================= */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-card border border-border/70 shadow-sm">
+            <div className="text-xs font-bold text-muted-foreground">
+              الصفحة <span className="font-black text-foreground">{currentPage}</span> من <span className="font-black text-foreground">{totalPages}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(1)}
+                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-bold hover:bg-accent disabled:opacity-40 transition-colors"
+              >
+                الأولى
+              </button>
+
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-bold hover:bg-accent disabled:opacity-40 transition-colors flex items-center gap-1"
+              >
+                <ChevronRight className="w-4 h-4" />
+                <span>السابق</span>
+              </button>
+
+              <div className="px-3 text-xs font-black text-primary">
+                {currentPage} / {totalPages}
+              </div>
+
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-bold hover:bg-accent disabled:opacity-40 transition-colors flex items-center gap-1"
+              >
+                <span>التالي</span>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-bold hover:bg-accent disabled:opacity-40 transition-colors"
+              >
+                الأخيرة
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
-      <AdvancedPrintEngine 
-        isOpen={isPrintOpen} 
-        onClose={() => setIsPrintOpen(false)} 
-        data={statusFilter === "trash" ? allDeletedStudents : selected.size > 0 ? filtered.filter(s => selected.has(s.id)) : filtered}
-        templates={printTemplates} 
+
+      {/* =========================================================
+          Modal 1: 360° Quick Student Dossier View
+          ========================================================= */}
+      {selectedStudentForView && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setSelectedStudentForView(null)}
+          dir="rtl"
+        >
+          <div 
+            className="w-full max-w-2xl bg-card border border-border shadow-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-white font-black text-base shadow-sm">
+                  {selectedStudentForView.name.split(" ").slice(0, 2).map(n => n[0]).join("")}
+                </div>
+                <div>
+                  <h3 className="font-black text-base sm:text-lg text-foreground">{selectedStudentForView.name}</h3>
+                  <div className="text-xs text-muted-foreground font-bold flex items-center gap-2 mt-0.5">
+                    <span>رقم القيد: {selectedStudentForView.id}</span>
+                    <span>•</span>
+                    <Badge tone="primary">{selectedStudentForView.grade}</Badge>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedStudentForView(null)}
+                className="p-1.5 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Student Info Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1">
+                <div className="text-[11px] font-bold text-muted-foreground">الرقم الوطني / الإقامة</div>
+                <div className="font-extrabold text-foreground tabular-nums" dir="ltr">
+                  {selectedStudentForView.nationalId || "غير مسجل"}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1">
+                <div className="text-[11px] font-bold text-muted-foreground">تاريخ الميلاد والسن</div>
+                <div className="font-extrabold text-foreground tabular-nums" dir="ltr">
+                  {selectedStudentForView.dob || "غير محدد"}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1">
+                <div className="text-[11px] font-bold text-muted-foreground">الشعبة والقاعة الدراسية</div>
+                <div className="font-extrabold text-foreground">
+                  {allSections.find(x => x.id === selectedStudentForView.sectionId)?.name 
+                    ? `شعبة ${allSections.find(x => x.id === selectedStudentForView.sectionId)?.name}` 
+                    : "غير محدد"}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1">
+                <div className="text-[11px] font-bold text-muted-foreground">ولي الأمر والقرابة</div>
+                <div className="font-extrabold text-foreground">
+                  {selectedStudentForView.guardianName || "-"} ({selectedStudentForView.guardianRelationship || "ولي أمر"})
+                </div>
+              </div>
+            </div>
+
+            {/* Guardian Contact Ticker */}
+            {selectedStudentForView.guardianPhone && (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs font-bold text-foreground">هاتف ولي الأمر المباشر:</span>
+                  <span className="font-extrabold text-foreground tabular-nums" dir="ltr">{selectedStudentForView.guardianPhone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`tel:${selectedStudentForView.guardianPhone}`}
+                    className="px-3 py-1 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
+                  >
+                    اتصال
+                  </a>
+                  <a
+                    href={`https://wa.me/${selectedStudentForView.guardianPhone.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
+                  >
+                    واتساب
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Footer Buttons */}
+            <div className="pt-3 border-t border-border/60 flex items-center justify-between">
+              <Link
+                to="/students/$id"
+                params={{ id: selectedStudentForView.id }}
+                className="inline-flex items-center gap-2 text-xs font-extrabold text-primary hover:underline"
+              >
+                <span>الانتقال للملف الأكاديمي والمالي الكامل</span>
+                <ChevronLeft className="w-4 h-4" />
+              </Link>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const stu = selectedStudentForView;
+                    setSelectedStudentForView(null);
+                    openEditModal(stu);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold hover:bg-amber-500/20"
+                >
+                  تعديل البيانات
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentForView(null)}
+                  className="px-4 py-2 rounded-xl bg-muted hover:bg-accent text-xs font-bold text-foreground"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          Modal 2: Quick Student Edit Drawer / Modal
+          ========================================================= */}
+      {editingStudent && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
+          onClick={() => setEditingStudent(null)}
+          dir="rtl"
+        >
+          <div 
+            className="w-full max-w-xl bg-card border border-border shadow-2xl rounded-3xl p-6 sm:p-7 overflow-visible animate-in zoom-in-95 duration-150 space-y-4 my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-foreground">تعديل بيانات الطالب</h3>
+                  <div className="text-xs text-muted-foreground mt-0.5">{editingStudent.id}</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingStudent(null)}
+                className="p-1 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStudentEdit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-1">الاسم الرباعي الكامل *</label>
+                <input
+                  required
+                  type="text"
+                  value={editFormData.name || ""}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">الرقم الوطني / الإقامة *</label>
+                  <input
+                    required
+                    type="text"
+                    value={editFormData.nationalId || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, nationalId: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary tabular-nums"
+                  />
+                </div>
+
+                <div>
+                  <ArabicDatePicker
+                    label="تاريخ الميلاد"
+                    value={editFormData.dob}
+                    onChange={(val) => setEditFormData({ ...editFormData, dob: val })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">الصف الدراسي *</label>
+                  <select
+                    value={editFormData.grade || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, grade: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                  >
+                    {availableGrades.map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">الشعبة الدراسية</label>
+                  <select
+                    value={editFormData.sectionId || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, sectionId: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                  >
+                    <option value="">-- بدون تعيين --</option>
+                    {allSections.filter(s => s.stage === stage).map(sec => (
+                      <option key={sec.id} value={sec.id}>
+                        {sec.grade} - شعبة {sec.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">اسم ولي الأمر</label>
+                  <input
+                    type="text"
+                    value={editFormData.guardianName || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, guardianName: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">هاتف ولي الأمر</label>
+                  <input
+                    type="text"
+                    value={editFormData.guardianPhone || ""}
+                    onChange={(e) => setEditFormData({ ...editFormData, guardianPhone: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary tabular-nums"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="px-4 py-2 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all glow-primary"
+                >
+                  حفظ التعديلات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          Modal 3: Bulk Transfer Section Modal
+          ========================================================= */}
+      {isTransferModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setIsTransferModalOpen(false)}
+          dir="rtl"
+        >
+          <div 
+            className="w-full max-w-md bg-card border border-border shadow-2xl rounded-3xl p-6 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="w-5 h-5 text-primary" />
+                <h3 className="font-extrabold text-sm text-foreground">نقل الطلاب المحددين لشعبة جديدة</h3>
+              </div>
+              <button 
+                onClick={() => setIsTransferModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              سيتم نقل عدد <span className="font-black text-primary">{selected.size}</span> طالب محدد إلى الشعبة المختارة:
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1.5">اختر الشعبة المستهدفة:</label>
+              <select
+                value={targetTransferSectionId}
+                onChange={(e) => setTargetTransferSectionId(e.target.value)}
+                className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">-- اختر الشعبة --</option>
+                {allSections.filter(s => s.stage === stage).map(sec => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.grade} - شعبة {sec.name} (القاعة: {sec.roomName || "بدون"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsTransferModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkTransfer}
+                className="px-6 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all glow-primary"
+              >
+                تنفيذ النقل
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Print Engine */}
+      <AdvancedPrintEngine
+        open={isPrintOpen}
+        onClose={() => setIsPrintOpen(false)}
+        templates={[
+          {
+            id: "all-students",
+            name: "كشف الطلاب المعتمد",
+            category: "الطلاب",
+            type: "table",
+            description: "طباعة قائمة الطلاب المحددين أو المعروضين",
+            columns: [
+              { label: "رقم القيد", key: "id" },
+              { label: "اسم الطالب", key: "name" },
+              { label: "الصف", key: "grade" },
+              { label: "الشعبة", key: "sectionId", render: (r) => allSections.find(x => x.id === r.sectionId)?.name || "-" },
+              { label: "الحالة", key: "status" },
+              { label: "ولي الأمر", key: "guardianName" },
+              { label: "الجوال", key: "guardianPhone" },
+            ]
+          },
+          {
+            id: "student-ids",
+            name: "بطاقات الهوية المدرسية (Student IDs)",
+            category: "الطلاب",
+            type: "cards",
+            description: "طباعة بطاقات تعريفية للطلاب مع شعار المدرسة",
+            columns: [
+              { label: "رقم القيد", key: "id" },
+              { label: "اسم الطالب", key: "name" },
+              { label: "الصف", key: "grade" },
+            ]
+          }
+        ]}
+        data={selected.size > 0 ? filteredStudents.filter(s => selected.has(s.id)) : filteredStudents}
+        defaultTitle={`كشف طلاب ${getStageLabel(stage)}`}
       />
+
     </AppShell>
   );
 }

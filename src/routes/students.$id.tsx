@@ -8,6 +8,7 @@ import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldChe
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialTimeline } from "@/components/financial-components";
+import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 
 export const Route = createFileRoute("/students/$id")({
   component: StudentProfile,
@@ -67,8 +68,12 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                 <input required value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums" />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">تاريخ الميلاد</label>
-                <input type="date" value={(formData as any).dob || ""} onChange={e => setFormData({...formData, dob: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums" />
+                <ArabicDatePicker
+                  label="تاريخ الميلاد"
+                  value={(formData as any).dob || ""}
+                  onChange={(val) => setFormData({ ...formData, dob: val } as any)}
+                  showAgeCalculator={true}
+                />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الجنس</label>
@@ -195,8 +200,12 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">تاريخ الالتحاق</label>
-                <input type="date" value={(formData as any).enrollmentDate || ""} onChange={e => setFormData({...formData, enrollmentDate: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums" />
+                <ArabicDatePicker
+                  label="تاريخ الالتحاق"
+                  value={(formData as any).enrollmentDate || ""}
+                  onChange={(val) => setFormData({ ...formData, enrollmentDate: val } as any)}
+                  showAgeCalculator={false}
+                />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الحالة</label>
@@ -951,8 +960,13 @@ function StudentProfile() {
                 <input required type="number" min="1" value={newInvoiceData.amount || ""} onChange={e => setNewInvoiceData({...newInvoiceData, amount: Number(e.target.value)})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums font-bold" />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">تاريخ الاستحقاق</label>
-                <input required type="date" value={newInvoiceData.dueDate} onChange={e => setNewInvoiceData({...newInvoiceData, dueDate: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums" />
+                <ArabicDatePicker
+                  label="تاريخ الاستحقاق"
+                  required
+                  value={newInvoiceData.dueDate}
+                  onChange={(val) => setNewInvoiceData({ ...newInvoiceData, dueDate: val })}
+                  showAgeCalculator={false}
+                />
               </div>
               <div className="pt-4 flex gap-3 justify-end">
                 <button type="button" onClick={() => setIsNewInvoiceOpen(false)} className="rounded-xl px-6 py-2.5 font-bold hover:bg-accent transition-colors border border-border">إلغاء</button>
