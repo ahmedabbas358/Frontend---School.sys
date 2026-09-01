@@ -179,18 +179,71 @@ function AcademicYearsPage() {
     toast.success(`تم اعتماد "${year.name}" كسنة دراسية نشطة لكافة أقسام النظام!`);
   };
 
+  // Next Grade Progression Map
+  const NEXT_GRADE_MAP: Record<string, { nextGrade: string; status: "ناجح" | "خريج" }> = {
+    "روضة 1": { nextGrade: "روضة 2", status: "ناجح" },
+    "روضة 2": { nextGrade: "الصف الأول", status: "ناجح" },
+    "الصف الأول": { nextGrade: "الصف الثاني", status: "ناجح" },
+    "الصف الثاني": { nextGrade: "الصف الثالث", status: "ناجح" },
+    "الصف الثالث": { nextGrade: "الصف الرابع", status: "ناجح" },
+    "الصف الرابع": { nextGrade: "الصف الخامس", status: "ناجح" },
+    "الصف الخامس": { nextGrade: "الصف السادس", status: "ناجح" },
+    "الصف السادس": { nextGrade: "الصف الأول المتوسط", status: "ناجح" },
+    "الصف الأول المتوسط": { nextGrade: "الصف الثاني المتوسط", status: "ناجح" },
+    "الصف الثاني المتوسط": { nextGrade: "الصف الثالث المتوسط", status: "ناجح" },
+    "الصف الثالث المتوسط": { nextGrade: "الصف الأول الثانوي", status: "ناجح" },
+    "الصف الأول الثانوي": { nextGrade: "الصف الثاني الثانوي", status: "ناجح" },
+    "الصف الثاني الثانوي": { nextGrade: "الصف الثالث الثانوي", status: "ناجح" },
+    "الصف الثالث الثانوي": { nextGrade: "الصف الثالث الثانوي", status: "خريج" },
+  };
+
   // Promotion Wizard State
   const [targetPromotionYearId, setTargetPromotionYearId] = useState<string>("");
+  const [rolloverBalances, setRolloverBalances] = useState(true);
+
+  const { rolloverFinancialBalances } = useGlobalStore();
+
   const handleExecutePromotion = () => {
     if (!targetPromotionYearId) {
       toast.error("يرجى تحديد العام الدراسي المستهدف للترحيل");
       return;
     }
-    if (promoteStudents) {
-      promoteStudents(selectedYearId, targetPromotionYearId);
+
+    if (targetPromotionYearId === selectedYearId) {
+      toast.error("لا يمكن ترحيل الطلاب إلى نفس العام الدراسي الحالي");
+      return;
     }
+
+    // Build promotions for all active students in current stage or all students
+    const activeStudents = allStudents.filter(s => s.status === "نشط" || !s.status);
+    let promotedCount = 0;
+    let graduatedCount = 0;
+
+    const promotions = activeStudents.map(student => {
+      const currentGrade = student.grade || "الصف الأول";
+      const rule = NEXT_GRADE_MAP[currentGrade] || { nextGrade: currentGrade, status: "ناجح" as const };
+      
+      if (rule.status === "خريج") graduatedCount++;
+      else promotedCount++;
+
+      return {
+        studentId: student.id,
+        nextGrade: rule.nextGrade,
+        nextAcademicYearId: targetPromotionYearId,
+        status: rule.status
+      };
+    });
+
+    if (promotions.length > 0) {
+      promoteStudents(promotions);
+    }
+
+    if (rolloverBalances && rolloverFinancialBalances) {
+      rolloverFinancialBalances(selectedYearId, targetPromotionYearId);
+    }
+
     setIsPromotionModalOpen(false);
-    toast.success(`تم ترحيل وترفيع جميع الطلاب بنجاح إلى العام الجديد!`);
+    toast.success(`تم إتمام الترحيل بنجاح: ترفيع ${promotedCount} طالب وتخريج ${graduatedCount} طالب!`);
   };
 
   return (
@@ -661,12 +714,30 @@ function AcademicYearsPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Financial Rollover Option */}
+              <div className="pt-2 border-t border-border/40">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rolloverBalances}
+                    onChange={(e) => setRolloverBalances(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded text-primary focus:ring-primary/20 accent-primary"
+                  />
+                  <div className="text-xs">
+                    <div className="font-bold text-foreground">ترحيل الأرصدة والذمم المالية المتبقية</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                      نقل متبقيات الرسوم غير المسددة كأرصدة افتتاحية في قيود العام الجديد آلياً.
+                    </div>
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
               <div className="leading-relaxed text-[11px]">
-                تنبيه أمان: سيتم نقل الطلاب للصفوف التالية وتحديث الشعب تلقائياً، والاحتفاظ بالسجلات الأكاديمية والمالية السابقة في أرشيف العام المنتهي دون أي حذف.
+                تنبيه أمان: سيتم ترفيع <span className="font-black">{allStudents.filter(s => s.status === 'نشط' || !s.status).length}</span> طالب مسجلين إلى الصفوف التالية وتخريج طلاب الثانوية النهائية، مع الحفاظ على الأرشيف كاملاً.
               </div>
             </div>
 
