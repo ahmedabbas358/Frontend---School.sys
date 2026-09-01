@@ -1199,8 +1199,8 @@ function generateFullEnterpriseSchoolData() {
 
   // --- 5. Subjects ---
   const generatedSubjects: Subject[] = [
-    { id: "SUB-101", name: "الرياضيات العامة", code: "MATH101", creditHours: 5, stage: "primary", grades: ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي", "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"] },
-    { id: "SUB-102", name: "العلوم والتكنولوجيا", code: "SCI101", creditHours: 4, stage: "primary", grades: ["الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"] },
+    { id: "SUB-101", name: "الرياضيات العامة", code: "MATH101", creditHours: 5, stage: "primary", grades: ["الصف الأول", "الصف الثاني", "الصف الثالث", "الصف الرابع", "الصف الخامس", "الصف السادس"] },
+    { id: "SUB-102", name: "العلوم والتكنولوجيا", code: "SCI101", creditHours: 4, stage: "primary", grades: ["الصف الرابع", "الصف الخامس", "الصف السادس"] },
     { id: "SUB-103", name: "اللغة العربية واللغويات", code: "ARAB101", creditHours: 6, stage: "all" },
     { id: "SUB-104", name: "القرآن الكريم والدراسات الإسلامية", code: "ISL101", creditHours: 4, stage: "all" },
     { id: "SUB-105", name: "الفيزياء التطبيقية", code: "PHYS201", creditHours: 4, stage: "high", grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"] },
