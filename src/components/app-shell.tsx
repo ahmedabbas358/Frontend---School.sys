@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { CommandPalette } from "./command-palette";
@@ -300,6 +300,7 @@ export function AppShell({
     currency
   } = useGlobalStore();
 
+  const unreadCount = unreadNotificationsCount || 0;
   const netBalance = (allPayments || []).reduce((sum, p) => sum + p.amount, 0) - (allExpenses || []).reduce((sum, e) => sum + e.amount, 0);
 
   // Update Sidebar Mode and Persist
@@ -363,6 +364,18 @@ export function AppShell({
     document.documentElement.dir = systemSettings.language === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = systemSettings.language;
   }, [systemSettings.language]);
+
+  const currentActiveGroup = useMemo(() => {
+    for (const item of NAV) {
+      if (item.kind === "group") {
+        const match = item.group.items.some(
+          (sub) => pathname === sub.to || (sub.to !== "/" && pathname.startsWith(sub.to + "/")) || (sub.to !== "/" && pathname === sub.to)
+        );
+        if (match) return item.group;
+      }
+    }
+    return null;
+  }, [pathname]);
 
   const currentLabel =
     title ??
