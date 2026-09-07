@@ -349,7 +349,25 @@ function StudentRegistrationWizard() {
               Form Body (2 Columns)
               ========================================================= */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (currentStep < 4) {
+                  handleNext();
+                } else {
+                  handleSubmit(onSubmit)(e);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+                  e.preventDefault();
+                  if (currentStep < 4) {
+                    handleNext();
+                  }
+                }
+              }}
+              className="space-y-6"
+            >
               <PageCard className="p-6 sm:p-7 border-border/70 glass-card">
                 
                 {/* STEP 1: Basic & Academic Info */}
@@ -738,17 +756,25 @@ function StudentRegistrationWizard() {
                   {currentStep < 4 ? (
                     <button
                       type="button"
-                      onClick={handleNext}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNext();
+                      }}
                       className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-extrabold shadow-md hover:bg-primary/90 transition-all glow-primary"
                     >
-                      <span>المتابعة للخطوة التالية</span>
+                      <span>المتابعة للخطوة {currentStep + 1} ({steps[currentStep].title})</span>
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                   ) : (
                     <button
-                      type="submit"
+                      type="button"
                       disabled={isSubmitting}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-lg transition-all active:scale-95 glow-success"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSubmit(onSubmit)(e);
+                      }}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-lg transition-all active:scale-95 glow-success disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       <span>تأكيد تسجيل الطالب وتوليد الفواتير</span>

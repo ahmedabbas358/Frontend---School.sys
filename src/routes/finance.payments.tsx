@@ -222,16 +222,16 @@ function FinancePayments() {
           </div>
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
             <div className="relative w-full sm:w-64">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="ابحث برقم السند، الفاتورة أو الاسم..."
-                className="h-9 w-full rounded-xl border border-border/60 bg-background pr-9 pl-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/40"
+                className="h-10 w-full rounded-xl border border-input bg-card/90 ps-9 pe-3 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs placeholder:text-muted-foreground/70"
               />
             </div>
             <select 
-              className="h-9 rounded-xl border border-border/60 bg-background px-2.5 text-xs font-bold cursor-pointer outline-none"
+              className="h-10 rounded-xl border border-input bg-card/90 px-3 text-xs font-semibold cursor-pointer outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs"
               value={gradeFilter}
               onChange={e => { setGradeFilter(e.target.value); setSectionFilter(""); }}
             >
@@ -239,7 +239,7 @@ function FinancePayments() {
               {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
             <select 
-              className="h-9 rounded-xl border border-border/60 bg-background px-2.5 text-xs font-bold cursor-pointer outline-none"
+              className="h-10 rounded-xl border border-input bg-card/90 px-3 text-xs font-semibold cursor-pointer outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs"
               value={sectionFilter}
               onChange={e => setSectionFilter(e.target.value)}
             >
@@ -247,7 +247,7 @@ function FinancePayments() {
               {availableSections.map(s => <option key={s.id} value={s.id}>{s.grade} - شعبة {s.name}</option>)}
             </select>
             <select 
-              className="h-9 rounded-xl border border-border/60 bg-background px-2.5 text-xs font-bold cursor-pointer outline-none"
+              className="h-10 rounded-xl border border-input bg-card/90 px-3 text-xs font-semibold cursor-pointer outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs"
               value={methodFilter}
               onChange={e => setMethodFilter(e.target.value)}
             >
@@ -326,20 +326,31 @@ function FinancePayments() {
 
       {/* --- New Payment Receipt Issuance Modal --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
-              <h3 className="text-base font-extrabold flex items-center gap-2"><Receipt className="h-5 w-5 text-primary" /> إصدار سند قبض مالي جديد</h3>
-              <button onClick={() => { setIsModalOpen(false); reset(); }} className="rounded-xl p-1.5 hover:bg-accent">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="w-full max-w-md rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl p-6 sm:p-7 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-5 pb-3.5 border-b border-border/60">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-foreground">إصدار سند قبض مالي جديد</h3>
+                  <p className="text-xs text-muted-foreground">توريد دفعة أو قسط لحساب الفاتورة المحددة</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setIsModalOpen(false); reset(); }} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-bold text-muted-foreground">الفاتورة المستهدفة <span className="text-danger">*</span></label>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الفاتورة المستهدفة <span className="text-destructive">*</span></label>
                 <select
                   {...register("invoiceId")}
-                  className="h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/40"
+                  className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
                 >
                   <option value="">-- اختر الفاتورة المطلوب سدادها --</option>
                   {unpaidInvoices.map(inv => (
@@ -348,45 +359,45 @@ function FinancePayments() {
                     </option>
                   ))}
                 </select>
-                {errors.invoiceId && <p className="mt-1 text-xs text-danger font-bold">{errors.invoiceId.message}</p>}
+                {errors.invoiceId && <p className="mt-1 text-xs text-destructive font-bold">{errors.invoiceId.message}</p>}
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-muted-foreground">المبلغ المحصل ({currency}) <span className="text-danger">*</span></label>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">المبلغ المحصل ({currency}) <span className="text-destructive">*</span></label>
                 <input
                   type="number"
                   {...register("amount")}
-                  placeholder="أدخل المبلغ..."
-                  className="h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/40"
+                  placeholder="أدخل المبلغ المحصل..."
+                  className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-sm font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
                 />
-                {errors.amount && <p className="mt-1 text-xs text-danger font-bold">{errors.amount.message}</p>}
+                {errors.amount && <p className="mt-1 text-xs text-destructive font-bold">{errors.amount.message}</p>}
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-muted-foreground">طريقة السداد وتوريد الخزينة <span className="text-danger">*</span></label>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">طريقة السداد وتوريد الخزينة <span className="text-destructive">*</span></label>
                 <select
                   {...register("method")}
-                  className="h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/40"
+                  className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
                 >
                   <option value="cash">نقدي (كاش - الخزينة الرئيسية)</option>
                   <option value="card">شبكة ومدى (الحساب البنكي)</option>
                   <option value="bank_transfer">حوالة بنكية مباشرة</option>
                   <option value="cheque">شيك مصرفي مالي</option>
                 </select>
-                {errors.method && <p className="mt-1 text-xs text-danger font-bold">{errors.method.message}</p>}
+                {errors.method && <p className="mt-1 text-xs text-destructive font-bold">{errors.method.message}</p>}
               </div>
 
-              <div className="mt-6 flex justify-end gap-2 pt-2">
+              <div className="mt-6 flex justify-end gap-2.5 pt-3 border-t border-border/60">
                 <button
                   type="button"
                   onClick={() => { setIsModalOpen(false); reset(); }}
-                  className="h-10 rounded-xl px-4 text-xs font-bold hover:bg-accent"
+                  className="h-11 rounded-xl px-5 text-xs font-semibold border border-input bg-background/80 hover:bg-accent active:scale-[0.98] transition-all"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="h-10 rounded-xl bg-primary px-6 text-xs font-extrabold text-primary-foreground hover:bg-primary/90 shadow-sm"
+                  className="h-11 rounded-xl bg-primary px-6 text-xs font-extrabold text-primary-foreground hover:bg-primary/90 shadow-md active:scale-[0.98] transition-all glow-primary"
                 >
                   تأكيد وحفظ السند
                 </button>
@@ -398,50 +409,63 @@ function FinancePayments() {
 
       {/* --- Single Receipt Print Modal --- */}
       {selectedReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border overflow-hidden p-6 space-y-6">
-            <div className="flex justify-between items-center pb-4 border-b border-border/50">
-              <h3 className="font-extrabold text-lg flex items-center gap-2"><Receipt className="w-6 h-6 text-primary" /> سند قبض مالي رسمي</h3>
-              <button onClick={() => setSelectedReceipt(null)} className="p-1 hover:bg-accent rounded-xl"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="bg-card/98 dark:bg-card/95 w-full max-w-lg rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 space-y-6 animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-4 border-b border-border/60">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <Receipt className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-foreground">سند قبض مالي رسمي</h3>
+                  <p className="text-xs text-muted-foreground">معاينة تفاصيل العملية والتحصيل قبل الطباعة</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedReceipt(null)} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="p-6 bg-muted/30 rounded-2xl border border-border/60 space-y-3 font-bold text-sm">
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">رقم السند:</span>
-                <span className="font-mono font-black text-primary">{selectedReceipt.id}</span>
+            <div className="p-5 bg-muted/30 dark:bg-muted/15 rounded-2xl border border-border/60 space-y-3 font-semibold text-sm">
+              <div className="flex justify-between border-b border-border/50 pb-2.5">
+                <span className="text-muted-foreground text-xs font-bold">رقم السند:</span>
+                <span className="font-mono font-black text-primary text-xs">{selectedReceipt.id}</span>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">تاريخ الإصدار:</span>
-                <span>{selectedReceipt.date ? selectedReceipt.date.split("T")[0] : "-"}</span>
+              <div className="flex justify-between border-b border-border/50 pb-2.5">
+                <span className="text-muted-foreground text-xs font-bold">تاريخ الإصدار:</span>
+                <span className="text-xs font-bold tabular-nums">{selectedReceipt.date ? selectedReceipt.date.split("T")[0] : "-"}</span>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">استلمنا من الطالب/الجهة:</span>
-                <span className="font-extrabold">{selectedReceipt.studentName}</span>
+              <div className="flex justify-between border-b border-border/50 pb-2.5">
+                <span className="text-muted-foreground text-xs font-bold">استلمنا من الطالب/الجهة:</span>
+                <span className="font-extrabold text-xs text-foreground">{selectedReceipt.studentName}</span>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">رقم الفاتورة/البيان:</span>
-                <span>{selectedReceipt.invoiceTitle} ({selectedReceipt.invoiceId || "سند مباشر"})</span>
+              <div className="flex justify-between border-b border-border/50 pb-2.5">
+                <span className="text-muted-foreground text-xs font-bold">رقم الفاتورة/البيان:</span>
+                <span className="text-xs font-bold">{selectedReceipt.invoiceTitle} ({selectedReceipt.invoiceId || "سند مباشر"})</span>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">طريقة الدفع:</span>
-                <span>{getMethodLabel(selectedReceipt.method)}</span>
+              <div className="flex justify-between border-b border-border/50 pb-2.5">
+                <span className="text-muted-foreground text-xs font-bold">طريقة الدفع:</span>
+                <span className="text-xs font-bold">{getMethodLabel(selectedReceipt.method)}</span>
               </div>
               <div className="flex justify-between pt-2 text-base">
-                <span className="text-muted-foreground">المبلغ المحصل:</span>
-                <span className="font-black text-success tabular-nums">{selectedReceipt.amount.toLocaleString()} {currency}</span>
+                <span className="text-muted-foreground font-bold text-xs">المبلغ المحصل:</span>
+                <span className="font-black text-success tabular-nums text-lg">{selectedReceipt.amount.toLocaleString()} {currency}</span>
               </div>
             </div>
 
             <div className="flex gap-3 pt-2">
               <button 
                 onClick={() => { window.print(); setSelectedReceipt(null); }}
-                className="flex-1 btn-primary py-2.5 rounded-xl font-extrabold flex items-center justify-center gap-2"
+                className="flex-1 h-11 bg-primary text-primary-foreground rounded-xl font-extrabold flex items-center justify-center gap-2 hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary text-xs"
               >
                 <Printer className="w-4 h-4" /> طباعة السند الآن
               </button>
               <button 
                 onClick={() => setSelectedReceipt(null)} 
-                className="btn-secondary px-6 rounded-xl font-bold"
+                className="h-11 border border-input bg-background/80 hover:bg-accent px-6 rounded-xl font-semibold text-xs active:scale-[0.98] transition-all"
               >
                 إغلاق
               </button>

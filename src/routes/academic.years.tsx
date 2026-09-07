@@ -290,7 +290,7 @@ function AcademicYearsPage() {
                 <span>العام الأكاديمي المعتمد للنظام</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                {currentActiveYear?.name || "١٤٤٦ هـ"}
+                {currentActiveYear?.name || "1446 هـ"}
               </h2>
               <p className="max-w-2xl text-xs sm:text-sm text-blue-100/90 leading-relaxed">
                 يتم ربط وحفظ سجلات الطلاب، الحضور، الدرجات، الرسوم المالية، والجدول الأسبوعي وفق السنة الدراسية النشطة.
@@ -377,7 +377,7 @@ function AcademicYearsPage() {
             </div>
             <div className="mt-3">
               <div className="text-2xl font-black text-foreground">الفصل الثاني</div>
-              <div className="text-xs font-bold text-muted-foreground mt-0.5">من أصل ٣ فصول دراسية</div>
+              <div className="text-xs font-bold text-muted-foreground mt-0.5">من أصل 3 فصول دراسية</div>
             </div>
           </div>
         </div>
@@ -549,18 +549,18 @@ function AcademicYearsPage() {
           ========================================================= */}
       {isModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
           onClick={() => setIsModalOpen(false)}
           dir="rtl"
         >
           <div 
-            className="w-full max-w-lg bg-card border border-border shadow-2xl rounded-3xl p-6 sm:p-7 overflow-visible animate-in zoom-in-95 duration-150 space-y-5 my-8"
+            className="w-full max-w-lg bg-card/98 dark:bg-card/95 backdrop-blur-2xl border border-border/80 shadow-2xl rounded-3xl p-6 sm:p-7 overflow-visible animate-in zoom-in-95 duration-150 space-y-5 my-8"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary shrink-0">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
@@ -574,7 +574,7 @@ function AcademicYearsPage() {
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -590,10 +590,10 @@ function AcademicYearsPage() {
                 <input
                   required
                   type="text"
-                  placeholder="مثال: العام الدراسي ١٤٤٧ - ١٤٤٨ هـ"
+                  placeholder="مثال: العام الدراسي 1447 - 1448 هـ"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full h-11 rounded-xl border border-input bg-background px-3.5 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs"
                 />
               </div>
 
@@ -619,17 +619,17 @@ function AcademicYearsPage() {
               </div>
 
               {/* Active Year Checkbox Box */}
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/70 hover:border-primary/40 transition-colors">
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border/70 hover:border-primary/40 transition-colors">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.isCurrent}
                     onChange={(e) => setFormData({ ...formData, isCurrent: e.target.checked })}
-                    className="mt-0.5 h-4 w-4 rounded text-primary focus:ring-primary/20 accent-primary"
+                    className="mt-0.5 h-4.5 w-4.5 rounded-lg border-2 border-input text-primary focus:ring-4 focus:ring-primary/15 accent-primary cursor-pointer"
                   />
                   <div className="text-xs">
                     <div className="font-black text-foreground">تعيين كسنة دراسية نشطة ومعتمدة فوراً</div>
-                    <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">
+                    <div className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed font-medium">
                       عند التفعيل، ستنتقل كافة العمليات اليومية (تسجيل الطلاب، الحضور، الفواتير، الاختبارات) للعمل تحت مظلة هذه السنة.
                     </div>
                   </div>
@@ -637,19 +637,19 @@ function AcademicYearsPage() {
               </div>
 
               {/* Modal Actions */}
-              <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2.5">
+              <div className="pt-3.5 border-t border-border/60 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent text-foreground transition-colors"
+                  className="px-5 py-2.5 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent text-foreground transition-colors"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all glow-primary flex items-center gap-1.5"
+                  className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all active:scale-[0.98] glow-primary flex items-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4 font-bold" />
                   <span>حفظ بيانات السنة الدراسية</span>
                 </button>
               </div>
@@ -663,37 +663,37 @@ function AcademicYearsPage() {
           ========================================================= */}
       {isPromotionModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
           onClick={() => setIsPromotionModalOpen(false)}
           dir="rtl"
         >
           <div 
-            className="w-full max-w-xl bg-card border border-border shadow-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4"
+            className="w-full max-w-xl bg-card/98 dark:bg-card/95 backdrop-blur-2xl border border-border/80 shadow-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4 my-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500/10 text-amber-500 shrink-0">
                   <ArrowRightLeft className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-black text-base text-foreground">محرك ترحيل وترفيع الطلاب السنوي</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">ترفيع الصفوف وتخريج المراحل المنتهية آلياً</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 font-medium">ترفيع الصفوف وتخريج المراحل المنتهية آلياً</p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsPromotionModalOpen(false)}
-                className="p-1.5 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed font-medium">
               يقوم هذا المحرك بترفيع جميع الطلاب الناجحين للصف الدراسي التالي للعام الجديد، وتخريج طلاب الصف الثالث ثانوي آلياً.
             </p>
 
-            <div className="space-y-3 p-4 rounded-2xl bg-muted/40 border border-border/70">
+            <div className="space-y-3.5 p-4 rounded-2xl bg-muted/30 border border-border/70">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-muted-foreground">العام الدراسي الحالي (المصدر):</span>
                 <span className="font-black text-foreground text-sm">{selectedYear?.name}</span>
@@ -704,7 +704,7 @@ function AcademicYearsPage() {
                 <select
                   value={targetPromotionYearId}
                   onChange={(e) => setTargetPromotionYearId(e.target.value)}
-                  className="w-full h-11 rounded-xl border border-input bg-background px-3.5 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs cursor-pointer"
                 >
                   <option value="">-- اختر العام الدراسي للترحيل --</option>
                   {allAcademicYears.map((y) => (
@@ -716,17 +716,17 @@ function AcademicYearsPage() {
               </div>
 
               {/* Financial Rollover Option */}
-              <div className="pt-2 border-t border-border/40">
+              <div className="pt-2.5 border-t border-border/40">
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rolloverBalances}
                     onChange={(e) => setRolloverBalances(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded text-primary focus:ring-primary/20 accent-primary"
+                    className="mt-0.5 h-4.5 w-4.5 rounded-lg border-2 border-input text-primary focus:ring-4 focus:ring-primary/15 accent-primary cursor-pointer"
                   />
                   <div className="text-xs">
                     <div className="font-bold text-foreground">ترحيل الأرصدة والذمم المالية المتبقية</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed font-medium">
                       نقل متبقيات الرسوم غير المسددة كأرصدة افتتاحية في قيود العام الجديد آلياً.
                     </div>
                   </div>

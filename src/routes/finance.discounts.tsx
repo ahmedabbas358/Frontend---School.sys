@@ -239,39 +239,46 @@ function FinanceDiscounts() {
 
       {/* --- Add Discount Modal --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border overflow-hidden">
-            <div className="p-5 border-b border-border/50 flex justify-between items-center bg-primary/10">
-              <h3 className="font-extrabold text-base flex items-center gap-2 text-primary"><Plus className="w-5 h-5" /> إضافة بند خصم / منحة جديدة</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-accent rounded-lg"><X className="w-4 h-4" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
+          <div className="w-full max-w-lg modal-card-luxury overflow-hidden">
+            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-primary/10">
+              <h3 className="font-black text-lg flex items-center gap-2.5 text-primary">
+                <div className="h-8 w-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+                  <Plus className="w-4 h-4" />
+                </div>
+                إضافة بند خصم / منحة جديدة
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <form onSubmit={handleAddDiscount} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">اسم الخصم أو المنحة <span className="text-danger">*</span></label>
+                <label className="block text-xs font-extrabold text-foreground mb-2">اسم الخصم أو المنحة <span className="text-danger">*</span></label>
                 <input 
                   type="text" 
                   required 
                   placeholder="مثال: خصم الأخ الثاني (15%) أو منحة تفوق" 
                   value={newDiscount.name}
                   onChange={e => setNewDiscount(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary/40 outline-none" 
+                  className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground mb-1">نوع الخصم</label>
+                  <label className="block text-xs font-extrabold text-foreground mb-2">نوع الخصم</label>
                   <select 
                     value={newDiscount.type}
                     onChange={e => setNewDiscount(prev => ({ ...prev, type: e.target.value as any }))}
-                    className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-xs focus:ring-2 focus:ring-primary/40 outline-none"
+                    className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 cursor-pointer"
                   >
                     <option value="percentage">نسبة مئوية (%)</option>
                     <option value="fixed">مبلغ ثابت ({currency})</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground mb-1">قيمة الخصم <span className="text-danger">*</span></label>
+                  <label className="block text-xs font-extrabold text-foreground mb-2">قيمة الخصم <span className="text-danger">*</span></label>
                   <input 
                     type="number" 
                     required 
@@ -279,25 +286,25 @@ function FinanceDiscounts() {
                     placeholder="أدخل القيمة..." 
                     value={newDiscount.value || ""}
                     onChange={e => setNewDiscount(prev => ({ ...prev, value: Number(e.target.value) }))}
-                    className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-base focus:ring-2 focus:ring-primary/40 outline-none" 
+                    className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-extrabold text-base shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" 
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">الوصف والملاحظات</label>
+                <label className="block text-xs font-extrabold text-foreground mb-2">الوصف والملاحظات</label>
                 <input 
                   type="text" 
                   placeholder="ملاحظات توضيحية حول ضوابط الخصم..." 
                   value={newDiscount.description || ""}
                   onChange={e => setNewDiscount(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl text-xs focus:ring-2 focus:ring-primary/40 outline-none" 
+                  className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl text-sm font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" 
                 />
               </div>
 
-              <div className="pt-3 flex gap-3">
-                <button type="submit" className="flex-1 btn-primary font-extrabold py-2.5 rounded-xl">حفظ بند الخصم</button>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 btn-secondary py-2.5 rounded-xl">إلغاء</button>
+              <div className="pt-3 flex gap-3 border-t border-border/50">
+                <button type="submit" className="flex-1 bg-primary text-primary-foreground font-extrabold py-2.5 rounded-xl shadow-md hover:bg-primary/90 transition-all text-sm active:scale-[0.98]">حفظ بند الخصم</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-[0.98]">إلغاء</button>
               </div>
             </form>
           </div>

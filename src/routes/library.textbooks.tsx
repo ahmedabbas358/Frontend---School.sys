@@ -164,46 +164,64 @@ function LibraryTextbooks() {
       <div className="space-y-4">
         
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-bold">{editingId ? "تعديل بيانات الكتاب" : "إضافة كتاب دراسي جديد"}</h3>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">عنوان الكتاب <span className="text-danger">*</span></label>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+            <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
+              <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
+                    <Book className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">{editingId ? "تعديل بيانات الكتاب" : "إضافة كتاب دراسي جديد"}</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">تسجيل بيانات الكتاب وتحديد عدد النسخ بالمستودع</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setIsModalOpen(false); reset(); setEditingId(null); }}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">عنوان الكتاب <span className="text-destructive">*</span></label>
                   <input
                     {...register("title")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                     placeholder="مثال: الرياضيات المتقدمة"
                   />
-                  {errors.title && <p className="mt-1 text-xs text-danger">{errors.title.message}</p>}
+                  {errors.title && <p className="text-xs font-bold text-destructive">{errors.title.message}</p>}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">المادة <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">المادة الدراسية <span className="text-destructive">*</span></label>
                   <input
                     {...register("subject")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                     placeholder="مثال: رياضيات"
                   />
-                  {errors.subject && <p className="mt-1 text-xs text-danger">{errors.subject.message}</p>}
+                  {errors.subject && <p className="text-xs font-bold text-destructive">{errors.subject.message}</p>}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">الصف الدراسي المقرّر <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">الصف الدراسي المقرّر <span className="text-destructive">*</span></label>
                   <select
                     {...register("gradeId")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
                   >
                     <option value="">اختر الصف...</option>
                     {grades.map(g => (
                       <option key={g} value={g}>{g}</option>
                     ))}
                   </select>
-                  {errors.gradeId && <p className="mt-1 text-xs text-danger">{errors.gradeId.message}</p>}
+                  {errors.gradeId && <p className="text-xs font-bold text-destructive">{errors.gradeId.message}</p>}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">الفصل الدراسي <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">الفصل الدراسي <span className="text-destructive">*</span></label>
                   <select
                     {...register("term")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
                   >
                     <option value="الفصل الأول">الفصل الأول</option>
                     <option value="الفصل الثاني">الفصل الثاني</option>
@@ -212,29 +230,29 @@ function LibraryTextbooks() {
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
-                  {errors.term && <p className="mt-1 text-xs text-danger">{errors.term.message}</p>}
+                  {errors.term && <p className="text-xs font-bold text-destructive">{errors.term.message}</p>}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">إجمالي النسخ المضافة للمخزن <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">إجمالي النسخ المضافة للمخزن <span className="text-destructive">*</span></label>
                   <input
                     type="number"
                     {...register("copies")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   />
-                  {errors.copies && <p className="mt-1 text-xs text-danger">{errors.copies.message}</p>}
+                  {errors.copies && <p className="text-xs font-bold text-destructive">{errors.copies.message}</p>}
                 </div>
 
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => { setIsModalOpen(false); reset(); setEditingId(null); }}
-                    className="h-10 rounded-lg px-4 text-sm font-medium hover:bg-accent"
+                    className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]"
                   >
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="h-10 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+                    className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
                   >
                     حفظ البيانات
                   </button>
@@ -244,21 +262,21 @@ function LibraryTextbooks() {
           </div>
         )}
 
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+        <div className="rounded-2xl border border-border/70 bg-card/60 p-4 backdrop-blur-xl shadow-sm">
+          <div className="grid gap-3.5 md:grid-cols-[1fr_200px]">
             <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder={`البحث في مقررات ${getStageLabel(stage)}...`}
-                className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
               />
             </div>
             <select
               value={selectedTerm}
               onChange={(e) => setSelectedTerm(e.target.value)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
             >
               <option value="all">كل الفصول</option>
               <option value="الفصل الأول">الفصل الأول</option>

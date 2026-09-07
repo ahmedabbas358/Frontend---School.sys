@@ -203,20 +203,20 @@ function TeacherProfile() {
           <div className="grid gap-6 md:grid-cols-3">
             <PageCard title="معدل الحضور" className="text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="text-5xl font-black tabular-nums text-success mt-4 mb-2 relative z-10">٩٨٪</div>
+              <div className="text-5xl font-black tabular-nums text-success mt-4 mb-2 relative z-10">98%</div>
               <div className="text-sm text-muted-foreground font-bold relative z-10">خلال الفصل الدراسي الحالي</div>
             </PageCard>
             <PageCard title="النصاب الأسبوعي" className="text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="text-5xl font-black tabular-nums text-primary mt-4 mb-2 relative z-10">{teacherSlots.length}</div>
-              <div className="text-sm text-muted-foreground font-bold relative z-10">حصة من أصل ٢٤ (الحد الأقصى)</div>
+              <div className="text-sm text-muted-foreground font-bold relative z-10">حصة من أصل 24 (الحد الأقصى)</div>
               <div className="w-full bg-muted rounded-full h-2 mt-4 relative z-10">
                 <div className="bg-primary h-2 rounded-full" style={{ width: `${(teacherSlots.length / 24) * 100}%` }}></div>
               </div>
             </PageCard>
             <PageCard title="نسبة إنجاز المنهج" className="text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-warning/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="text-5xl font-black tabular-nums text-warning mt-4 mb-2 relative z-10">٧٢٪</div>
+              <div className="text-5xl font-black tabular-nums text-warning mt-4 mb-2 relative z-10">72%</div>
               <div className="text-sm text-muted-foreground font-bold relative z-10">متوسط الإنجاز عبر الشعب</div>
             </PageCard>
           </div>

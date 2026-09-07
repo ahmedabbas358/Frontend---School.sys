@@ -18,6 +18,7 @@ export interface ArabicDatePickerProps {
   className?: string;
   minYear?: number;
   maxYear?: number;
+  showAgeCalculator?: boolean;
 }
 
 const ARABIC_MONTHS = [
@@ -48,6 +49,7 @@ export function ArabicDatePicker({
   className = "",
   minYear = 1990,
   maxYear = new Date().getFullYear() + 5,
+  showAgeCalculator = false,
 }: ArabicDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"days" | "months" | "years">("days");
@@ -112,13 +114,27 @@ export function ArabicDatePicker({
   const displayFormattedDate = useMemo(() => {
     if (!value || !selectedParts) return "";
     const dateObj = new Date(selectedParts.year, selectedParts.month, selectedParts.day);
-    const formatted = dateObj.toLocaleDateString("ar-SA", {
+    const formatted = dateObj.toLocaleDateString("ar-EG", {
       year: "numeric",
       month: "long",
       day: "numeric",
+      numberingSystem: "latn",
     });
     return `${formatted} (${value})`;
   }, [value, selectedParts]);
+
+  const calculatedAge = useMemo(() => {
+    if (!showAgeCalculator || !value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const parts = value.split("-").map(Number);
+    const birth = new Date(parts[0], parts[1] - 1, parts[2]);
+    const today = new Date();
+    let ageYears = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      ageYears--;
+    }
+    return ageYears >= 0 ? ageYears : null;
+  }, [showAgeCalculator, value]);
 
   const handleSelectDay = (day: number) => {
     const formattedMonth = String(viewMonth + 1).padStart(2, "0");
@@ -188,50 +204,55 @@ export function ArabicDatePicker({
               setViewMode("days");
             }
           }}
-          className={`flex h-11 w-full items-center justify-between rounded-xl border px-3.5 text-xs text-right transition-all shadow-xs outline-none ${
+          className={`flex h-11 w-full items-center justify-between rounded-xl border px-3.5 text-xs text-right transition-all duration-200 shadow-xs outline-none ${
             error
-              ? "border-danger bg-danger/5 text-danger"
+              ? "border-danger bg-danger/5 text-danger ring-4 ring-danger/10"
               : isOpen
-              ? "border-primary ring-2 ring-primary/20 bg-background text-foreground"
-              : "border-input bg-background hover:border-primary/50 text-foreground"
+              ? "border-primary ring-4 ring-primary/15 bg-background text-foreground"
+              : "border-input bg-background/80 hover:border-primary/45 text-foreground"
           }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <CalendarIcon className={`w-4 h-4 shrink-0 ${value ? "text-primary" : "text-muted-foreground opacity-60"}`} />
+            <CalendarIcon className={`w-4 h-4 shrink-0 transition-colors ${value ? "text-primary" : "text-muted-foreground opacity-60"}`} />
             {value ? (
               <span className="font-bold text-foreground truncate">{displayFormattedDate}</span>
             ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
+              <span className="text-muted-foreground/60">{placeholder}</span>
             )}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {value && (
               <span
                 onClick={(e) => {
                   e.stopPropagation();
                   onChange("");
                 }}
-                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 title="مسح التاريخ"
               >
                 <X className="w-3.5 h-3.5" />
               </span>
             )}
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/60">
+            {calculatedAge !== null && (
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-primary/15 text-primary border border-primary/25 tabular-nums">
+                {calculatedAge} سنة
+              </span>
+            )}
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-muted/80 text-muted-foreground border border-border/60">
               تقويم
             </span>
           </div>
         </button>
       </div>
 
-      {error && <p className="text-[11px] font-bold text-danger mt-0.5">{error}</p>}
+      {error && <p className="text-[11px] font-bold text-danger mt-1">{error}</p>}
 
       {/* =========================================================
           Ultra-Compact Custom Calendar Dialog (No native select popups!)
           ========================================================= */}
       {isOpen && (
-        <div className="absolute top-full right-0 z-[100] mt-1.5 w-72 sm:w-80 rounded-2xl border border-border bg-card/95 backdrop-blur-xl p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute top-full right-0 z-[100] mt-2 w-72 sm:w-80 rounded-2xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl p-3.5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
           
           {/* Header Navigation & Mode Switching */}
           <div className="flex items-center justify-between gap-1 mb-2.5 border-b border-border/60 pb-2">

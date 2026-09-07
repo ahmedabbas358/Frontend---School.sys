@@ -107,108 +107,125 @@ function ClinicVisits() {
         
         {/* Add Visit Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-bold">تسجيل مراجعة للعيادة المدرسية</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+            <div className="w-full max-w-md rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl p-6 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/60">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                    <Stethoscope className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-foreground">تسجيل مراجعة للعيادة</h3>
+                    <p className="text-xs text-muted-foreground">توثيق الفحص والتشخيص والإجراء العلاجي</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setIsModalOpen(false); reset(); }} 
+                  className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                >
+                  <span className="font-bold text-lg leading-none">&times;</span>
+                </button>
+              </div>
+
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                
                 <div>
-                  <label className="mb-1 block text-sm font-medium">اسم الطالب ({getStageLabel(stage)}) <span className="text-danger">*</span></label>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">اسم الطالب ({getStageLabel(stage)}) <span className="text-destructive">*</span></label>
                   
-                    <div className="relative">
-                      <div 
-                        className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => setIsStudentDropdownOpen(!isStudentDropdownOpen)}
-                      >
-                        <span className={selectedStudentId ? "text-foreground font-bold" : "text-muted-foreground"}>
-                          {selectedStudent ? `${selectedStudent.id} - ${selectedStudent.name}` : "-- اختر الطالب --"}
-                        </span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      
-                      {isStudentDropdownOpen && (
-                        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg p-1">
-                          <div className="sticky top-0 bg-popover p-2 pb-1">
-                            <div className="relative">
-                              <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                              <input 
-                                autoFocus
-                                value={studentSearch}
-                                onChange={(e) => setStudentSearch(e.target.value)}
-                                placeholder="ابحث بالاسم أو الرقم..."
-                                className="h-8 w-full rounded-md border border-input bg-background pr-7 pl-3 text-xs outline-none focus:ring-1 focus:ring-primary"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          </div>
-                          <div className="mt-1">
-                            {filteredStudents.length === 0 ? (
-                              <div className="p-3 text-center text-xs text-muted-foreground">لا توجد نتائج</div>
-                            ) : (
-                              filteredStudents.map(st => (
-                                <div 
-                                  key={st.id} 
-                                  className="cursor-pointer rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-                                  onClick={() => {
-                                    setValue("studentId", st.id, { shouldValidate: true });
-                                    setStudentSearch("");
-                                    setIsStudentDropdownOpen(false);
-                                  }}
-                                >
-                                  <div className="font-bold">{st.name}</div>
-                                  <div className="text-xs text-muted-foreground">{st.id}</div>
-                                </div>
-                              ))
-                            )}
+                  <div className="relative">
+                    <div 
+                      className="flex h-11 w-full items-center justify-between rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold cursor-pointer hover:border-primary/50 transition-all focus:ring-4 focus:ring-primary/15"
+                      onClick={() => setIsStudentDropdownOpen(!isStudentDropdownOpen)}
+                    >
+                      <span className={selectedStudentId ? "text-foreground font-bold" : "text-muted-foreground"}>
+                        {selectedStudent ? `${selectedStudent.id} - ${selectedStudent.name}` : "-- اختر الطالب --"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    
+                    {isStudentDropdownOpen && (
+                      <div className="absolute top-full start-0 end-0 z-50 mt-1.5 max-h-60 overflow-y-auto custom-scrollbar-modal rounded-2xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl p-2 animate-in zoom-in-95 duration-100">
+                        <div className="sticky top-0 bg-card/95 backdrop-blur-md p-1 pb-2">
+                          <div className="relative">
+                            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <input 
+                              autoFocus
+                              value={studentSearch}
+                              onChange={(e) => setStudentSearch(e.target.value)}
+                              placeholder="ابحث بالاسم أو الرقم..."
+                              className="h-9 w-full rounded-xl border border-input bg-background/80 ps-8 pe-3 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              onClick={(e) => e.stopPropagation()}
+                            />
                           </div>
                         </div>
-                      )}
-                    </div>
+                        <div className="mt-1 space-y-1">
+                          {filteredStudents.length === 0 ? (
+                            <div className="p-3 text-center text-xs text-muted-foreground">لا توجد نتائج</div>
+                          ) : (
+                            filteredStudents.map(st => (
+                              <div 
+                                key={st.id} 
+                                className="cursor-pointer rounded-xl px-3 py-2 text-xs hover:bg-accent hover:text-accent-foreground transition-all"
+                                onClick={() => {
+                                  setValue("studentId", st.id, { shouldValidate: true });
+                                  setStudentSearch("");
+                                  setIsStudentDropdownOpen(false);
+                                }}
+                              >
+                                <div className="font-bold text-foreground">{st.name}</div>
+                                <div className="text-[11px] text-muted-foreground">{st.id}</div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                  {errors.studentId && <p className="mt-1 text-xs text-danger">{errors.studentId.message}</p>}
+                  {errors.studentId && <p className="mt-1 text-xs text-destructive font-bold">{errors.studentId.message}</p>}
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">الأعراض الظاهرة <span className="text-danger">*</span></label>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الأعراض الظاهرة <span className="text-destructive">*</span></label>
                   <input
                     {...register("symptoms")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                    placeholder="مثال: صداع، ارتفاع حرارة..."
+                    className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
+                    placeholder="مثال: صداع، ارتفاع حرارة، إجهاد..."
                   />
-                  {errors.symptoms && <p className="mt-1 text-xs text-danger">{errors.symptoms.message}</p>}
+                  {errors.symptoms && <p className="mt-1 text-xs text-destructive font-bold">{errors.symptoms.message}</p>}
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">التشخيص المبدئي <span className="text-danger">*</span></label>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">التشخيص المبدئي <span className="text-destructive">*</span></label>
                   <input
                     {...register("diagnosis")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    placeholder="مثال: اشتباه إنفلونزا موسمية..."
+                    className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
                   />
-                  {errors.diagnosis && <p className="mt-1 text-xs text-danger">{errors.diagnosis.message}</p>}
+                  {errors.diagnosis && <p className="mt-1 text-xs text-destructive font-bold">{errors.diagnosis.message}</p>}
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">الإجراء المتخذ <span className="text-danger">*</span></label>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الإجراء المتخذ <span className="text-destructive">*</span></label>
                   <textarea
                     {...register("actionTaken")}
-                    className="w-full rounded-lg border border-input bg-background p-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="w-full rounded-xl border border-input bg-background/80 p-3.5 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all resize-none custom-scrollbar placeholder:text-muted-foreground/60"
                     rows={3}
-                    placeholder="تم إعطاء خافض للحرارة والتواصل مع ولي الأمر..."
+                    placeholder="تم إعطاء خافض للحرارة والتواصل مع ولي الأمر للمتابعة..."
                   />
-                  {errors.actionTaken && <p className="mt-1 text-xs text-danger">{errors.actionTaken.message}</p>}
+                  {errors.actionTaken && <p className="mt-1 text-xs text-destructive font-bold">{errors.actionTaken.message}</p>}
                 </div>
 
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="pt-4 flex justify-end gap-2.5 border-t border-border/60">
                   <button
                     type="button"
                     onClick={() => { setIsModalOpen(false); reset(); }}
-                    className="h-10 rounded-lg px-4 text-sm font-medium hover:bg-accent"
+                    className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all"
                   >
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="h-10 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+                    className="h-11 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-extrabold hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary"
                   >
                     حفظ الزيارة الطبية
                   </button>
@@ -218,18 +235,18 @@ function ClinicVisits() {
           </div>
         )}
 
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
             <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="البحث باسم الطالب أو رقم الزيارة..."
-                className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                className="h-11 w-full rounded-xl border border-input bg-background/80 ps-9 pe-3 text-xs font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs placeholder:text-muted-foreground/60"
               />
             </div>
-            <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm hover:bg-accent">
+            <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-input bg-background/80 px-4 text-xs font-semibold hover:bg-accent active:scale-[0.98] transition-all">
               <Filter className="h-4 w-4" /> تصفية
             </button>
           </div>

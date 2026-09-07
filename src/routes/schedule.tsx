@@ -396,92 +396,108 @@ function SchedulePage() {
 
       {/* Settings Modal */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-border/50 sticky top-0 bg-card z-10">
-              <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-                <Settings className="h-5 w-5" /> إعدادات الجدول الدراسي
-              </h2>
-              <button onClick={() => setIsSettingsOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-border/60 sticky top-0 bg-card/98 dark:bg-card/95 backdrop-blur-md z-10">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <Settings className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-foreground">إعدادات الجدول المدرسي</h2>
+                  <p className="text-xs text-muted-foreground">ضبط أيام الدراسة، الحصص اليومية، وفترات الفسحة والراحة</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSettingsOpen(false)} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
             
-            <div className="p-6 space-y-8">
+            <div className="p-6 space-y-6">
               {/* Conflict Prevention */}
-              <div className="flex items-center justify-between bg-primary/5 border border-primary/20 p-4 rounded-xl">
+              <div className="flex items-center justify-between bg-primary/5 border border-primary/20 p-4 rounded-2xl">
                 <div>
-                  <h3 className="font-bold text-base mb-1">نظام منع التعارض التلقائي</h3>
-                  <p className="text-sm text-muted-foreground">يمنع تعيين معلم في حصة إذا كان لديه حصة في شعبة أخرى بنفس الوقت</p>
+                  <h3 className="font-extrabold text-sm mb-0.5 text-foreground">نظام منع التعارض التلقائي</h3>
+                  <p className="text-xs text-muted-foreground">يمنع تعيين معلم في حصة إذا كان لديه حصة في شعبة أخرى بنفس الوقت</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" checked={tempSettings.preventConflicts} onChange={(e) => setTempSettings({...tempSettings, preventConflicts: e.target.checked})} />
-                  <div className="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[100%] rtl:peer-checked:after:-translate-x-[100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 rtl:peer-checked:after:-translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-primary"></div>
                 </label>
               </div>
 
               {/* Study Days */}
               <div>
-                <h3 className="font-bold text-base mb-3 border-b border-border/50 pb-2">أيام الدوام الأسبوعي</h3>
-                <div className="flex flex-wrap gap-3">
-                  {ALL_DAYS.map((day: any) => (
-                    <label key={day} className="flex items-center gap-2 bg-muted/40 px-4 py-2 rounded-xl cursor-pointer hover:bg-muted transition-colors border border-transparent hover:border-border">
-                      <input 
-                        type="checkbox" 
-                        checked={tempSettings.studyDays.includes(day)}
-                        onChange={(e: any) => {
-                          const checked = e.target.checked;
-                          setTempSettings(prev => ({
-                            ...prev,
-                            studyDays: checked 
-                              ? ALL_DAYS.filter(d => prev.studyDays.includes(d) || d === day)
-                              : prev.studyDays.filter(d => d !== day)
-                          }));
-                        }}
-                        className="w-4 h-4 text-primary rounded"
-                      />
-                      <span className="font-bold text-sm">{day}</span>
-                    </label>
-                  ))}
+                <h3 className="font-extrabold text-sm mb-3 border-b border-border/60 pb-2 text-foreground">أيام الدوام الأسبوعي</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  {ALL_DAYS.map((day: any) => {
+                    const isChecked = tempSettings.studyDays.includes(day);
+                    return (
+                      <label key={day} className={`flex items-center gap-2 px-3.5 py-2 rounded-xl cursor-pointer transition-all border select-none ${
+                        isChecked 
+                          ? "bg-primary/10 border-primary/30 text-primary font-bold shadow-xs" 
+                          : "bg-muted/30 border-border/60 text-muted-foreground hover:bg-accent"
+                      }`}>
+                        <input 
+                          type="checkbox" 
+                          checked={isChecked}
+                          onChange={(e: any) => {
+                            const checked = e.target.checked;
+                            setTempSettings(prev => ({
+                              ...prev,
+                              studyDays: checked 
+                                ? ALL_DAYS.filter(d => prev.studyDays.includes(d) || d === day)
+                                : prev.studyDays.filter(d => d !== day)
+                            }));
+                          }}
+                          className="h-4 w-4 rounded-md border-input text-primary focus:ring-primary/20 cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold">{day}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Periods Count */}
               <div>
-                <h3 className="font-bold text-base mb-3 border-b border-border/50 pb-2">عدد الحصص اليومي</h3>
-                <div className="flex items-center gap-4 max-w-xs">
+                <h3 className="font-extrabold text-sm mb-3 border-b border-border/60 pb-2 text-foreground">عدد الحصص اليومي</h3>
+                <div className="flex items-center gap-3 max-w-xs">
                   <input 
                     type="number" 
                     min={3} 
                     max={10} 
                     value={tempSettings.periodsCount}
                     onChange={(e: any) => setTempSettings((prev: any) => ({...prev, periodsCount: parseInt(e.target.value) || 7}))}
-                    className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none font-bold text-center"
+                    className="w-28 h-11 rounded-xl border border-input bg-background/80 px-3.5 focus:border-primary focus:ring-4 focus:ring-primary/15 font-black text-center tabular-nums text-foreground outline-none transition-all"
                   />
-                  <span className="text-muted-foreground font-bold text-sm whitespace-nowrap">حصة دراسية</span>
+                  <span className="text-muted-foreground font-semibold text-xs whitespace-nowrap">حصص دراسية يومياً</span>
                 </div>
               </div>
 
               {/* Breaks */}
               <div>
-                <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
-                  <h3 className="font-bold text-base">فترات الاستراحة (الفسحة)</h3>
+                <div className="flex items-center justify-between mb-3 border-b border-border/60 pb-2">
+                  <h3 className="font-extrabold text-sm text-foreground">فترات الاستراحة (الفسحة)</h3>
                   <button 
                     onClick={() => setTempSettings({...tempSettings, breaks: [...tempSettings.breaks, {afterPeriod: 1, name: "استراحة"}]})}
-                    className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
+                    className="text-xs font-bold text-primary flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 active:scale-[0.98] transition-all"
                   >
-                    <Plus className="h-3 w-3" /> إضافة استراحة
+                    <Plus className="h-3.5 w-3.5" /> إضافة استراحة
                   </button>
                 </div>
                 
                 {tempSettings.breaks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">لا توجد استراحات محددة في الجدول.</p>
+                  <p className="text-xs text-muted-foreground italic">لا توجد استراحات محددة في الجدول.</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {tempSettings.breaks.map((brk: any, idx: number) => (
-                      <div key={idx} className="flex gap-3 items-end bg-background p-3 rounded-xl border border-border/50">
+                      <div key={idx} className="flex gap-3 items-end bg-muted/30 dark:bg-muted/15 p-3.5 rounded-2xl border border-border/60">
                         <div className="flex-1">
-                          <label className="text-xs text-muted-foreground mb-1 block font-bold">اسم الاستراحة</label>
+                          <label className="text-xs font-semibold text-foreground/85 mb-1.5 block">اسم الاستراحة</label>
                           <input 
                             type="text" 
                             value={brk.name}
@@ -490,11 +506,11 @@ function SchedulePage() {
                               newBreaks[idx].name = e.target.value;
                               setTempSettings({...tempSettings, breaks: newBreaks});
                             }}
-                            className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none font-bold"
+                            className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-semibold focus:border-primary focus:ring-4 focus:ring-primary/15 outline-none transition-all text-foreground"
                           />
                         </div>
                         <div className="flex-1">
-                          <label className="text-xs text-muted-foreground mb-1 block font-bold">مكان الاستراحة (بعد الحصة)</label>
+                          <label className="text-xs font-semibold text-foreground/85 mb-1.5 block">مكان الاستراحة (بعد الحصة)</label>
                           <select 
                             value={brk.afterPeriod}
                             onChange={(e) => {
@@ -502,7 +518,7 @@ function SchedulePage() {
                               newBreaks[idx].afterPeriod = parseInt(e.target.value);
                               setTempSettings({...tempSettings, breaks: newBreaks});
                             }}
-                            className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none font-bold"
+                            className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-semibold focus:border-primary focus:ring-4 focus:ring-primary/15 outline-none transition-all text-foreground cursor-pointer"
                           >
                             {Array.from({length: tempSettings.periodsCount}).map((_: any, i: number) => (
                               <option key={i+1} value={i+1}>بعد الحصة {i+1}</option>
@@ -514,7 +530,7 @@ function SchedulePage() {
                             const newBreaks = tempSettings.breaks.filter((_: any, i: number) => i !== idx);
                             setTempSettings({...tempSettings, breaks: newBreaks});
                           }}
-                          className="h-9 w-9 rounded-lg bg-danger/10 text-danger flex items-center justify-center hover:bg-danger hover:text-white transition-colors"
+                          className="h-10 w-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive hover:text-white active:scale-95 transition-all"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -525,16 +541,16 @@ function SchedulePage() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-border/50 bg-muted/20 flex justify-end gap-3 rounded-b-3xl">
+            <div className="p-6 pt-4 border-t border-border/60 bg-card/98 dark:bg-card/95 flex justify-end gap-2.5 rounded-b-3xl">
               <button 
                 onClick={() => setIsSettingsOpen(false)}
-                className="px-6 py-2.5 rounded-xl font-bold hover:bg-accent transition-colors"
+                className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all"
               >
                 إلغاء
               </button>
               <button 
                 onClick={saveSettings}
-                className="px-6 py-2.5 rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2"
+                className="h-11 px-7 rounded-xl text-xs font-extrabold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary flex items-center gap-2"
               >
                 <Save className="h-4 w-4" /> حفظ الإعدادات
               </button>
@@ -545,27 +561,33 @@ function SchedulePage() {
 
       {/* Slot Assignment Modal */}
       {modalOpen && editingSlot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-primary">تعديل الحصة</h2>
-              <button onClick={() => setModalOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="w-full max-w-md rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl p-6 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/60">
+              <div>
+                <h2 className="text-base font-extrabold text-foreground">تعديل حصة الجدول</h2>
+                <p className="text-xs text-muted-foreground">إسناد المادة والمعلم لهذه الحصة</p>
+              </div>
+              <button 
+                onClick={() => setModalOpen(false)} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
             
-            <div className="mb-6 flex gap-2">
+            <div className="mb-5 flex flex-wrap gap-2">
               <Badge tone="primary">{editingSlot.day}</Badge>
               <Badge tone="info">الحصة {editingSlot.period}</Badge>
               <Badge tone="neutral">{targetSection?.grade} - {targetSection?.name}</Badge>
             </div>
 
-            <form onSubmit={handleSaveSlot} className="space-y-5">
+            <form onSubmit={handleSaveSlot} className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">المادة الدراسية *</label>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">المادة الدراسية <span className="text-destructive">*</span></label>
                 <select
                   required
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
                   value={selectedSubject}
                   onChange={e => setSelectedSubject(e.target.value)}
                 >
@@ -577,10 +599,10 @@ function SchedulePage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-muted-foreground">المعلم *</label>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">المعلم المكلف <span className="text-destructive">*</span></label>
                 <select
                   required
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
                   value={selectedTeacher}
                   onChange={e => setSelectedTeacher(e.target.value)}
                 >
@@ -588,41 +610,39 @@ function SchedulePage() {
                   {teachers.map(t => {
                     const busy = isTeacherBusy(t.id, editingSlot.day, editingSlot.period);
                     return (
-                      <option key={t.id} value={t.id} disabled={!!busy} className={busy ? "text-danger" : ""}>
+                      <option key={t.id} value={t.id} disabled={!!busy} className={busy ? "text-destructive" : ""}>
                         {t.name} {busy ? `(${busy})` : ""}
                       </option>
                     );
                   })}
                 </select>
                 {selectedTeacher && isTeacherBusy(selectedTeacher, editingSlot.day, editingSlot.period) && (
-                  <p className="mt-2 text-xs text-danger flex items-center gap-1 font-bold">
-                    <AlertCircle className="h-3 w-3" /> المعلم المختار لديه تعارض في هذا الوقت.
+                  <p className="mt-2 text-xs text-destructive flex items-center gap-1.5 font-bold">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" /> المعلم المختار لديه تعارض في هذا الوقت.
                   </p>
                 )}
               </div>
 
-              <div className="pt-5 mt-2 border-t border-border/50 flex justify-between items-center">
+              <div className="pt-4 mt-2 border-t border-border/60 flex justify-between items-center">
+                <button 
+                  type="button" 
+                  onClick={handleClearSlot}
+                  className="h-11 rounded-xl px-4 text-xs font-bold text-destructive hover:bg-destructive/10 active:scale-[0.98] transition-all flex items-center gap-1.5"
+                >
+                  <Trash2 className="h-4 w-4" /> إفراغ الحصة
+                </button>
                 <div className="flex gap-2">
                   <button 
                     type="button" 
-                    onClick={handleClearSlot}
-                    className="rounded-xl px-4 py-2.5 font-bold text-danger hover:bg-danger/10 transition-colors flex items-center gap-2"
-                  >
-                    <Trash2 className="h-4 w-4" /> إفراغ
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    type="button" 
-                    onClick={() => setModalOpen(false)}
-                    className="rounded-xl px-4 py-2.5 font-bold hover:bg-accent transition-colors"
+                    onClick={() => setModalOpen(false)} 
+                    className="h-11 rounded-xl px-4 text-xs font-semibold border border-input bg-background/80 hover:bg-accent active:scale-[0.98] transition-all"
                   >
                     إلغاء
                   </button>
                   <button 
                     type="submit" 
                     disabled={!!(selectedTeacher && isTeacherBusy(selectedTeacher, editingSlot.day, editingSlot.period))}
-                    className="rounded-xl bg-primary px-6 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-11 rounded-xl bg-primary px-6 text-xs font-extrabold text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     حفظ
                   </button>

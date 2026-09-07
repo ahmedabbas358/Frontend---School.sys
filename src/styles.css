@@ -271,41 +271,134 @@
    GLOBAL HIGH-PRECISION PRINT ENGINE STYLES (@media print)
    ========================================================= */
 @media print {
-  body * {
-    visibility: hidden;
+  /* Complete removal of background application during print - zero blank pages! */
+  #root,
+  body > *:not(.print-engine-modal):not(#print-isolated-iframe) {
+    display: none !important;
   }
 
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-engine-modal,
+  .print-engine-modal *,
   .print-paper-canvas,
   .print-paper-canvas * {
     visibility: visible !important;
   }
 
+  .print-engine-modal {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: transparent !important;
+    display: block !important;
+    transform: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: auto !important;
+  }
+
+  .print-engine-body,
+  .print-engine-scroll,
+  .print-engine-scale {
+    position: static !important;
+    overflow: visible !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    transform: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
   .print-paper-canvas {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: relative !important;
+    display: block !important;
+    left: auto !important;
+    top: auto !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-height: auto !important;
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
+    outline: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    transform: none !important;
+  }
+
+  .print-header-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-header-col-right {
+    width: 32% !important;
+    min-width: 32% !important;
+    text-align: right !important;
+    flex-shrink: 0 !important;
+  }
+
+  .print-header-col-center {
+    width: 36% !important;
+    min-width: 36% !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .print-header-col-left {
+    width: 32% !important;
+    min-width: 32% !important;
+    text-align: left !important;
+    flex-shrink: 0 !important;
   }
 
   table {
     width: 100% !important;
     border-collapse: collapse !important;
     table-layout: auto !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
   }
 
   tr {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-  }
-
-  thead {
-    display: table-header-group !important;
+    display: table-row !important;
   }
 
   tfoot {
@@ -313,16 +406,16 @@
   }
 
   th, td {
-    line-height: 1.6 !important;
+    line-height: 1.5 !important;
     vertical-align: middle !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    white-space: normal !important;
+    word-break: normal !important;
     padding: 6px 8px !important;
   }
 
   .print-hidden,
-  button, nav, header, aside {
+  .print-controls-bar,
+  .print-sidebar,
+  button, nav, header.print-hidden, aside {
     display: none !important;
   }
 }
@@ -352,4 +445,127 @@
   transform: scale(1.04);
   box-shadow: 0 0 15px -3px var(--primary);
 }
+
+/* =========================================================
+   LUXURY FORM INPUTS & SELECTS BASE & UTILITIES
+   ========================================================= */
+@layer base {
+  /* Default high-polish interactions for all native text-like inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="url"],
+  input[type="date"],
+  select,
+  textarea {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Luxury Input Field Utility */
+.input-luxury {
+  height: 2.75rem; /* 44px */
+  width: 100%;
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid var(--color-border);
+  background-color: color-mix(in oklch, var(--color-background) 85%, transparent);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.input-luxury:hover {
+  border-color: color-mix(in oklch, var(--color-primary) 50%, var(--color-border));
+}
+
+.input-luxury:focus {
+  background-color: var(--color-background);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 18%, transparent);
+}
+
+.input-luxury::placeholder {
+  color: color-mix(in oklch, var(--color-muted-foreground) 75%, transparent);
+  font-weight: 500;
+}
+
+/* =========================================================
+   LUXURY MODALS, DIALOGS & OVERLAYS
+   ========================================================= */
+@keyframes modalPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes overlayFadeIn {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+.modal-backdrop-luxury {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: oklch(0 0 0 / 0.62);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  animation: overlayFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-card-luxury {
+  background-color: color-mix(in oklch, var(--color-card) 98%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in oklch, var(--color-border) 85%, transparent);
+  border-radius: 1.5rem; /* 24px rounded-3xl */
+  box-shadow: 0 25px 60px -15px oklch(0 0 0 / 0.3), 0 0 0 1px oklch(1 0 0 / 0.05);
+  animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dark .modal-card-luxury {
+  background-color: color-mix(in oklch, var(--color-card) 92%, transparent);
+  border: 1px solid oklch(1 0 0 / 0.1);
+  box-shadow: 0 30px 70px -15px oklch(0 0 0 / 0.6), 0 0 0 1px oklch(1 0 0 / 0.08);
+}
+
+/* Modal Inner Scrollbar */
+.custom-scrollbar-modal::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar-modal::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--color-muted-foreground) 25%, transparent);
+  border-radius: 9999px;
+}
+.custom-scrollbar-modal::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--color-muted-foreground) 45%, transparent);
+}
+
 

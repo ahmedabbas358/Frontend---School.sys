@@ -110,7 +110,7 @@ const INITIAL_CIRCULARS: Circular[] = [
     body: "نحيطكم علماً بأنه تم اعتماد جداول الاختبارات النصفية للعام الدراسي الحالي. يرجى من جميع السادة المعلمين والمعلمات الاطلاع على جداول المراقبة المرفقة وتأكيد الاستلام عبر النظام.",
     issuer: "إدارة الشؤون التعليمية والأكاديمية",
     date: "اليوم",
-    time: "٠٨:١٥ ص",
+    time: "08:15 ص",
     urgency: "urgent",
     target: "teachers",
   },
@@ -120,7 +120,7 @@ const INITIAL_CIRCULARS: Circular[] = [
     body: "يسر إدارة المدرسة دعوة أولياء الأمور الكرام لحضور اللقاء التربوي الفصلي لمناقشة المستوى التحصيلي والسلوكي للطلاب وذلك يوم الخميس القادم بعد صلاة العصر.",
     issuer: "إدارة التوجيه والإرشاد الطلابي",
     date: "اليوم",
-    time: "٠٩:٣٠ ص",
+    time: "09:30 ص",
     urgency: "important",
     target: "guardians",
   },
@@ -130,7 +130,7 @@ const INITIAL_CIRCULARS: Circular[] = [
     body: "حرصاً على سلامة أبنائنا الطلاب، تم تحديث معايير السلامة الغذائية والإشراف اليومي على مرافق المدرسة والعيادة الطبية.",
     issuer: "الخدمات المدرسية والعيادة",
     date: "أمس",
-    time: "١١:٠٠ ص",
+    time: "11:00 ص",
     urgency: "normal",
     target: "all",
   },
@@ -293,13 +293,14 @@ function DashboardPage() {
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
-      day: 'numeric' 
+      day: 'numeric',
+      numberingSystem: 'latn'
     };
-    return currentTime.toLocaleDateString("ar-SA", options);
+    return currentTime.toLocaleDateString("ar-EG", options);
   }, [currentTime]);
 
   const formattedTime = useMemo(() => {
-    return currentTime.toLocaleTimeString("ar-SA", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return currentTime.toLocaleTimeString("ar-EG", { hour: '2-digit', minute: '2-digit', second: '2-digit', numberingSystem: 'latn' });
   }, [currentTime]);
 
   // Master Dashboard Configuration State
@@ -730,7 +731,7 @@ function DashboardPage() {
                     icon={Users} 
                     label="الطلاب المسجلون" 
                     value={totalStudentCount.toLocaleString("en-US")} 
-                    delta="+٤ جدد" 
+                    delta="+4 جدد" 
                     tone="primary" 
                     subtext={`${scope === "all" ? "إجمالي الطلاب" : getStageLabel(stage)}`}
                   />
@@ -757,8 +758,8 @@ function DashboardPage() {
                   <StatCard 
                     icon={TrendingUp} 
                     label="نسبة الحضور اليوم" 
-                    value={`${todayRate}٪`} 
-                    delta="+١.٢٪" 
+                    value={`${todayRate}%`} 
+                    delta="+1.2%" 
                     tone="success" 
                     subtext={`${presentToday} طالب حاضر`}
                   />
@@ -1487,7 +1488,7 @@ function DashboardPage() {
                             : "bg-muted/30 border-border/60 hover:bg-muted text-muted-foreground"
                         }`}
                       >
-                        <div>٦ أعمدة (عرض ممتد على سطر واحد)</div>
+                        <div>6 أعمدة (عرض ممتد على سطر واحد)</div>
                         <div className="text-[10px] opacity-80 mt-0.5 font-normal">مناسب للشاشات الكبيرة والعريضة</div>
                       </button>
 
@@ -1500,7 +1501,7 @@ function DashboardPage() {
                             : "bg-muted/30 border-border/60 hover:bg-muted text-muted-foreground"
                         }`}
                       >
-                        <div>٣ أعمدة (سطرين مريحين)</div>
+                        <div>3 أعمدة (سطرين مريحين)</div>
                         <div className="text-[10px] opacity-80 mt-0.5 font-normal">مناسب للشاشات المتوسطة واللابتوب</div>
                       </button>
                     </div>

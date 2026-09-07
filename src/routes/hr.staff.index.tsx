@@ -172,113 +172,128 @@ function HrStaffIndex() {
         
         {/* Add Staff Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-bold">تسجيل موظف / معلم جديد</h3>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
+            <div className="w-full max-w-2xl modal-card-luxury overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b border-border/50 flex justify-between items-center bg-primary/10 shrink-0">
+                <h3 className="font-black text-xl flex items-center gap-2.5 text-primary">
+                  <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  تسجيل موظف / معلم جديد
+                </h3>
+                <button onClick={() => { setIsModalOpen(false); reset(); }} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5 overflow-y-auto custom-scrollbar-modal">
                 
                 <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">الرقم الوظيفي</label>
-                  <input
-                    {...register("employeeNo")}
-                    onBlur={(e) => handleSmartRegistrationCheck(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                    placeholder="أدخل الرقم الوظيفي للبحث في الأرشيف"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">الاسم الكامل <span className="text-danger">*</span></label>
-                  <input
-                    {...register("name")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                  />
-                  {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
-                </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">الرقم الوظيفي</label>
+                    <input
+                      {...register("employeeNo")}
+                      onBlur={(e) => handleSmartRegistrationCheck(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
+                      placeholder="أدخل الرقم الوظيفي للبحث في الأرشيف"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">الاسم الكامل <span className="text-danger">*</span></label>
+                    <input
+                      {...register("name")}
+                      className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
+                    />
+                    {errors.name && <p className="mt-1 text-xs font-bold text-danger">{errors.name.message}</p>}
+                  </div>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">المسمى الوظيفي <span className="text-danger">*</span></label>
+                  <label className="mb-2 block text-xs font-extrabold text-foreground">المسمى الوظيفي <span className="text-danger">*</span></label>
                   <input
                     {...register("role")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
                     placeholder="معلم رياضيات, مرشد طلابي..."
                   />
-                  {errors.role && <p className="mt-1 text-xs text-danger">{errors.role.message}</p>}
+                  {errors.role && <p className="mt-1 text-xs font-bold text-danger">{errors.role.message}</p>}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">الجوال</label>
-                    <input {...register("phone")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring" />
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">الجوال</label>
+                    <input {...register("phone")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" dir="ltr" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">البريد الإلكتروني</label>
-                    <input {...register("email")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring" />
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">البريد الإلكتروني</label>
+                    <input {...register("email")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" dir="ltr" />
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 space-y-3">
+                  <h4 className="text-xs font-black text-primary uppercase tracking-wider">نظام الأجور والتعويضات</h4>
+                  <div className="grid gap-3.5 md:grid-cols-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-extrabold text-foreground">نظام الدفع</label>
+                      <select {...register("paymentType")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3 text-xs font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15">
+                        <option value="Monthly">راتب شهري</option>
+                        <option value="PerLesson">نظام الحصص</option>
+                        <option value="Daily">أجر يومي</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-extrabold text-foreground">
+                        {selectedPaymentType === "Monthly" ? "الراتب الأساسي" : selectedPaymentType === "PerLesson" ? "أجر الحصة" : "الأجر اليومي"}
+                      </label>
+                      <input type="number" {...register("basicSalary")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3 text-sm font-black shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-extrabold text-foreground">البدلات</label>
+                      <input type="number" {...register("allowance")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3 text-sm font-black text-success shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-extrabold text-foreground">الحسميات</label>
+                      <input type="number" {...register("deduction")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3 text-sm font-black text-danger shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">نظام الدفع</label>
-                    <select {...register("paymentType")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring">
-                      <option value="Monthly">راتب شهري</option>
-                      <option value="PerLesson">نظام الحصص</option>
-                      <option value="Daily">أجر يومي</option>
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">القسم <span className="text-danger">*</span></label>
+                    <input
+                      {...register("department")}
+                      className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
+                      placeholder="الشؤون التعليمية, الإدارة..."
+                    />
+                    {errors.department && <p className="mt-1 text-xs font-bold text-danger">{errors.department.message}</p>}
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">نطاق العمل (المرحلة) <span className="text-danger">*</span></label>
+                    <select
+                      {...register("stage")}
+                      className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 cursor-pointer"
+                    >
+                      <option value="all">الكل (شامل لكل المراحل)</option>
+                      <option value="kindergarten">رياض الأطفال</option>
+                      <option value="primary">الابتدائي</option>
+                      <option value="middle">المتوسط</option>
+                      <option value="high">الثانوي</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">
-                      {selectedPaymentType === "Monthly" ? "الراتب الشهري الثابت" : selectedPaymentType === "PerLesson" ? "أجر الحصة الواحدة" : "الأجر اليومي"}
-                    </label>
-                    <input type="number" {...register("basicSalary")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">البدلات</label>
-                    <input type="number" {...register("allowance")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">الحسميات</label>
-                    <input type="number" {...register("deduction")} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring" />
+                    {errors.stage && <p className="mt-1 text-xs font-bold text-danger">{errors.stage.message}</p>}
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-1 block text-sm font-medium">القسم <span className="text-danger">*</span></label>
-                  <input
-                    {...register("department")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                    placeholder="الشؤون التعليمية, الإدارة..."
-                  />
-                  {errors.department && <p className="mt-1 text-xs text-danger">{errors.department.message}</p>}
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium">نطاق العمل (المرحلة) <span className="text-danger">*</span></label>
-                  <select
-                    {...register("stage")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                  >
-                    <option value="all">الكل (شامل لكل المراحل)</option>
-                    <option value="kindergarten">رياض الأطفال</option>
-                    <option value="primary">الابتدائي</option>
-                    <option value="middle">المتوسط</option>
-                    <option value="high">الثانوي</option>
-                  </select>
-                  {errors.stage && <p className="mt-1 text-xs text-danger">{errors.stage.message}</p>}
-                </div>
-
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="pt-3 flex justify-end gap-3 border-t border-border/50 shrink-0">
                   <button
                     type="button"
                     onClick={() => { setIsModalOpen(false); reset(); }}
-                    className="h-10 rounded-lg px-4 text-sm font-medium hover:bg-accent"
+                    className="rounded-xl px-5 py-2.5 text-sm font-bold hover:bg-accent border border-border/80 transition-colors active:scale-[0.98]"
                   >
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="h-10 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+                    className="rounded-xl bg-primary px-8 py-2.5 text-sm font-extrabold text-primary-foreground hover:bg-primary/90 transition-all shadow-md active:scale-[0.98]"
                   >
                     حفظ بيانات الموظف
                   </button>
@@ -289,42 +304,42 @@ function HrStaffIndex() {
         )}
 
         <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md p-4 shadow-sm">
             <p className="text-xs font-bold text-muted-foreground">على رأس العمل</p>
-            <p className="mt-1 text-2xl font-black text-success">{staffStats.active}</p>
+            <p className="mt-1 text-2xl font-black text-success tabular-nums">{staffStats.active}</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md p-4 shadow-sm">
             <p className="text-xs font-bold text-muted-foreground">في إجازة</p>
-            <p className="mt-1 text-2xl font-black text-warning">{staffStats.leaves}</p>
+            <p className="mt-1 text-2xl font-black text-warning tabular-nums">{staffStats.leaves}</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md p-4 shadow-sm">
             <p className="text-xs font-bold text-muted-foreground">معلمون ومربون</p>
-            <p className="mt-1 text-2xl font-black text-primary">{staffStats.teachers}</p>
+            <p className="mt-1 text-2xl font-black text-primary tabular-nums">{staffStats.teachers}</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md p-4 shadow-sm">
             <p className="text-xs font-bold text-muted-foreground">صافي الرواتب</p>
-            <p className="mt-1 text-2xl font-black">{staffStats.payroll.toLocaleString()} {currency}</p>
+            <p className="mt-1 text-2xl font-black tabular-nums">{staffStats.payroll.toLocaleString()} {currency}</p>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-md p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-[1fr_180px_220px]">
             <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="البحث باسم الموظف أو الرقم أو الهاتف..."
-                className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
               />
             </div>
-            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold">
+            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 cursor-pointer">
               <option value="all">كل الحالات</option>
               <option value="active">على رأس العمل</option>
               <option value="on_leave">في إجازة</option>
               <option value="terminated">منتهي الخدمة</option>
             </select>
-            <select value={departmentFilter} onChange={event => setDepartmentFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold">
+            <select value={departmentFilter} onChange={event => setDepartmentFilter(event.target.value)} className="h-11 rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 cursor-pointer">
               <option value="all">كل الأقسام</option>
               {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
             </select>

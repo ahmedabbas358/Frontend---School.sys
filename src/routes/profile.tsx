@@ -20,7 +20,7 @@ function ProfilePage() {
     phone: "0551234567",
     department: "الإدارة العليا",
     location: "الرياض - حي الواحة",
-    joinDate: "١٤٤٠/٠٥/١٢ هـ",
+    joinDate: "1440/05/12 هـ",
     permissions: "صلاحيات كاملة",
   });
 

@@ -29,6 +29,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AcademicRouteImport } from './routes/academic'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TeachersIndexRouteImport } from './routes/teachers.index'
+import { Route as SupervisorIndexRouteImport } from './routes/supervisor.index'
 import { Route as StudentsIndexRouteImport } from './routes/students.index'
 import { Route as GuardiansIndexRouteImport } from './routes/guardians.index'
 import { Route as FinanceIndexRouteImport } from './routes/finance.index'
@@ -36,6 +37,8 @@ import { Route as ExamsIndexRouteImport } from './routes/exams.index'
 import { Route as TransportStudentsRouteImport } from './routes/transport.students'
 import { Route as TransportRoutesRouteImport } from './routes/transport.routes'
 import { Route as TeachersIdRouteImport } from './routes/teachers.$id'
+import { Route as SupervisorGateRouteImport } from './routes/supervisor.gate'
+import { Route as SupervisorClassesRouteImport } from './routes/supervisor.classes'
 import { Route as StudentsNewRouteImport } from './routes/students.new'
 import { Route as StudentsIdRouteImport } from './routes/students.$id'
 import { Route as SettingsTrashRouteImport } from './routes/settings.trash'
@@ -189,6 +192,11 @@ const TeachersIndexRoute = TeachersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => TeachersRoute,
 } as any)
+const SupervisorIndexRoute = SupervisorIndexRouteImport.update({
+  id: '/supervisor/',
+  path: '/supervisor/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentsIndexRoute = StudentsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -223,6 +231,16 @@ const TeachersIdRoute = TeachersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => TeachersRoute,
+} as any)
+const SupervisorGateRoute = SupervisorGateRouteImport.update({
+  id: '/supervisor/gate',
+  path: '/supervisor/gate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupervisorClassesRoute = SupervisorClassesRouteImport.update({
+  id: '/supervisor/classes',
+  path: '/supervisor/classes',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const StudentsNewRoute = StudentsNewRouteImport.update({
   id: '/new',
@@ -555,6 +573,8 @@ export interface FileRoutesByFullPath {
   '/settings/trash': typeof SettingsTrashRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
+  '/supervisor/classes': typeof SupervisorClassesRoute
+  '/supervisor/gate': typeof SupervisorGateRoute
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
@@ -562,6 +582,7 @@ export interface FileRoutesByFullPath {
   '/finance/': typeof FinanceIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/supervisor/': typeof SupervisorIndexRoute
   '/teachers/': typeof TeachersIndexRoute
   '/hr/staff/$id': typeof HrStaffIdRoute
   '/hr/staff/': typeof HrStaffIndexRoute
@@ -631,6 +652,8 @@ export interface FileRoutesByTo {
   '/settings/trash': typeof SettingsTrashRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
+  '/supervisor/classes': typeof SupervisorClassesRoute
+  '/supervisor/gate': typeof SupervisorGateRoute
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
@@ -638,6 +661,7 @@ export interface FileRoutesByTo {
   '/finance': typeof FinanceIndexRoute
   '/guardians': typeof GuardiansIndexRoute
   '/students': typeof StudentsIndexRoute
+  '/supervisor': typeof SupervisorIndexRoute
   '/teachers': typeof TeachersIndexRoute
   '/hr/staff/$id': typeof HrStaffIdRoute
   '/hr/staff': typeof HrStaffIndexRoute
@@ -713,6 +737,8 @@ export interface FileRoutesById {
   '/settings/trash': typeof SettingsTrashRoute
   '/students/$id': typeof StudentsIdRoute
   '/students/new': typeof StudentsNewRoute
+  '/supervisor/classes': typeof SupervisorClassesRoute
+  '/supervisor/gate': typeof SupervisorGateRoute
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
@@ -720,6 +746,7 @@ export interface FileRoutesById {
   '/finance/': typeof FinanceIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/supervisor/': typeof SupervisorIndexRoute
   '/teachers/': typeof TeachersIndexRoute
   '/hr/staff/$id': typeof HrStaffIdRoute
   '/hr/staff/': typeof HrStaffIndexRoute
@@ -796,6 +823,8 @@ export interface FileRouteTypes {
     | '/settings/trash'
     | '/students/$id'
     | '/students/new'
+    | '/supervisor/classes'
+    | '/supervisor/gate'
     | '/teachers/$id'
     | '/transport/routes'
     | '/transport/students'
@@ -803,6 +832,7 @@ export interface FileRouteTypes {
     | '/finance/'
     | '/guardians/'
     | '/students/'
+    | '/supervisor/'
     | '/teachers/'
     | '/hr/staff/$id'
     | '/hr/staff/'
@@ -872,6 +902,8 @@ export interface FileRouteTypes {
     | '/settings/trash'
     | '/students/$id'
     | '/students/new'
+    | '/supervisor/classes'
+    | '/supervisor/gate'
     | '/teachers/$id'
     | '/transport/routes'
     | '/transport/students'
@@ -879,6 +911,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/guardians'
     | '/students'
+    | '/supervisor'
     | '/teachers'
     | '/hr/staff/$id'
     | '/hr/staff'
@@ -953,6 +986,8 @@ export interface FileRouteTypes {
     | '/settings/trash'
     | '/students/$id'
     | '/students/new'
+    | '/supervisor/classes'
+    | '/supervisor/gate'
     | '/teachers/$id'
     | '/transport/routes'
     | '/transport/students'
@@ -960,6 +995,7 @@ export interface FileRouteTypes {
     | '/finance/'
     | '/guardians/'
     | '/students/'
+    | '/supervisor/'
     | '/teachers/'
     | '/hr/staff/$id'
     | '/hr/staff/'
@@ -986,6 +1022,9 @@ export interface RootRouteChildren {
   TeachersRoute: typeof TeachersRouteWithChildren
   TransportRoute: typeof TransportRouteWithChildren
   AdmissionsIdRoute: typeof AdmissionsIdRoute
+  SupervisorClassesRoute: typeof SupervisorClassesRoute
+  SupervisorGateRoute: typeof SupervisorGateRoute
+  SupervisorIndexRoute: typeof SupervisorIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1130,6 +1169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeachersIndexRouteImport
       parentRoute: typeof TeachersRoute
     }
+    '/supervisor/': {
+      id: '/supervisor/'
+      path: '/supervisor'
+      fullPath: '/supervisor/'
+      preLoaderRoute: typeof SupervisorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/students/': {
       id: '/students/'
       path: '/'
@@ -1178,6 +1224,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/teachers/$id'
       preLoaderRoute: typeof TeachersIdRouteImport
       parentRoute: typeof TeachersRoute
+    }
+    '/supervisor/gate': {
+      id: '/supervisor/gate'
+      path: '/supervisor/gate'
+      fullPath: '/supervisor/gate'
+      preLoaderRoute: typeof SupervisorGateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/supervisor/classes': {
+      id: '/supervisor/classes'
+      path: '/supervisor/classes'
+      fullPath: '/supervisor/classes'
+      preLoaderRoute: typeof SupervisorClassesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/students/new': {
       id: '/students/new'
@@ -1836,6 +1896,9 @@ const rootRouteChildren: RootRouteChildren = {
   TeachersRoute: TeachersRouteWithChildren,
   TransportRoute: TransportRouteWithChildren,
   AdmissionsIdRoute: AdmissionsIdRoute,
+  SupervisorClassesRoute: SupervisorClassesRoute,
+  SupervisorGateRoute: SupervisorGateRoute,
+  SupervisorIndexRoute: SupervisorIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

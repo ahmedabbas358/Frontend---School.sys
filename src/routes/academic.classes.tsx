@@ -46,31 +46,41 @@ function TeacherSelect({
   return (
     <div className="relative" ref={ref}>
       <div 
-        className="flex items-center justify-between w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 cursor-pointer hover:border-primary transition-colors"
+        tabIndex={0}
+        role="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        className={`flex items-center justify-between w-full h-11 rounded-xl border px-3.5 text-xs font-bold cursor-pointer transition-all duration-200 shadow-xs outline-none ${
+          isOpen
+            ? "border-primary ring-4 ring-primary/15 bg-background text-foreground"
+            : "border-input bg-background/80 hover:border-primary/45 text-foreground"
+        }`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={selectedOption ? "text-foreground font-bold" : "text-muted-foreground"}>
+        <span className={selectedOption ? "text-foreground font-bold" : "text-muted-foreground/60"}>
           {selectedOption ? `${selectedOption.name} (${selectedOption.role})` : "-- ابحث واختر المعلم --"}
         </span>
-        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown className={`h-4 w-4 text-muted-foreground opacity-70 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 rounded-xl border border-border bg-card shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="p-2 border-b border-border flex items-center gap-2 px-3 bg-background/50">
-            <Search className="h-4 w-4 text-muted-foreground" />
+        <div className="absolute z-50 w-full mt-2 rounded-2xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="p-2.5 border-b border-border/60 flex items-center gap-2 bg-muted/20">
+            <Search className="h-4 w-4 text-muted-foreground opacity-60 shrink-0" />
             <input 
               autoFocus
               type="text" 
               placeholder="ابحث بالاسم أو التخصص..." 
-              className="w-full bg-transparent border-none focus:outline-none text-sm py-1 font-bold"
+              className="w-full bg-transparent border-none focus:outline-none text-xs font-bold placeholder:text-muted-foreground/60 text-foreground"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="max-h-60 overflow-y-auto p-1">
+          <div className="max-h-60 overflow-y-auto p-1.5 custom-scrollbar-modal space-y-0.5">
             <div 
-              className={`px-3 py-2 text-sm rounded-lg cursor-pointer flex items-center justify-between hover:bg-accent ${!value ? "bg-primary/10 text-primary font-bold" : ""}`}
+              className={`px-3 py-2 text-xs rounded-xl cursor-pointer flex items-center justify-between transition-colors ${
+                !value ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted/60"
+              }`}
               onClick={() => { onChange(""); setIsOpen(false); setSearch(""); }}
             >
               <span className="font-bold">بدون رائد فصل</span>
@@ -78,19 +88,21 @@ function TeacherSelect({
             </div>
             
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-center text-muted-foreground font-bold">لا يوجد نتائج للبحث</div>
+              <div className="px-3 py-6 text-xs text-center text-muted-foreground font-bold">لا توجد نتائج للبحث</div>
             ) : (
               filteredOptions.map(t => (
                 <div 
                   key={t.id}
-                  className={`px-3 py-2 text-sm rounded-lg cursor-pointer flex items-center justify-between hover:bg-accent transition-colors ${value === t.name ? "bg-primary/10 text-primary font-bold" : ""}`}
+                  className={`px-3 py-2 text-xs rounded-xl cursor-pointer flex items-center justify-between transition-all active:scale-[0.99] ${
+                    value === t.name ? "bg-primary/10 text-primary font-bold" : "text-foreground hover:bg-muted/60 font-medium"
+                  }`}
                   onClick={() => { onChange(t.name); setIsOpen(false); setSearch(""); }}
                 >
-                  <div className="flex flex-col">
+                  <div className="flex flex-col gap-0.5">
                     <span className="font-bold">{t.name}</span>
-                    <span className="text-xs text-muted-foreground opacity-80">{t.role}</span>
+                    <span className="text-[11px] text-muted-foreground opacity-80">{t.role}</span>
                   </div>
-                  {value === t.name && <Check className="h-4 w-4" />}
+                  {value === t.name && <Check className="h-4 w-4 text-primary font-bold shrink-0" />}
                 </div>
               ))
             )}
@@ -564,12 +576,12 @@ function AcademicSectionsPage() {
           </div>
 
           <div className="flex-1 w-full md:max-w-md relative">
-            <Search className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
               placeholder="ابحث عن شعبة، صف، أو معلم..."
-              className="h-11 w-full rounded-xl border border-border/50 bg-background pr-11 pl-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+              className="h-11 w-full rounded-xl border border-input bg-background/80 pr-11 pl-4 text-xs font-bold shadow-xs hover:border-primary/45 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60 text-foreground"
             />
           </div>
         </div>
@@ -692,22 +704,40 @@ function AcademicSectionsPage() {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-7 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">{editingId ? "تعديل بيانات الشعبة" : "إضافة شعبة جديدة"}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
+          onClick={() => setIsModalOpen(false)}
+          dir="rtl"
+        >
+          <div 
+            className="w-full max-w-lg rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 p-6 sm:p-7 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-200 my-8 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary shrink-0">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-foreground">{editingId ? "تعديل بيانات الشعبة" : "إضافة شعبة جديدة"}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">حدد الصف والمسمى والمعلم المشرف</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
             
-            <form onSubmit={handleSave} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الصف الدراسي المستهدف *</label>
+                  <label className="mb-1.5 block text-xs font-bold text-foreground">الصف الدراسي المستهدف *</label>
                   <select
                     required
-                    className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold cursor-pointer"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs cursor-pointer"
                     value={formData.grade}
                     onChange={e => setFormData({...formData, grade: e.target.value})}
                   >
@@ -719,11 +749,11 @@ function AcademicSectionsPage() {
                 </div>
                 
                 <div>
-                  <label className="mb-1.5 block text-sm font-bold text-muted-foreground">اسم/رمز الشعبة *</label>
+                  <label className="mb-1.5 block text-xs font-bold text-foreground">اسم/رمز الشعبة *</label>
                   <input
                     required
                     placeholder="مثال: أ، ب، ج..."
-                    className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs"
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                   />
@@ -731,7 +761,7 @@ function AcademicSectionsPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">رائد الفصل (اختياري)</label>
+                <label className="mb-1.5 block text-xs font-bold text-foreground">رائد الفصل (اختياري)</label>
                 <TeacherSelect 
                   value={formData.homeroomTeacher}
                   onChange={(val) => setFormData({...formData, homeroomTeacher: val})}
@@ -740,20 +770,29 @@ function AcademicSectionsPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الطاقة الاستيعابية القصوى</label>
+                <label className="mb-1.5 block text-xs font-bold text-foreground">الطاقة الاستيعابية القصوى</label>
                 <input 
                   type="number" 
                   min="5" max="100"
                   required
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold tabular-nums"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs tabular-nums"
                   value={formData.capacity}
                   onChange={e => setFormData({...formData, capacity: Number(e.target.value)})}
                 />
               </div>
 
-              <div className="pt-5 mt-2 border-t border-border/50 flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 font-bold hover:bg-accent transition-colors">إلغاء</button>
-                <button type="submit" className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm hover:scale-105">
+              <div className="pt-4 border-t border-border/60 flex justify-end gap-2.5">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-input bg-background hover:bg-accent text-foreground transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button 
+                  type="submit" 
+                  className="rounded-xl bg-primary px-7 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98] glow-primary"
+                >
                   {editingId ? "حفظ التعديلات" : "إضافة الشعبة"}
                 </button>
               </div>
@@ -764,16 +803,37 @@ function AcademicSectionsPage() {
 
       {/* Delete Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setIsDeleteModalOpen(false)}
+          dir="rtl"
+        >
+          <div 
+            className="w-full max-w-sm rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl p-6 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex flex-col items-center text-center">
-              <div className="rounded-full bg-danger/10 p-3 text-danger mb-4"><AlertCircle className="h-8 w-8" /></div>
-              <h2 className="text-xl font-bold mb-2">تأكيد الحذف</h2>
-              <p className="text-muted-foreground mb-6 font-bold">هل أنت متأكد أنك تريد حذف هذه الشعبة؟ لا يمكن التراجع.</p>
+              <div className="rounded-2xl bg-danger/10 p-3.5 text-danger mb-4">
+                <AlertCircle className="h-7 w-7" />
+              </div>
+              <h2 className="text-base font-black text-foreground mb-1.5">تأكيد حذف الشعبة</h2>
+              <p className="text-xs text-muted-foreground mb-6 font-medium leading-relaxed">
+                هل أنت متأكد من رغبتك في حذف هذه الشعبة؟ لن يمكن التراجع عن هذا الإجراء.
+              </p>
               
-              <div className="flex w-full gap-3">
-                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 rounded-xl px-4 py-2.5 font-bold hover:bg-accent transition-colors">إلغاء</button>
-                <button onClick={confirmDelete} className="flex-1 rounded-xl bg-danger px-4 py-2.5 font-bold text-danger-foreground hover:bg-danger/90 transition-colors shadow-sm">نعم، احذف</button>
+              <div className="flex w-full gap-2.5">
+                <button 
+                  onClick={() => setIsDeleteModalOpen(false)} 
+                  className="flex-1 rounded-xl px-4 py-2.5 text-xs font-bold border border-input bg-background hover:bg-accent text-foreground transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button 
+                  onClick={confirmDelete} 
+                  className="flex-1 rounded-xl bg-danger px-4 py-2.5 text-xs font-bold text-danger-foreground hover:bg-danger/90 transition-all active:scale-[0.98] shadow-sm"
+                >
+                  نعم، احذف
+                </button>
               </div>
             </div>
           </div>

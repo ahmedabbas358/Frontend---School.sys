@@ -202,6 +202,7 @@ function TakeAttendance() {
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => setAllMarks("present")} className="rounded-lg bg-success/10 px-4 py-2 text-sm font-bold text-success hover:bg-success/20">تعليم الكل (حاضر)</button>
                   <button onClick={() => setMarks({})} className="rounded-lg border border-border px-4 py-2 text-sm font-bold hover:bg-accent">مسح الرصد</button>
+                  <button type="button" onClick={() => setIsPrintOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-bold hover:bg-accent text-foreground shadow-xs"><Printer className="h-4 w-4" /> طباعة الكشف</button>
                   <button onClick={handleSave} className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"><Save className="h-4 w-4" /> حفظ الحضور</button>
                 </div>
               }

@@ -126,47 +126,62 @@ function LibraryDistribution() {
       <div className="space-y-4">
         
         {selectedStudent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-2xl rounded-xl border border-border bg-card shadow-xl flex flex-col max-h-[90vh]">
-              <div className="p-6 border-b border-border flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-bold">توزيع الكتب: {selectedStudent.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedStudent.grade} / ولي الأمر: {selectedStudent.guardianName}</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+            <div className="w-full max-w-2xl rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">توزيع وتسليم الكتب: {selectedStudent.name}</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">{selectedStudent.grade} | ولي الأمر: {selectedStudent.guardianName}</p>
+                  </div>
                 </div>
-                <button onClick={() => setSelectedStudent(null)} className="p-2 hover:bg-accent rounded-lg">
-                  <X className="h-5 w-5" />
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudent(null)}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  ✕
                 </button>
               </div>
               
-              <div className="p-6 overflow-y-auto">
-                <div className="mb-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border/50 bg-background p-3 text-center">
-                    <p className="text-xs font-bold text-muted-foreground">المطلوب</p>
-                    <p className="text-2xl font-black">{studentTextbooks.length}</p>
+              <div className="p-6 overflow-y-auto custom-scrollbar-modal space-y-5">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-border/60 bg-card/60 p-3.5 text-center shadow-sm">
+                    <p className="text-xs font-bold text-muted-foreground">الكتب المقررة</p>
+                    <p className="mt-1 text-2xl font-black">{studentTextbooks.length}</p>
                   </div>
-                  <div className="rounded-xl border border-border/50 bg-background p-3 text-center">
-                    <p className="text-xs font-bold text-muted-foreground">المستلم</p>
-                    <p className="text-2xl font-black text-success">{getProgress(selectedStudent).received}</p>
+                  <div className="rounded-2xl border border-border/60 bg-card/60 p-3.5 text-center shadow-sm">
+                    <p className="text-xs font-bold text-muted-foreground">الكتب المستلمة</p>
+                    <p className="mt-1 text-2xl font-black text-success">{getProgress(selectedStudent).received}</p>
                   </div>
-                  <div className="rounded-xl border border-border/50 bg-background p-3 text-center">
-                    <p className="text-xs font-bold text-muted-foreground">المتبقي</p>
-                    <p className="text-2xl font-black text-danger">{Math.max(0, studentTextbooks.length - getProgress(selectedStudent).received)}</p>
+                  <div className="rounded-2xl border border-border/60 bg-card/60 p-3.5 text-center shadow-sm">
+                    <p className="text-xs font-bold text-muted-foreground">المتبقي للتسليم</p>
+                    <p className="mt-1 text-2xl font-black text-danger">{Math.max(0, studentTextbooks.length - getProgress(selectedStudent).received)}</p>
                   </div>
                 </div>
-                <div className="mb-5 flex flex-wrap gap-2">
-                  <button onClick={deliverAllMissing} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90">تسليم كل المتبقي</button>
-                  <button onClick={returnAllReceived} className="rounded-xl border border-danger/30 px-4 py-2 text-sm font-bold text-danger hover:bg-danger/10">استرجاع كل المستلم</button>
+
+                <div className="flex flex-wrap gap-2.5">
+                  <button onClick={deliverAllMissing} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98]">
+                    تسليم كل المتبقي دفعة واحدة
+                  </button>
+                  <button onClick={returnAllReceived} className="rounded-xl border border-danger/30 px-4 py-2 text-xs font-bold text-danger hover:bg-danger/10 transition-colors active:scale-[0.98]">
+                    استرجاع كل المستلم إلى المخزن
+                  </button>
                 </div>
+
                 {studentTextbooks.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>لم يتم تعيين كتب دراسية لهذا الصف بعد.</p>
+                  <div className="text-center py-10 text-muted-foreground bg-muted/15 rounded-2xl border border-dashed border-border/60">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-30 text-muted-foreground" />
+                    <p className="font-bold text-sm">لم يتم تعيين كتب دراسية لهذا الصف بعد.</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {Object.entries(groupedTextbooks).sort(([a], [b]) => a.localeCompare(b)).map(([term, books]) => (
                       <div key={term} className="space-y-3">
-                        <h4 className="font-bold text-primary border-b border-border pb-2">{term}</h4>
+                        <h4 className="font-bold text-sm text-primary border-b border-border/50 pb-2">{term}</h4>
                         {books.map(tb => {
                           const distributions = activeStageDistributions.filter(
                             d => d.studentId === selectedStudent.id && d.textbookId === tb.id
@@ -177,23 +192,25 @@ function LibraryDistribution() {
                           const available = tb.copies - totalDistributed;
 
                           return (
-                            <div key={tb.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-background">
+                            <div key={tb.id} className="flex items-center justify-between p-4 border border-border/70 rounded-2xl bg-card/70 backdrop-blur-sm transition-all hover:border-primary/40">
                               <div>
-                                <h4 className="font-bold">{tb.title}</h4>
-                                <p className="text-sm text-muted-foreground">{tb.subject} | متبقي في المخزن: <span className="font-bold">{available}</span> من أصل {tb.copies}</p>
+                                <h4 className="font-bold text-sm text-foreground">{tb.title}</h4>
+                                <p className="text-xs text-muted-foreground mt-0.5">{tb.subject} | متبقي في المخزن: <span className="font-bold text-foreground">{available}</span> من أصل {tb.copies}</p>
                               </div>
                               <div className="flex items-center gap-3">
                                 {receivedCount > 0 && (
-                                  <span className="text-sm font-bold bg-success/10 text-success px-2 py-1 rounded flex items-center gap-1"><Check className="h-3 w-3" /> مستلم</span>
+                                  <span className="text-xs font-bold bg-success/15 text-success px-2.5 py-1 rounded-lg flex items-center gap-1">
+                                    <Check className="h-3.5 w-3.5" /> مستلم
+                                  </span>
                                 )}
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5">
                                   <button
                                     onClick={() => handleToggleTextbook(tb, 'return', lastDistribution?.id)}
                                     disabled={receivedCount === 0}
-                                    className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors border ${
+                                    className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all border ${
                                       receivedCount > 0
-                                        ? "border-danger text-danger hover:bg-danger/10"
-                                        : "border-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                                        ? "border-danger/40 text-danger hover:bg-danger/10 active:scale-[0.98]"
+                                        : "border-muted text-muted-foreground opacity-40 cursor-not-allowed"
                                     }`}
                                   >
                                     إرجاع
@@ -201,10 +218,10 @@ function LibraryDistribution() {
                                   <button
                                     onClick={() => handleToggleTextbook(tb, 'give')}
                                     disabled={available <= 0}
-                                    className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors ${
+                                    className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all ${
                                       available > 0 
-                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                        : "bg-muted text-muted-foreground cursor-not-allowed"
+                                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm active:scale-[0.98]"
+                                        : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                                     }`}
                                   >
                                     تسليم
@@ -218,6 +235,16 @@ function LibraryDistribution() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="p-4 border-t border-border/50 flex justify-end shrink-0 bg-muted/10">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudent(null)}
+                  className="rounded-xl px-5 py-2 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]"
+                >
+                  إغلاق
+                </button>
               </div>
             </div>
           </div>
@@ -242,25 +269,25 @@ function LibraryDistribution() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/70 bg-card/60 p-4 backdrop-blur-xl shadow-sm">
           <div className="mb-3 flex items-center gap-2">
             <Filter className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold text-primary">فلاتر التسليم</span>
+            <span className="text-xs font-bold text-primary">فلاتر التسليم والمطابقة</span>
           </div>
-          <div className="grid gap-3 md:grid-cols-[1fr_170px_170px_170px]">
+          <div className="grid gap-3.5 md:grid-cols-[1fr_180px_180px_180px]">
             <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="البحث عن طالب أو ولي أمر..."
-                className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
               />
             </div>
             <select
               value={filterGrade}
               onChange={(e) => setFilterGrade(e.target.value)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
             >
               <option value="all">كل الصفوف</option>
               {grades.map(g => (
@@ -270,7 +297,7 @@ function LibraryDistribution() {
             <select
               value={filterSection}
               onChange={(e) => setFilterSection(e.target.value)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
             >
               <option value="all">كل الشعب</option>
               {allSections.filter(s => s.stage === stage && (filterGrade === "all" || s.grade === filterGrade)).map(s => (
@@ -280,7 +307,7 @@ function LibraryDistribution() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
             >
               <option value="all">كل الحالات</option>
               <option value="complete">مكتمل</option>

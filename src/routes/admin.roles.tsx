@@ -153,40 +153,55 @@ function AdminRolesPage() {
       </div>
 
       {isDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl border border-border">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold">{editingRole ? "تعديل الدور" : "إنشاء دور جديد"}</h2>
-              <button onClick={() => setIsDialogOpen(false)} className="rounded-md p-1 hover:bg-accent"><X className="h-5 w-5" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
+            <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
+                  <Shield className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">{editingRole ? "تعديل مسمى الدور" : "إضافة دور جديد"}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">تحديد مسمى الدور لاستخدامه في توزيع الصلاحيات</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDialogOpen(false)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+              >
+                ✕
+              </button>
             </div>
             
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-bold">اسم الدور</label>
+            <div className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground">اسم الدور الوظيفي</label>
                 <input 
                   type="text" 
                   value={newRoleName} 
                   onChange={e => setNewRoleName(e.target.value)} 
-                  className="h-10 w-full rounded-lg border border-input bg-background px-3 outline-none focus:ring-2 focus:ring-ring/30"
-                  placeholder="مثال: محاسب مالي"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+                  placeholder="مثال: محاسب مالي، وكيل شؤون معلمين..."
                   autoFocus
                   onKeyDown={e => e.key === "Enter" && handleSave()}
                 />
               </div>
               {editingRole && criticalRoles.has(editingRole) && (
-                <div className="rounded-lg bg-warning/10 border border-warning/30 p-3 text-xs text-warning-foreground font-bold">
-                  ⚠️ هذا دور حساس — لا يمكن تعديل اسمه لدواعي أمنية.
+                <div className="rounded-xl bg-warning/10 border border-warning/30 p-3.5 text-xs text-warning font-bold flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>هذا دور نظام أساسي وحساس — لا يمكن تعديل اسمه لدواعي الأمان والامتثال.</span>
                 </div>
               )}
-            </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setIsDialogOpen(false)} className="rounded-lg px-4 py-2 text-sm font-bold hover:bg-accent">
-                إلغاء
-              </button>
-              <button onClick={handleSave} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2">
-                <Save className="h-4 w-4" /> {editingRole ? "حفظ التعديل" : "إنشاء الدور"}
-              </button>
+              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
+                <button onClick={() => setIsDialogOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]">
+                  إلغاء
+                </button>
+                <button onClick={handleSave} className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 inline-flex items-center gap-2 active:scale-[0.98]">
+                  <Save className="h-4 w-4" /> {editingRole ? "حفظ التعديل" : "إنشاء الدور"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

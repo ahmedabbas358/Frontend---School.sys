@@ -77,7 +77,7 @@ function SystemTrashPage() {
                 { key: "id", header: "الرقم", cell: (s) => <span className="font-bold text-xs">{s.id}</span> },
                 { key: "name", header: "الاسم", cell: (s) => <span className="font-bold text-danger">{s.name}</span> },
                 { key: "grade", header: "الصف", cell: (s) => s.grade },
-                { key: "deletedAt", header: "تاريخ الحذف", cell: (s) => <span className="text-xs">{new Date(s.deletedAt || "").toLocaleString("ar-SA")}</span> },
+                { key: "deletedAt", header: "تاريخ الحذف", cell: (s) => <span className="text-xs">{new Date(s.deletedAt || "").toLocaleString("ar-EG")}</span> },
                 {
                   key: "actions",
                   header: "الإجراءات",
@@ -104,7 +104,7 @@ function SystemTrashPage() {
                 { key: "id", header: "الرقم", cell: (g) => <span className="font-bold text-xs">{g.id}</span> },
                 { key: "name", header: "الاسم", cell: (g) => <span className="font-bold text-danger">{g.name}</span> },
                 { key: "phone", header: "الجوال", cell: (g) => g.phone },
-                { key: "deletedAt", header: "تاريخ الحذف", cell: (g) => <span className="text-xs">{new Date(g.deletedAt || "").toLocaleString("ar-SA")}</span> },
+                { key: "deletedAt", header: "تاريخ الحذف", cell: (g) => <span className="text-xs">{new Date(g.deletedAt || "").toLocaleString("ar-EG")}</span> },
                 {
                   key: "actions",
                   header: "الإجراءات",
@@ -131,7 +131,7 @@ function SystemTrashPage() {
                 { key: "id", header: "الرقم", cell: (s) => <span className="font-bold text-xs">{s.id}</span> },
                 { key: "name", header: "الاسم", cell: (s) => <span className="font-bold text-danger">{s.name}</span> },
                 { key: "role", header: "الوظيفة", cell: (s) => s.role },
-                { key: "deletedAt", header: "تاريخ الحذف", cell: (s) => <span className="text-xs">{new Date(s.deletedAt || "").toLocaleString("ar-SA")}</span> },
+                { key: "deletedAt", header: "تاريخ الحذف", cell: (s) => <span className="text-xs">{new Date(s.deletedAt || "").toLocaleString("ar-EG")}</span> },
                 {
                   key: "actions",
                   header: "الإجراءات",

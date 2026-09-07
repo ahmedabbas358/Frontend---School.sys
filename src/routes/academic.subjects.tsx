@@ -240,17 +240,17 @@ function AcademicSubjectsPage() {
             Search Bar
             ========================================================= */}
         <div className="relative">
-          <Search className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="بحث باسم المقرر الدراسي أو الرمز (مثل MATH101)..."
-            className="w-full h-11 rounded-2xl border border-input bg-card/80 pr-10 pl-4 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs transition-all"
+            className="w-full h-11 rounded-2xl border border-input/80 bg-card/90 ps-10 pe-10 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 shadow-xs transition-all placeholder:text-muted-foreground/70"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-muted text-muted-foreground"
+              className="absolute end-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -382,37 +382,40 @@ function AcademicSubjectsPage() {
           ========================================================= */}
       {isModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => setIsModalOpen(false)}
           dir="rtl"
         >
           <div 
-            className="w-full max-w-md bg-card border border-border shadow-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4"
+            className="w-full max-w-md bg-card/98 dark:bg-card/95 border border-border/80 shadow-2xl backdrop-blur-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                  <BookOpen className="w-4 h-4" />
+            <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <BookOpen className="w-5 h-5" />
                 </div>
-                <h3 className="font-black text-base text-foreground">إضافة مقرر دراسي جديد</h3>
+                <div>
+                  <h3 className="font-extrabold text-base text-foreground">إضافة مقرر دراسي جديد</h3>
+                  <p className="text-xs text-muted-foreground">تحديد مادة دراسية وتوزيع ساعاتها وصفها المستهدف</p>
+                </div>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)} 
-                className="p-1 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             
-            <form onSubmit={handleAddSubject} className="space-y-3.5">
+            <form onSubmit={handleAddSubject} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1">اسم المادة الدراسية *</label>
+                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">اسم المادة الدراسية <span className="text-destructive">*</span></label>
                 <input 
                   type="text" 
                   required
                   placeholder="مثال: الرياضيات المتقدمة"
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
                   value={newSubject.name}
                   onChange={e => setNewSubject({...newSubject, name: e.target.value})}
                 />
@@ -420,12 +423,12 @@ function AcademicSubjectsPage() {
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">رمز المادة *</label>
+                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">رمز المادة <span className="text-destructive">*</span></label>
                   <input 
                     type="text" 
                     required
-                    placeholder="مثال: MATH102"
-                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary uppercase"
+                    placeholder="MATH102"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 uppercase tracking-wider transition-all placeholder:text-muted-foreground/60"
                     dir="ltr"
                     value={newSubject.code}
                     onChange={e => setNewSubject({...newSubject, code: e.target.value})}
@@ -433,12 +436,12 @@ function AcademicSubjectsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">الحصص الأسبوعية</label>
+                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">الحصص الأسبوعية</label>
                   <input 
                     type="number" 
                     min="1"
                     max="20"
-                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
                     value={newSubject.creditHours}
                     onChange={e => setNewSubject({...newSubject, creditHours: Number(e.target.value)})}
                   />
@@ -446,10 +449,10 @@ function AcademicSubjectsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1">الصف الدراسي المستهدف *</label>
+                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">الصف الدراسي المستهدف <span className="text-destructive">*</span></label>
                 <select
                   required
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 cursor-pointer transition-all"
                   value={newSubject.grade}
                   onChange={(e) => setNewSubject({ ...newSubject, grade: e.target.value })}
                 >
@@ -461,28 +464,28 @@ function AcademicSubjectsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1">الرسوم الإضافية (اختياري)</label>
+                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">الرسوم الإضافية (اختياري)</label>
                 <input 
                   type="number" 
                   min="0"
                   placeholder="0 (مجانية تلقائياً)"
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
                   value={newSubject.fee || ""}
                   onChange={e => setNewSubject({...newSubject, fee: Number(e.target.value)})}
                 />
               </div>
 
-              <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2.5">
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent"
+                  className="px-4 py-2.5 rounded-xl border border-input bg-background/80 text-xs font-semibold hover:bg-accent active:scale-[0.98] transition-all"
                 >
                   إلغاء
                 </button>
                 <button 
                   type="submit" 
-                  className="px-6 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all glow-primary"
+                  className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-extrabold shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all glow-primary"
                 >
                   حفظ المادة
                 </button>

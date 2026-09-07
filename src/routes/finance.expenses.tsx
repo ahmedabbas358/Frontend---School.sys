@@ -195,19 +195,19 @@ function FinanceExpenses() {
               </button>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="ابحث بالبيان، المستفيد أو رقم السند..."
-                className="h-9 w-full rounded-xl border border-border/60 bg-background pr-9 pl-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/40"
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-xs font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
               />
             </div>
 
             <select 
-              className="h-9 rounded-xl border border-border/60 bg-background px-2.5 text-xs font-bold cursor-pointer outline-none"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-xs font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
             >
@@ -216,7 +216,7 @@ function FinanceExpenses() {
             </select>
 
             <select 
-              className="h-9 rounded-xl border border-border/60 bg-background px-2.5 text-xs font-bold cursor-pointer outline-none"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-xs font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
@@ -278,30 +278,43 @@ function FinanceExpenses() {
 
       {/* --- Add Expense Modal --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border overflow-hidden">
-            <div className="p-5 border-b border-border/50 flex justify-between items-center bg-danger/10">
-              <h3 className="font-extrabold text-base flex items-center gap-2 text-danger">
-                <Plus className="w-5 h-5" /> تسجيل طلب مصروف ونفقة جديدة
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-accent rounded-lg"><X className="w-4 h-4" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+          <div className="w-full max-w-lg rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
+            <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-danger/15 text-danger flex items-center justify-center shadow-inner border border-danger/20">
+                  <TrendingDown className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">تسجيل طلب مصروف ونفقة جديدة</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">تسجيل سند صرف جديد وربطه بالمركز المالي</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+              >
+                ✕
+              </button>
             </div>
+
             <form onSubmit={handleAddExpense} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">بيان ووصف المصروف <span className="text-danger">*</span></label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-muted-foreground">بيان ووصف المصروف <span className="text-danger">*</span></label>
                 <input 
                   type="text" 
                   required 
                   placeholder="مثال: شراء أحبار ومستلزمات مكتبية" 
                   value={newExpense.title}
                   onChange={e => setNewExpense(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-sm focus:ring-2 focus:ring-danger/50 outline-none" 
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15" 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-muted-foreground mb-1">المبلغ المطلوب ({currency}) <span className="text-danger">*</span></label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-muted-foreground">المبلغ المطلوب ({currency}) <span className="text-danger">*</span></label>
                   <input 
                     type="number" 
                     required 
@@ -309,16 +322,16 @@ function FinanceExpenses() {
                     placeholder="أدخل المبلغ..." 
                     value={newExpense.amount || ""}
                     onChange={e => setNewExpense(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                    className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-base focus:ring-2 focus:ring-danger/50 outline-none" 
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-base font-black text-danger shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15" 
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-muted-foreground mb-1">تصنيف المصروف <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-muted-foreground">تصنيف المصروف <span className="text-danger">*</span></label>
                   <select 
                     required
                     value={newExpense.categoryId}
                     onChange={e => setNewExpense(prev => ({ ...prev, categoryId: e.target.value }))}
-                    className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-xs focus:ring-2 focus:ring-danger/50 outline-none"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-xs font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15 cursor-pointer"
                   >
                     <option value="">-- اختر التصنيف --</option>
                     {allExpenseCategories.map(c => (
@@ -328,24 +341,24 @@ function FinanceExpenses() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">المستفيد / المورد / الموظف <span className="text-danger">*</span></label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-muted-foreground">المستفيد / المورد / الموظف <span className="text-danger">*</span></label>
                 <input 
                   type="text" 
                   required 
                   placeholder="اسم الشركة أو الموظف المستلم..." 
                   value={newExpense.beneficiary}
                   onChange={e => setNewExpense(prev => ({ ...prev, beneficiary: e.target.value }))}
-                  className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-sm focus:ring-2 focus:ring-danger/50 outline-none" 
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15" 
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-muted-foreground mb-1">طريقة الدفع وسداد الصندوق</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-muted-foreground">طريقة الدفع وسداد الصندوق</label>
                 <select 
                   value={newExpense.method}
                   onChange={e => setNewExpense(prev => ({ ...prev, method: e.target.value as any }))}
-                  className="w-full px-3 py-2.5 bg-background border border-border/60 rounded-xl font-bold text-sm focus:ring-2 focus:ring-danger/50 outline-none"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15 cursor-pointer"
                 >
                   <option value="bank_transfer">تحويل بنكي</option>
                   <option value="cash">نقدي (كاش الخزينة)</option>
@@ -354,9 +367,13 @@ function FinanceExpenses() {
                 </select>
               </div>
 
-              <div className="pt-3 flex gap-3">
-                <button type="submit" className="flex-1 btn-primary bg-danger hover:bg-danger/90 font-extrabold py-2.5 rounded-xl">حفظ وسجل المصروف</button>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 btn-secondary py-2.5 rounded-xl">إلغاء</button>
+              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]">
+                  إلغاء
+                </button>
+                <button type="submit" className="rounded-xl bg-danger px-6 py-2.5 text-sm font-bold text-white hover:bg-danger/90 transition-all shadow-md shadow-danger/20 active:scale-[0.98]">
+                  حفظ وتسجيل المصروف
+                </button>
               </div>
             </form>
           </div>

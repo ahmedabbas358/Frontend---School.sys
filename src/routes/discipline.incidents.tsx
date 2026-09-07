@@ -264,16 +264,30 @@ function DisciplineIncidents() {
 
       {/* Add Incident Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-lg flex flex-col rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="p-6 pb-4 border-b border-border/50 shrink-0">
-              <h3 className="text-2xl font-black text-primary">تسجيل واقعة سلوكية</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="w-full max-w-lg flex flex-col rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh]">
+            <div className="p-6 pb-4 border-b border-border/60 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-foreground">تسجيل واقعة سلوكية</h3>
+                  <p className="text-xs text-muted-foreground">توثيق الحادثة السلوكية وخصم النقاط تلقائياً</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setIsModalOpen(false); reset(); }} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <span className="font-bold text-lg leading-none">&times;</span>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-              <form id="incident-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <form id="incident-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">اسم الطالب ({getStageLabel(stage)}) <span className="text-danger">*</span></label>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">اسم الطالب ({getStageLabel(stage)}) <span className="text-destructive">*</span></label>
                   <Controller
                     name="studentId"
                     control={control}
@@ -287,65 +301,66 @@ function DisciplineIncidents() {
                       />
                     )}
                   />
-                  {errors.studentId && <p className="mt-1.5 text-xs font-bold text-danger">{errors.studentId.message}</p>}
+                  {errors.studentId && <p className="mt-1 text-xs font-bold text-destructive">{errors.studentId.message}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3.5">
                   <div>
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">تصنيف الواقعة (مخالفة) <span className="text-danger">*</span></label>
+                    <label className="mb-1.5 block text-xs font-semibold text-foreground/85">تصنيف الواقعة (مخالفة) <span className="text-destructive">*</span></label>
                     <select
                       {...register("categoryId")}
-                      className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+                      className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
                     >
                       <option value="">-- اختر التصنيف --</option>
                       {allDisciplineCategories.filter(c => c.type === "behavioral" && c.defaultPoints < 0).map(c => (
                         <option key={c.id} value={c.id}>{c.name} ({c.defaultPoints} نقطة)</option>
                       ))}
                     </select>
-                    {errors.categoryId && <p className="mt-1.5 text-xs font-bold text-danger">{errors.categoryId.message}</p>}
+                    {errors.categoryId && <p className="mt-1 text-xs font-bold text-destructive">{errors.categoryId.message}</p>}
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-bold text-muted-foreground">المكان</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-foreground/85">المكان</label>
                     <input
                       {...register("location")}
-                      className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
                       placeholder="الفصل، الساحة، المعمل..."
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الإجراء المتخذ</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الإجراء المتخذ</label>
                   <input
                     {...register("actionTaken")}
-                    className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                    placeholder="إنذار شفوي، استدعاء..."
+                    className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
+                    placeholder="إنذار شفوي، استدعاء ولي أمر..."
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">وصف الحالة والتفاصيل <span className="text-danger">*</span></label>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">وصف الحالة والتفاصيل <span className="text-destructive">*</span></label>
                   <textarea
                     {...register("description")}
-                    className="w-full rounded-2xl border border-border/50 bg-background p-4 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none custom-scrollbar"
+                    className="w-full rounded-xl border border-input bg-background/80 p-3.5 text-xs font-medium text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all resize-none custom-scrollbar placeholder:text-muted-foreground/60"
                     rows={4}
+                    placeholder="تفاصيل دقيقة حول الواقعة السلوكية والظروف المحيطة..."
                   />
-                  {errors.description && <p className="mt-1.5 text-xs font-bold text-danger">{errors.description.message}</p>}
+                  {errors.description && <p className="mt-1 text-xs font-bold text-destructive">{errors.description.message}</p>}
                 </div>
               </form>
             </div>
-            <div className="p-6 pt-4 border-t border-border/50 flex justify-end gap-3 bg-card rounded-b-3xl shrink-0">
+            <div className="p-6 pt-4 border-t border-border/60 flex justify-end gap-2.5 bg-card/98 dark:bg-card/95 rounded-b-3xl shrink-0">
               <button
                 type="button"
                 onClick={() => { setIsModalOpen(false); reset(); }}
-                className="rounded-xl px-5 py-2.5 font-bold hover:bg-accent transition-colors"
+                className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all"
               >
                 إلغاء
               </button>
               <button
                 form="incident-form"
                 type="submit"
-                className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm hover:scale-105"
+                className="h-11 px-7 rounded-xl bg-primary text-primary-foreground text-xs font-extrabold hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary"
               >
                 حفظ الواقعة
               </button>

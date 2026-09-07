@@ -35,6 +35,7 @@ export interface Student {
   address?: string;
   guardianPhone?: string;
   guardianRelation?: string;
+  guardianRelationship?: string;
   bloodType?: string;
   medicalNotes?: string;
   enrollmentDate?: string;
@@ -1346,9 +1347,9 @@ const initialJournalEntries: JournalEntry[] = [];
 const initialJournalLines: JournalLine[] = [];
 
 const initialAcademicYears: AcademicYear[] = [
-  { id: "Y-1000", name: "١٤٤٤ هـ", startDate: "2022-08-21", endDate: "2023-06-12", isCurrent: false },
-  { id: "Y-1001", name: "١٤٤٥ هـ", startDate: "2023-08-20", endDate: "2024-06-10", isCurrent: false },
-  { id: "Y-1002", name: "١٤٤٦ هـ", startDate: "2024-08-18", endDate: "2025-06-15", isCurrent: true },
+  { id: "Y-1000", name: "1444 هـ", startDate: "2022-08-21", endDate: "2023-06-12", isCurrent: false },
+  { id: "Y-1001", name: "1445 هـ", startDate: "2023-08-20", endDate: "2024-06-10", isCurrent: false },
+  { id: "Y-1002", name: "1446 هـ", startDate: "2024-08-18", endDate: "2025-06-15", isCurrent: true },
 ];
 
 const initialTeachingAssignments: TeachingAssignment[] = [];
@@ -1519,6 +1520,27 @@ interface GlobalStoreContextType {
   addClinicVisit: (visit: Omit<ClinicVisit, "id" | "studentName" | "stage">) => void;
   addDisciplineIncident: (incident: Omit<DisciplineIncident, "id">) => void;
   addAttendanceSession: (session: Omit<AttendanceSession, "id">, records: Omit<AttendanceRecord, "id" | "sessionId">[]) => void;
+  bulkRecordStudentAttendance: (params: {
+    academicYearId: string;
+    sectionId: string;
+    date: string;
+    periodNumber?: number;
+    subjectId?: string;
+    supervisorName?: string;
+    records: {
+      studentEnrollmentId: string;
+      status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
+      note?: string;
+    }[];
+  }) => { sessionId: string; count: number };
+  quickCheckInStaff: (params: {
+    staffId: string;
+    date: string;
+    action?: "check_in" | "check_out" | "toggle";
+    time?: string;
+    notes?: string;
+    gateSupervisor?: string;
+  }) => StaffAttendanceRecord;
   addBehaviorTransaction: (transaction: Omit<BehaviorTransaction, "id">) => void;
   addSection: (section: Omit<Section, "id">) => void;
   updateSection: (id: string, updates: Partial<Section>) => void;
@@ -1648,8 +1670,20 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>(initialEmployeeAssignments);
   const [clinicVisits, setClinicVisits] = useState<ClinicVisit[]>(initialClinicVisits);
   const [disciplineIncidents, setDisciplineIncidents] = useState<DisciplineIncident[]>([]);
-  const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_attendance_sessions") : null;
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_attendance_records") : null;
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
   const [attendanceExcuses, setAttendanceExcuses] = useState<AttendanceExcuse[]>([]);
   const [behaviorTransactions, setBehaviorTransactions] = useState<BehaviorTransaction[]>([]);
   const [disciplineCategories, setDisciplineCategories] = useState<DisciplineCategory[]>([
@@ -1686,7 +1720,13 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const [staffEvaluations, setStaffEvaluations] = useState<StaffEvaluation[]>(initialStaffEvaluations);
   const [staffContracts, setStaffContracts] = useState<StaffContract[]>(initialStaffContracts);
   const [staffLeaves, setStaffLeaves] = useState<StaffLeave[]>(initialStaffLeaves);
-  const [staffAttendance, setStaffAttendance] = useState<StaffAttendanceRecord[]>([]);
+  const [staffAttendance, setStaffAttendance] = useState<StaffAttendanceRecord[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_staff_attendance") : null;
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
   const [staffAdvances, setStaffAdvances] = useState<StaffAdvance[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(initialActivityLogs);
   const [users, setUsers] = useState<UserAccount[]>(initialUsers);
@@ -1703,7 +1743,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     },
     {
       id: "notif-2",
-      title: "تم تسجيل ١٠ طلاب جدد",
+      title: "تم تسجيل 10 طلاب جدد",
       message: "في مرحلة رياض الأطفال.",
       type: "success",
       timestamp: new Date(Date.now() - 60 * 60000).toISOString(),
@@ -1736,11 +1776,23 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   });
   
   useEffect(() => {
-    localStorage.setItem("darasi_system_settings", JSON.stringify(systemSettings));
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_system_settings", JSON.stringify(systemSettings));
+      } catch (e) {
+        console.error("Error persisting settings:", e);
+      }
+    }
   }, [systemSettings]);
 
   useEffect(() => {
-    localStorage.setItem("darasi_currency", currency);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_currency", currency);
+      } catch (e) {
+        console.error("Error persisting currency:", e);
+      }
+    }
   }, [currency]);
   
   const updateSettings = (updates: Partial<SystemSettings>) => {
@@ -1846,21 +1898,33 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   };
 
   const updateStudent = (id: string, updates: Partial<Student>) => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-    setStudentEnrollments(prev => prev.map(e => (e.studentId === id && e.academicYearId === currentAcademicYearId) ? { ...e, ...updates } as StudentEnrollment : e));
+    const targetStudentId = id.startsWith("ENR-")
+      ? (studentEnrollments.find(e => e.id === id)?.studentId || id)
+      : id;
+    setStudents(prev => prev.map(s => (s.id === targetStudentId || s.id === id) ? { ...s, ...updates } : s));
+    setStudentEnrollments(prev => prev.map(e => ((e.studentId === targetStudentId || e.id === id) && e.academicYearId === currentAcademicYearId) ? { ...e, ...updates } as StudentEnrollment : e));
   };
 
   const softDeleteStudent = (id: string) => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, isDeleted: true, deletedAt: new Date().toISOString() } : s));
+    const targetStudentId = id.startsWith("ENR-")
+      ? (studentEnrollments.find(e => e.id === id)?.studentId || id)
+      : id;
+    setStudents(prev => prev.map(s => (s.id === targetStudentId || s.id === id) ? { ...s, isDeleted: true, deletedAt: new Date().toISOString() } : s));
   };
 
   const restoreStudent = (id: string) => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, isDeleted: false, deletedAt: undefined } : s));
+    const targetStudentId = id.startsWith("ENR-")
+      ? (studentEnrollments.find(e => e.id === id)?.studentId || id)
+      : id;
+    setStudents(prev => prev.map(s => (s.id === targetStudentId || s.id === id) ? { ...s, isDeleted: false, deletedAt: undefined } : s));
   };
 
   const hardDeleteStudent = (id: string) => {
-    setStudents(prev => prev.filter(s => s.id !== id));
-    setStudentEnrollments(prev => prev.filter(e => e.studentId !== id));
+    const targetStudentId = id.startsWith("ENR-")
+      ? (studentEnrollments.find(e => e.id === id)?.studentId || id)
+      : id;
+    setStudents(prev => prev.filter(s => s.id !== targetStudentId && s.id !== id));
+    setStudentEnrollments(prev => prev.filter(e => e.studentId !== targetStudentId && e.id !== id));
   };
 
   const addGuardian = (g: Omit<Guardian, "id">) => {
@@ -2484,6 +2548,215 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Sync attendance state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("darasi_attendance_sessions", JSON.stringify(attendanceSessions));
+    } catch {}
+  }, [attendanceSessions]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("darasi_attendance_records", JSON.stringify(attendanceRecords));
+    } catch {}
+  }, [attendanceRecords]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("darasi_staff_attendance", JSON.stringify(staffAttendance));
+    } catch {}
+  }, [staffAttendance]);
+
+  const bulkRecordStudentAttendance = (params: {
+    academicYearId: string;
+    sectionId: string;
+    date: string;
+    periodNumber?: number;
+    subjectId?: string;
+    supervisorName?: string;
+    records: {
+      studentEnrollmentId: string;
+      status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
+      note?: string;
+    }[];
+  }) => {
+    const period = params.periodNumber || 1;
+    const now = new Date().toISOString();
+    const markedBy = params.supervisorName || "مشرف الدور / الفصل";
+
+    const existing = attendanceSessions.find(
+      s => s.academicYearId === params.academicYearId &&
+           s.sectionId === params.sectionId &&
+           s.date === params.date &&
+           s.periodNumber === period
+    );
+
+    const sessionId = existing ? existing.id : `AS-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    if (existing) {
+      setAttendanceSessions(prev => prev.map(s => s.id === sessionId ? {
+        ...s,
+        status: "closed",
+        createdBy: markedBy,
+      } : s));
+
+      setAttendanceRecords(prev => {
+        const remaining = prev.filter(r => r.sessionId !== sessionId);
+        const newRecords: AttendanceRecord[] = params.records.map(r => ({
+          id: `AR-${Math.floor(10000 + Math.random() * 90000)}`,
+          sessionId,
+          studentEnrollmentId: r.studentEnrollmentId,
+          status: r.status,
+          note: r.note,
+          markedBy,
+          markedAt: now,
+        }));
+        return [...newRecords, ...remaining];
+      });
+    } else {
+      const newSession: AttendanceSession = {
+        id: sessionId,
+        academicYearId: params.academicYearId,
+        sectionId: params.sectionId,
+        subjectId: params.subjectId || "general_attendance",
+        teacherId: markedBy,
+        periodNumber: period,
+        date: params.date,
+        status: "closed",
+        createdBy: markedBy,
+        createdAt: now,
+      };
+
+      const newRecords: AttendanceRecord[] = params.records.map(r => ({
+        id: `AR-${Math.floor(10000 + Math.random() * 90000)}`,
+        sessionId,
+        studentEnrollmentId: r.studentEnrollmentId,
+        status: r.status,
+        note: r.note,
+        markedBy,
+        markedAt: now,
+      }));
+
+      setAttendanceSessions(prev => [newSession, ...prev]);
+      setAttendanceRecords(prev => [...newRecords, ...prev]);
+    }
+
+    // Auto add discipline incidents for absent students
+    params.records.forEach(r => {
+      if (r.status === "ABSENT") {
+        setDisciplineIncidents(prev => {
+          const alreadyLogged = prev.some(di => di.studentEnrollmentId === r.studentEnrollmentId && di.date === params.date);
+          if (alreadyLogged) return prev;
+          return [{
+            id: `DI-${Math.floor(1000 + Math.random() * 9000)}`,
+            studentEnrollmentId: r.studentEnrollmentId,
+            date: params.date,
+            description: `غياب مرصود عبر تطبيق المشرفين (الفصل / الحصة ${period})`,
+            responsiblePerson: markedBy,
+            actionTaken: "إنذار غياب ورصد تلقائي"
+          }, ...prev];
+        });
+      }
+    });
+
+    return { sessionId, count: params.records.length };
+  };
+
+  const quickCheckInStaff = (params: {
+    staffId: string;
+    date: string;
+    action?: "check_in" | "check_out" | "toggle";
+    time?: string;
+    notes?: string;
+    gateSupervisor?: string;
+  }): StaffAttendanceRecord => {
+    const action = params.action || "toggle";
+    const curTime = params.time || new Date().toTimeString().slice(0, 8);
+    const markedBy = params.gateSupervisor || "مشرف البوابة العامة";
+
+    let resultRecord: StaffAttendanceRecord = {
+      id: `STA-${Math.floor(10000 + Math.random() * 90000)}`,
+      staffId: params.staffId,
+      date: params.date,
+      status: "present"
+    };
+
+    setStaffAttendance(prev => {
+      const idx = prev.findIndex(r => r.staffId === params.staffId && r.date === params.date);
+      const existing = idx >= 0 ? prev[idx] : null;
+
+      let effectiveAction = action;
+      if (effectiveAction === "toggle") {
+        if (!existing || !existing.checkIn) {
+          effectiveAction = "check_in";
+        } else if (!existing.checkOut) {
+          effectiveAction = "check_out";
+        } else {
+          effectiveAction = "check_out";
+        }
+      }
+
+      if (effectiveAction === "check_in") {
+        let minutesLate = 0;
+        let status: StaffAttendanceRecord["status"] = "present";
+        try {
+          const [hh, mm] = curTime.split(":").map(Number);
+          const arrivalMinutes = (hh || 0) * 60 + (mm || 0);
+          const shiftStartMinutes = 7 * 60 + 15; // 07:15 AM
+          if (arrivalMinutes > shiftStartMinutes) {
+            minutesLate = arrivalMinutes - shiftStartMinutes;
+            status = "late";
+          }
+        } catch {}
+
+        resultRecord = {
+          id: existing?.id || `STA-${Math.floor(10000 + Math.random() * 90000)}`,
+          staffId: params.staffId,
+          date: params.date,
+          checkIn: curTime,
+          checkOut: existing?.checkOut,
+          status,
+          minutesLate,
+          notes: params.notes || (minutesLate > 0 ? `تأخر صباحي ${minutesLate} دقيقة - بوابة الاستقبال` : `تسجيل دخول عبر بوابة الاستقبال (${markedBy})`)
+        };
+      } else {
+        resultRecord = {
+          id: existing?.id || `STA-${Math.floor(10000 + Math.random() * 90000)}`,
+          staffId: params.staffId,
+          date: params.date,
+          checkIn: existing?.checkIn || curTime,
+          checkOut: curTime,
+          status: existing?.status || "present",
+          minutesLate: existing?.minutesLate || 0,
+          notes: params.notes || (existing?.notes ? `${existing.notes} | انصراف ${curTime}` : `انصراف عبر البوابة (${markedBy})`)
+        };
+      }
+
+      const next = [...prev];
+      if (idx >= 0) {
+        next[idx] = resultRecord;
+      } else {
+        next.unshift(resultRecord);
+      }
+      return next;
+    });
+
+    const staffMember = staff.find(s => s.id === params.staffId);
+    const workerName = staffMember ? staffMember.name : params.staffId;
+    const logAction = action === "check_out" ? "تسجيل انصراف" : "تسجيل دخول";
+    
+    setActivityLogs(prev => [{
+      id: `AL-${Math.floor(1000 + Math.random() * 9000)}`,
+      user: markedBy,
+      action: logAction,
+      entity: "بوابة الحضور",
+      details: `${logAction}: ${workerName} الساعة ${curTime}`,
+      date: new Date().toISOString()
+    }, ...prev]);
+
+    return resultRecord;
+  };
+
   const addBehaviorTransaction = (transactionData: Omit<BehaviorTransaction, "id">) => {
     const newTransaction: BehaviorTransaction = {
       ...transactionData,
@@ -3045,7 +3318,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       allVendors: vendors, addVendor, payVendor,
       addAccount, updateAccount, deleteAccount, toggleAccountStatus,
       addBook, issueBook, returnBook, addInventoryItem, updateInventoryItem, deleteInventoryItem,
-      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, addStaffAdvance, addClinicVisit, addDisciplineIncident, addAttendanceSession, addBehaviorTransaction,
+      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, quickCheckInStaff, addStaffAdvance, addClinicVisit, addDisciplineIncident, addAttendanceSession, bulkRecordStudentAttendance, addBehaviorTransaction,
       addSection, updateSection, deleteSection, 
 
       currency,

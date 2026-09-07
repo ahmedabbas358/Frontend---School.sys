@@ -125,33 +125,60 @@ function ExamsPeriodView() {
       </PageCard>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border/50 overflow-hidden slide-in-from-bottom-4 animate-in">
-            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-accent/30">
-              <h2 className="text-xl font-black text-primary">إضافة فترة اختبار جديدة</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 bg-background rounded-full hover:bg-danger/10 hover:text-danger transition-colors border border-border/50">
-                <span className="font-bold text-xl leading-none">&times;</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="bg-card/98 dark:bg-card/95 w-full max-w-lg rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex justify-between items-center pb-4 border-b border-border/60">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <CalendarDays className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-foreground">إضافة فترة اختبار جديدة</h2>
+                  <p className="text-xs text-muted-foreground">تحديد موعد ونوع فترة الاختبارات المعتمدة</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <span className="font-bold text-lg leading-none">&times;</span>
               </button>
             </div>
             
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form onSubmit={handleSave} className="space-y-4 pt-1">
               <div>
-                <label className="mb-2 block text-sm font-bold text-muted-foreground">اسم الفترة <span className="text-danger">*</span></label>
-                <input required value={formData.name || ""} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="مثال: اختبارات منتصف الفصل الدراسي الأول" className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary" />
+                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">اسم الفترة <span className="text-destructive">*</span></label>
+                <input 
+                  required 
+                  value={formData.name || ""} 
+                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} 
+                  placeholder="مثال: اختبارات منتصف الفصل الدراسي الأول" 
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
+                />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الفصل <span className="text-danger">*</span></label>
-                  <select required value={formData.term} onChange={e => setFormData(prev => ({ ...prev, term: e.target.value }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الفصل الدراسي <span className="text-destructive">*</span></label>
+                  <select 
+                    required 
+                    value={formData.term} 
+                    onChange={e => setFormData(prev => ({ ...prev, term: e.target.value }))} 
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+                  >
                     <option value="الفصل الأول">الفصل الأول</option>
                     <option value="الفصل الثاني">الفصل الثاني</option>
                     <option value="الفصل الثالث">الفصل الثالث</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">النوع <span className="text-danger">*</span></label>
-                  <select required value={formData.type} onChange={e => setFormData(prev => ({ ...prev, type: e.target.value as any }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">النوع <span className="text-destructive">*</span></label>
+                  <select 
+                    required 
+                    value={formData.type} 
+                    onChange={e => setFormData(prev => ({ ...prev, type: e.target.value as any }))} 
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+                  >
                     <option value="monthly">شهري</option>
                     <option value="midterm">نصفي</option>
                     <option value="final">نهائي</option>
@@ -160,7 +187,7 @@ function ExamsPeriodView() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
                   <ArabicDatePicker
                     label="تاريخ البداية"
@@ -181,9 +208,20 @@ function ExamsPeriodView() {
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 font-bold hover:bg-accent rounded-xl transition-colors">إلغاء</button>
-                <button type="submit" className="px-8 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-md">حفظ</button>
+              <div className="pt-4 flex justify-end gap-2.5 border-t border-border/60">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all"
+                >
+                  إلغاء
+                </button>
+                <button 
+                  type="submit" 
+                  className="h-11 px-7 bg-primary text-primary-foreground text-xs font-extrabold rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary"
+                >
+                  حفظ الفترة
+                </button>
               </div>
             </form>
           </div>
@@ -252,11 +290,21 @@ function ExamSubjectsScheduleView() {
         <DataTable
           rows={filteredSubjects.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())}
           columns={[
-            { key: "exam", header: "الاختبار", cell: row => <span className="font-bold">{(activeStageExams || []).find(e => e.id === row.examId)?.name || "-"}</span> },
-            { key: "subject", header: "المادة", cell: row => <span className="font-black text-primary">{(activeStageSubjects || []).find(s => s.id === row.subjectId)?.name || "-"}</span> },
-            { key: "grade", header: "الصف", cell: row => <span className="font-bold text-muted-foreground">{row.grade}</span> },
-            { key: "date", header: "تاريخ الاختبار", cell: row => <span className="tabular-nums" dir="ltr">{row.date}</span> },
-            { key: "score", header: "الدرجة", cell: row => <span className="text-sm">{row.passScore} / {row.maxScore} (وزن {row.weight}%)</span> },
+            { key: "grade", header: "الصف", cell: row => <span className="font-bold">{row.grade}</span> },
+            { key: "subject", header: "المادة", cell: row => {
+              const sub = (activeStageSubjects || []).find(s => s.id === row.subjectId);
+              return <span className="font-bold text-primary">{sub?.name || row.subjectId}</span>;
+            }},
+            { key: "exam", header: "الاختبار", cell: row => {
+              const ex = (activeStageExams || []).find(e => e.id === row.examId);
+              return <span>{ex?.name || row.examId}</span>;
+            }},
+            { key: "date", header: "تاريخ الاختبار", cell: row => <span className="font-bold tabular-nums">{row.date}</span> },
+            { key: "scores", header: "الدرجات (الكبرى/الصغرى/الوزن)", cell: row => (
+              <span className="text-xs bg-muted px-2 py-1 rounded-md font-bold">
+                {row.maxScore} / {row.passScore} ({row.weight}%)
+              </span>
+            )},
             { key: "actions", header: "", cell: row => (
               <button onClick={() => deleteExamSubject(row.id)} className="p-2 text-danger/70 hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"><Trash2 className="w-4 h-4"/></button>
             )}
@@ -265,36 +313,62 @@ function ExamSubjectsScheduleView() {
       </PageCard>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border/50 overflow-hidden slide-in-from-bottom-4 animate-in">
-            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-accent/30">
-              <h2 className="text-xl font-black text-primary">جدولة مادة لاختبار</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 bg-background rounded-full hover:bg-danger/10 hover:text-danger transition-colors border border-border/50">
-                <span className="font-bold text-xl leading-none">&times;</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="bg-card/98 dark:bg-card/95 w-full max-w-lg rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex justify-between items-center pb-4 border-b border-border/60">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-foreground">جدولة مادة لاختبار</h2>
+                  <p className="text-xs text-muted-foreground">تحديد موعد اختبار المادة وتوزيع درجات النجاح</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <span className="font-bold text-lg leading-none">&times;</span>
               </button>
             </div>
             
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form onSubmit={handleSave} className="space-y-4 pt-1">
               <div>
-                <label className="mb-2 block text-sm font-bold text-muted-foreground">اختر الاختبار <span className="text-danger">*</span></label>
-                <select required value={formData.examId} onChange={e => setFormData(prev => ({ ...prev, examId: e.target.value }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
-                  <option value="">-- اختر --</option>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">اختر الاختبار <span className="text-destructive">*</span></label>
+                <select 
+                  required 
+                  value={formData.examId} 
+                  onChange={e => setFormData(prev => ({ ...prev, examId: e.target.value }))} 
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+                >
+                  <option value="">-- اختر فترة الاختبار --</option>
                   {(activeStageExams || []).map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
                 </select>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الصف <span className="text-danger">*</span></label>
-                  <select required value={formData.grade} onChange={e => setFormData(prev => ({ ...prev, grade: e.target.value }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
-                    <option value="">-- اختر --</option>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الصف الدراسي <span className="text-destructive">*</span></label>
+                  <select 
+                    required 
+                    value={formData.grade} 
+                    onChange={e => setFormData(prev => ({ ...prev, grade: e.target.value }))} 
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+                  >
+                    <option value="">-- اختر الصف --</option>
                     {stageGrades.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">المادة <span className="text-danger">*</span></label>
-                  <select required value={formData.subjectId} onChange={e => setFormData(prev => ({ ...prev, subjectId: e.target.value }))} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary">
-                    <option value="">-- اختر --</option>
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">المادة الدراسية <span className="text-destructive">*</span></label>
+                  <select 
+                    required 
+                    value={formData.subjectId} 
+                    onChange={e => setFormData(prev => ({ ...prev, subjectId: e.target.value }))} 
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+                  >
+                    <option value="">-- اختر المادة --</option>
                     {(activeStageSubjects || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
@@ -310,24 +384,53 @@ function ExamSubjectsScheduleView() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3.5">
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الدرجة الكلية</label>
-                  <input type="number" required value={formData.maxScore} onChange={e => setFormData({...formData, maxScore: Number(e.target.value)})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold" />
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الدرجة الكلية</label>
+                  <input 
+                    type="number" 
+                    required 
+                    value={formData.maxScore} 
+                    onChange={e => setFormData({...formData, maxScore: Number(e.target.value)})} 
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all tabular-nums" 
+                  />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">درجة النجاح</label>
-                  <input type="number" required value={formData.passScore} onChange={e => setFormData({...formData, passScore: Number(e.target.value)})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold" />
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">درجة النجاح</label>
+                  <input 
+                    type="number" 
+                    required 
+                    value={formData.passScore} 
+                    onChange={e => setFormData({...formData, passScore: Number(e.target.value)})} 
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all tabular-nums" 
+                  />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">الوزن المئوي %</label>
-                  <input type="number" required value={formData.weight} onChange={e => setFormData({...formData, weight: Number(e.target.value)})} className="w-full h-12 rounded-xl border border-border/50 bg-background px-4 font-bold" />
+                  <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الوزن %</label>
+                  <input 
+                    type="number" 
+                    required 
+                    value={formData.weight} 
+                    onChange={e => setFormData({...formData, weight: Number(e.target.value)})} 
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all tabular-nums" 
+                  />
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 font-bold hover:bg-accent rounded-xl transition-colors">إلغاء</button>
-                <button type="submit" className="px-8 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-md">حفظ</button>
+              <div className="pt-4 flex justify-end gap-2.5 border-t border-border/60">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all"
+                >
+                  إلغاء
+                </button>
+                <button 
+                  type="submit" 
+                  className="h-11 px-7 bg-primary text-primary-foreground text-xs font-extrabold rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary"
+                >
+                  حفظ المادة
+                </button>
               </div>
             </form>
           </div>

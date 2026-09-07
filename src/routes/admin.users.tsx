@@ -135,17 +135,17 @@ function AdminUsersPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
+        <div className="rounded-2xl border border-border/70 bg-card/60 p-4 backdrop-blur-xl shadow-sm">
+          <div className="grid gap-3.5 md:grid-cols-[1fr_200px_180px]">
             <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input value={q} onChange={event => setQ(event.target.value)} placeholder="بحث باسم المستخدم أو الاسم أو الدور..." className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input value={q} onChange={event => setQ(event.target.value)} placeholder="بحث باسم المستخدم أو الاسم أو الدور..." className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
             </div>
-            <select value={roleFilter} onChange={event => setRoleFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold">
+            <select value={roleFilter} onChange={event => setRoleFilter(event.target.value)} className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer">
               <option value="all">كل الأدوار</option>
               {roles.map(role => <option key={role} value={role}>{role}</option>)}
             </select>
-            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold">
+            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer">
               <option value="all">كل الحالات</option>
               <option value="active">نشط</option>
               <option value="disabled">معطل</option>
@@ -170,9 +170,9 @@ function AdminUsersPage() {
               { key: "l", header: "آخر دخول", cell: (u) => <span className="inline-flex items-center gap-1 text-xs tabular"><Clock className="h-3 w-3 text-muted-foreground" />{u.lastLogin || "لم يسجل دخول"}</span> },
               { key: "act", header: "إجراءات", cell: (u) => (
                 <div className="flex gap-1">
-                  <button onClick={() => handleOpenDialog(u)} className="rounded-md p-2 hover:bg-accent text-muted-foreground hover:text-foreground" title="تعديل الحساب"><Pencil className="h-4 w-4" /></button>
-                  <button onClick={() => handleResetPassword(u)} className="rounded-md p-2 hover:bg-accent text-muted-foreground hover:text-foreground" title="إعادة تعيين كلمة المرور"><KeyRound className="h-4 w-4" /></button>
-                  <button onClick={() => handleToggleStatus(u)} className={`rounded-md p-2 hover:bg-accent ${u.status === "active" ? "text-danger" : "text-success"}`} title={u.status === "active" ? "تعطيل الحساب" : "تفعيل الحساب"}><Power className="h-4 w-4" /></button>
+                  <button onClick={() => handleOpenDialog(u)} className="rounded-xl p-2 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="تعديل الحساب"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => handleResetPassword(u)} className="rounded-xl p-2 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="إعادة تعيين كلمة المرور"><KeyRound className="h-4 w-4" /></button>
+                  <button onClick={() => handleToggleStatus(u)} className={`rounded-xl p-2 hover:bg-accent transition-colors ${u.status === "active" ? "text-danger" : "text-success"}`} title={u.status === "active" ? "تعطيل الحساب" : "تفعيل الحساب"}><Power className="h-4 w-4" /></button>
                 </div>
               )},
             ]}
@@ -182,40 +182,57 @@ function AdminUsersPage() {
       </div>
 
       {isDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl border border-border">
-            <h2 className="text-xl font-bold mb-5">{editingUser ? "تعديل المستخدم" : "إنشاء مستخدم جديد"}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
+            <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">{editingUser ? "تعديل بيانات المستخدم" : "إنشاء مستخدم جديد"}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">إدارة بيانات تسجيل الدخول وتحديد الصلاحيات</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDialogOpen(false)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+              >
+                ✕
+              </button>
+            </div>
             
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-bold">اسم المستخدم (للدخول)</label>
+            <div className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground">اسم المستخدم (للدخول)</label>
                 <input 
                   type="text" 
                   value={formData.username} 
                   onChange={e => setFormData({ ...formData, username: e.target.value })} 
-                  className="h-10 w-full rounded-lg border border-input bg-background px-3 outline-none focus:ring-2 focus:ring-ring/30"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   placeholder="مثال: a.alotaibi"
                   dir="ltr"
                 />
               </div>
               
-              <div>
-                <label className="mb-1 block text-sm font-bold">الاسم الكامل</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground">الاسم الكامل</label>
                 <input 
                   type="text" 
                   value={formData.fullName} 
                   onChange={e => setFormData({ ...formData, fullName: e.target.value })} 
-                  className="h-10 w-full rounded-lg border border-input bg-background px-3 outline-none focus:ring-2 focus:ring-ring/30"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   placeholder="مثال: أحمد العتيبي"
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-bold">الدور والصلاحيات</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground">الدور والصلاحيات</label>
                 <select 
                   value={formData.role} 
                   onChange={e => setFormData({ ...formData, role: e.target.value })} 
-                  className="h-10 w-full rounded-lg border border-input bg-background px-3 outline-none focus:ring-2 focus:ring-ring/30"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
                 >
                   {rolesCatalog.map(role => (
                     <option key={role} value={role}>{role}</option>
@@ -223,26 +240,26 @@ function AdminUsersPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-bold">حالة الحساب</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground">حالة الحساب</label>
                 <select 
                   value={formData.status} 
                   onChange={e => setFormData({ ...formData, status: e.target.value as "active" | "disabled" })} 
-                  className="h-10 w-full rounded-lg border border-input bg-background px-3 outline-none focus:ring-2 focus:ring-ring/30"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
                 >
-                  <option value="active">نشط</option>
-                  <option value="disabled">معطل</option>
+                  <option value="active">نشط (مسموح بالدخول)</option>
+                  <option value="disabled">معطل (محظور مؤقتاً)</option>
                 </select>
               </div>
-            </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setIsDialogOpen(false)} className="rounded-lg px-4 py-2 text-sm font-bold hover:bg-accent">
-                إلغاء
-              </button>
-              <button onClick={handleSave} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90">
-                حفظ البيانات
-              </button>
+              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
+                <button onClick={() => setIsDialogOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]">
+                  إلغاء
+                </button>
+                <button onClick={handleSave} className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]">
+                  حفظ البيانات
+                </button>
+              </div>
             </div>
           </div>
         </div>

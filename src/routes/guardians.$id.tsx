@@ -166,7 +166,7 @@ function GuardianProfile() {
         <div className="p-6 bg-white text-black">
           <div className="text-center mb-8 border-b-2 border-gray-300 pb-6">
             <h1 className="text-3xl font-black mb-2">كشف حساب مالي - مجمع</h1>
-            <p className="font-bold text-gray-600">التاريخ: {new Date().toLocaleDateString('ar-SA')}</p>
+            <p className="font-bold text-gray-600">التاريخ: {new Date().toLocaleDateString('ar-EG')}</p>
           </div>
 
           <div className="flex justify-between items-center bg-gray-100 p-6 rounded-xl border border-gray-300 mb-8">

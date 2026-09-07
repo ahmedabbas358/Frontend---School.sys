@@ -49,23 +49,33 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-6 border-b border-border/50 bg-muted/30">
-          <h2 className="text-xl font-bold flex items-center gap-2"><Settings className="h-5 w-5 text-primary" /> تعديل بيانات الطالب</h2>
-          <button onClick={onClose} className="p-2 hover:bg-accent rounded-full transition-colors"><X className="h-5 w-5" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
+      <div className="w-full max-w-2xl modal-card-luxury overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-6 border-b border-border/50 bg-muted/20">
+          <h2 className="text-xl font-black flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Settings className="h-5 w-5" />
+            </div>
+            تعديل بيانات الطالب
+          </h2>
+          <button onClick={onClose} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-6 overflow-y-auto custom-scrollbar-modal">
           <form id="edit-student-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-5">
-              <div className="md:col-span-2 border-b border-border pb-2 mb-2"><h3 className="font-bold text-primary">البيانات الأساسية</h3></div>
-              <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">اسم الطالب</label>
-                <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold" />
+              <div className="md:col-span-2 border-b border-border/60 pb-2.5 mb-1 flex items-center justify-between">
+                <h3 className="font-black text-sm text-primary uppercase tracking-wider">البيانات الأساسية</h3>
+                <span className="text-xs text-muted-foreground">بيانات الهوية والاسم</span>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">رقم الهوية</label>
-                <input required value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums" />
+                <label className="mb-2 block text-xs font-extrabold text-foreground">اسم الطالب <span className="text-danger">*</span></label>
+                <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-extrabold text-foreground">رقم الهوية <span className="text-danger">*</span></label>
+                <input required value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" />
               </div>
               <div>
                 <ArabicDatePicker
@@ -76,62 +86,72 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الجنس</label>
-                <select value={(formData as any).gender || "ذكر"} onChange={e => setFormData({...formData, gender: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold">
+                <label className="mb-2 block text-xs font-extrabold text-foreground">الجنس</label>
+                <select value={(formData as any).gender || "ذكر"} onChange={e => setFormData({...formData, gender: e.target.value} as any)} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50">
                   <option value="ذكر">ذكر</option>
                   <option value="أنثى">أنثى</option>
                 </select>
               </div>
 
-              <div className="md:col-span-2 border-b border-border pb-2 mb-2 mt-4"><h3 className="font-bold text-primary">بيانات التواصل وولي الأمر</h3></div>
-              <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">اسم ولي الأمر</label>
-                <input value={formData.guardianName} onChange={e => setFormData({...formData, guardianName: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold" />
+              <div className="md:col-span-2 border-b border-border/60 pb-2.5 mb-1 mt-3 flex items-center justify-between">
+                <h3 className="font-black text-sm text-primary uppercase tracking-wider">بيانات التواصل وولي الأمر</h3>
+                <span className="text-xs text-muted-foreground">أرقام الطوارئ والموقع</span>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">صلة القرابة</label>
-                <input value={(formData as any).guardianRelation || ""} onChange={e => setFormData({...formData, guardianRelation: e.target.value} as any)} placeholder="أب، أم، أخ..." className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold" />
+                <label className="mb-2 block text-xs font-extrabold text-foreground">اسم ولي الأمر</label>
+                <input value={formData.guardianName} onChange={e => setFormData({...formData, guardianName: e.target.value})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">رقم الجوال الطوارئ</label>
-                <input value={formData.guardianPhone} onChange={e => setFormData({...formData, guardianPhone: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums" dir="ltr" />
+                <label className="mb-2 block text-xs font-extrabold text-foreground">صلة القرابة</label>
+                <input value={(formData as any).guardianRelation || ""} onChange={e => setFormData({...formData, guardianRelation: e.target.value} as any)} placeholder="أب، أم، أخ..." className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-extrabold text-foreground">رقم الجوال للطوارئ</label>
+                <input value={formData.guardianPhone} onChange={e => setFormData({...formData, guardianPhone: e.target.value})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" dir="ltr" />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">العنوان الوطني</label>
-                <input value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors" />
+                <label className="mb-2 block text-xs font-extrabold text-foreground">العنوان الوطني</label>
+                <input value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
               </div>
 
               {student.stage === "kindergarten" && (
                 <>
-                  <div className="md:col-span-2 border-b border-border pb-2 mb-2 mt-4"><h3 className="font-bold text-primary">البيانات الخاصة (رياض الأطفال)</h3></div>
+                  <div className="md:col-span-2 border-b border-border/60 pb-2.5 mb-1 mt-3 flex items-center justify-between">
+                    <h3 className="font-black text-sm text-primary uppercase tracking-wider">البيانات الخاصة (رياض الأطفال)</h3>
+                  </div>
                   <div className="md:col-span-2">
-                    <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الأشخاص المخولون بالاستلام</label>
-                    <input value={(formData as any).pickupPersons || ""} onChange={e => setFormData({...formData, pickupPersons: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold" />
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">الأشخاص المخولون بالاستلام</label>
+                    <input value={(formData as any).pickupPersons || ""} onChange={e => setFormData({...formData, pickupPersons: e.target.value} as any)} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
                   </div>
                 </>
               )}
 
               {student.stage === "high" && (
                 <>
-                  <div className="md:col-span-2 border-b border-border pb-2 mb-2 mt-4"><h3 className="font-bold text-primary">البيانات الأكاديمية (الثانوي)</h3></div>
+                  <div className="md:col-span-2 border-b border-border/60 pb-2.5 mb-1 mt-3 flex items-center justify-between">
+                    <h3 className="font-black text-sm text-primary uppercase tracking-wider">البيانات الأكاديمية (الثانوي)</h3>
+                  </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-bold text-muted-foreground">المسار الأكاديمي</label>
-                    <select value={(formData as any).major || "science"} onChange={e => setFormData({...formData, major: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold">
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">المسار الأكاديمي</label>
+                    <select value={(formData as any).major || "science"} onChange={e => setFormData({...formData, major: e.target.value} as any)} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50">
                       <option value="science">علمي</option>
                       <option value="literature">أدبي (إنساني)</option>
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-bold text-muted-foreground">التخصص الدقيق</label>
-                    <input value={(formData as any).elective || ""} onChange={e => setFormData({...formData, elective: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold" />
+                    <label className="mb-2 block text-xs font-extrabold text-foreground">التخصص الدقيق</label>
+                    <input value={(formData as any).elective || ""} onChange={e => setFormData({...formData, elective: e.target.value} as any)} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
                   </div>
                 </>
               )}
 
-              <div className="md:col-span-2 border-b border-border pb-2 mb-2 mt-4"><h3 className="font-bold text-primary">البيانات الطبية</h3></div>
+              <div className="md:col-span-2 border-b border-border/60 pb-2.5 mb-1 mt-3 flex items-center justify-between">
+                <h3 className="font-black text-sm text-primary uppercase tracking-wider">البيانات الطبية</h3>
+                <span className="text-xs text-muted-foreground">الملف الصحي</span>
+              </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">فصيلة الدم</label>
-                <select value={(formData as any).bloodType || ""} onChange={e => setFormData({...formData, bloodType: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold tabular-nums" dir="ltr">
+                <label className="mb-2 block text-xs font-extrabold text-foreground">فصيلة الدم</label>
+                <select value={(formData as any).bloodType || ""} onChange={e => setFormData({...formData, bloodType: e.target.value} as any)} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" dir="ltr">
                   <option value="">غير محدد</option>
                   <option value="O+">O+</option>
                   <option value="O-">O-</option>
@@ -144,13 +164,16 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">ملاحظات طبية / أمراض مزمنة / حساسية</label>
-                <textarea value={formData.medicalNotes} onChange={e => setFormData({...formData, medicalNotes: e.target.value})} rows={3} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors resize-none font-bold"></textarea>
+                <label className="mb-2 block text-xs font-extrabold text-foreground">ملاحظات طبية / أمراض مزمنة / حساسية</label>
+                <textarea value={formData.medicalNotes} onChange={e => setFormData({...formData, medicalNotes: e.target.value})} rows={3} className="w-full rounded-xl border border-border/80 bg-background/80 p-3.5 text-sm font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 resize-none"></textarea>
               </div>
 
-              <div className="md:col-span-2 border-b border-border pb-2 mb-2 mt-4"><h3 className="font-bold text-primary">الإدارة الأكاديمية</h3></div>
+              <div className="md:col-span-2 border-b border-border/60 pb-2.5 mb-1 mt-3 flex items-center justify-between">
+                <h3 className="font-black text-sm text-primary uppercase tracking-wider">الإدارة الأكاديمية</h3>
+                <span className="text-xs text-muted-foreground">الفصل والشعبة وتاريخ القبول</span>
+              </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">المرحلة</label>
+                <label className="mb-2 block text-xs font-extrabold text-foreground">المرحلة الدراسية</label>
                 <select
                   value={formData.stage}
                   onChange={e => {
@@ -162,25 +185,25 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                       sectionId: undefined,
                     });
                   }}
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
                 >
                   {STAGE_LIST.map(stage => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الفصل</label>
+                <label className="mb-2 block text-xs font-extrabold text-foreground">الفصل الدراسي</label>
                 <select
                   value={formData.grade}
                   required
                   onChange={e => setFormData({ ...formData, grade: e.target.value, sectionId: undefined })}
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
                 >
                   <option value="">اختر الفصل</option>
                   {availableGrades.map(grade => <option key={grade} value={grade}>{grade}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الشعبة</label>
+                <label className="mb-2 block text-xs font-extrabold text-foreground">الشعبة</label>
                 <select
                   value={formData.sectionId || ""}
                   disabled={!formData.grade}
@@ -193,7 +216,7 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                       grade: section?.grade || formData.grade,
                     });
                   }}
-                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold disabled:opacity-50"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 disabled:opacity-50"
                 >
                   <option value="">بدون شعبة</option>
                   {availableSections.map(section => <option key={section.id} value={section.id}>شعبة {section.name}</option>)}
@@ -208,8 +231,8 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الحالة</label>
-                <select value={(formData as any).status || "نشط"} onChange={e => setFormData({...formData, status: e.target.value} as any)} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold">
+                <label className="mb-2 block text-xs font-extrabold text-foreground">الحالة الأكاديمية</label>
+                <select value={(formData as any).status || "نشط"} onChange={e => setFormData({...formData, status: e.target.value} as any)} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50">
                   <option value="نشط">نشط</option>
                   <option value="موقوف">موقوف</option>
                   <option value="منقول">منقول</option>
@@ -218,9 +241,9 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
             </div>
           </form>
         </div>
-        <div className="p-6 border-t border-border/50 bg-muted/10 flex gap-3 justify-end">
-          <button onClick={onClose} className="rounded-xl px-6 py-2.5 font-bold hover:bg-accent transition-colors border border-border">إلغاء</button>
-          <button form="edit-student-form" type="submit" className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-md">حفظ التغييرات</button>
+        <div className="p-5 border-t border-border/50 bg-muted/10 flex gap-3 justify-end items-center">
+          <button onClick={onClose} className="rounded-xl px-6 py-2.5 text-sm font-bold hover:bg-accent transition-colors border border-border/80 active:scale-[0.98]">إلغاء</button>
+          <button form="edit-student-form" type="submit" className="rounded-xl bg-primary px-8 py-2.5 text-sm font-extrabold text-primary-foreground hover:bg-primary/90 transition-all shadow-md active:scale-[0.98]">حفظ التغييرات</button>
         </div>
       </div>
     </div>
@@ -232,7 +255,7 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
 function StudentProfile() {
   const { id } = Route.useParams();
   const { 
-    currency, allStudents, allInvoices, allPayments, allClinicVisits, allDisciplineIncidents, 
+    currency, allStudents, allStudentEnrollments, activeStageStudents, allInvoices, allPayments, allClinicVisits, allDisciplineIncidents, 
     allSections, activeStageFeeStructures, addInvoice, addPayment, allTextbooks, 
     allTextbookDistributions, transportSubscriptions, transportRoutes,
     addTransportSubscription, updateTransportSubscription, deleteTransportSubscription
@@ -261,9 +284,35 @@ function StudentProfile() {
     method: "cash" as "cash" | "bank_transfer" | "card" | "cheque"
   });
 
-  const student = useMemo(() => allStudents.find((s) => s.id === id), [id, allStudents]);
+  const student = useMemo(() => {
+    // 1. Direct match in allStudents
+    const direct = allStudents.find((s) => s.id === id);
+    if (direct) return direct;
 
-  const studentSubscription = useMemo(() => student ? transportSubscriptions.find((s: any) => s.studentId === student.id) : null, [student, transportSubscriptions]);
+    // 2. Match via enrollment id
+    const enrollment = allStudentEnrollments?.find((e: any) => e.id === id);
+    if (enrollment) {
+      const baseStudent = allStudents.find((s) => s.id === enrollment.studentId);
+      if (baseStudent) {
+        return { ...baseStudent, ...enrollment, id: baseStudent.id, enrollmentId: enrollment.id };
+      }
+      return { ...enrollment, studentId: enrollment.studentId || enrollment.id };
+    }
+
+    // 3. Match in activeStageStudents
+    const activeMatch = activeStageStudents?.find((s: any) => s.id === id || s.studentId === id || s.nationalId === id);
+    if (activeMatch) return activeMatch;
+
+    return undefined;
+  }, [id, allStudents, allStudentEnrollments, activeStageStudents]);
+
+  const studentIds = useMemo(() => {
+    if (!student) return new Set<string>();
+    const ids = [student.id, (student as any).studentId, (student as any).enrollmentId, id].filter(Boolean) as string[];
+    return new Set(ids);
+  }, [student, id]);
+
+  const studentSubscription = useMemo(() => student ? transportSubscriptions.find((s: any) => studentIds.has(s.studentId)) : null, [student, transportSubscriptions, studentIds]);
   const studentRoute = useMemo(() => studentSubscription ? transportRoutes.find((r: any) => r.id === studentSubscription.routeId) : null, [studentSubscription, transportRoutes]);
 
   const handleOpenTransportModal = () => {
@@ -359,7 +408,7 @@ function StudentProfile() {
   }
 
   // Derived Info safely
-  const studentInvoices = allInvoices.filter((i) => i.studentId === student.id);
+  const studentInvoices = allInvoices.filter((i) => studentIds.has(i.studentId));
   const totalPaid = studentInvoices.reduce((acc, curr) => acc + (curr.paid || 0), 0);
   const totalDue = studentInvoices.reduce((acc, curr) => acc + ((curr.amount || 0) - (curr.paid || 0)), 0);
   
@@ -373,7 +422,7 @@ function StudentProfile() {
       type: "expense" as const, // For student, an invoice is a charge (negative impact on their balance)
       currency
     }));
-    const payments = allPayments.filter(p => p.studentId === student.id).map(p => ({
+    const payments = allPayments.filter(p => studentIds.has(p.studentId)).map(p => ({
       id: `pay-${p.id}`,
       date: p.date,
       title: `سداد دفعة`,
@@ -384,10 +433,10 @@ function StudentProfile() {
       method: p.method
     }));
     return [...invoices, ...payments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [studentInvoices, allPayments, student.id, currency]);
+  }, [studentInvoices, allPayments, studentIds, currency]);
   
-  const studentVisits = allClinicVisits.filter(v => v.studentId === student.id);
-  const studentIncidents = allDisciplineIncidents.filter((inc: any) => inc.studentId === student.id);
+  const studentVisits = allClinicVisits.filter(v => studentIds.has(v.studentId));
+  const studentIncidents = allDisciplineIncidents.filter((inc: any) => studentIds.has(inc.studentId) || (inc.studentEnrollmentId && studentIds.has(inc.studentEnrollmentId)));
   const studentSection = allSections.find(sec => sec.id === student.sectionId);
   const initials = student.name ? student.name.split(" ").map(n=>n[0]).slice(0,2).join("") : "ط";
 
@@ -762,7 +811,7 @@ function StudentProfile() {
                 <div className="p-4 rounded-2xl bg-danger/10 text-danger"><FileText className="h-6 w-6" /></div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1 font-bold">إجمالي المتأخرات المتبقية</p>
-                  <p className="font-black text-xl tabular-nums text-danger">{totalDue.toLocaleString("ar-SA")} {currency}</p>
+                  <p className="font-black text-xl tabular-nums text-danger">{totalDue.toLocaleString("en-US")} {currency}</p>
                 </div>
               </div>
             </div>
@@ -929,11 +978,18 @@ function StudentProfile() {
 
       {/* New Invoice Modal */}
       {isNewInvoiceOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
+          <div className="w-full max-w-md modal-card-luxury overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-border/50 bg-primary/5">
-              <h2 className="text-xl font-bold flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /> إصدار فاتورة جديدة للطالب</h2>
-              <button onClick={() => setIsNewInvoiceOpen(false)} className="p-2 hover:bg-accent rounded-full transition-colors"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-black flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <FileText className="h-4 w-4" />
+                </div>
+                إصدار فاتورة جديدة للطالب
+              </h2>
+              <button onClick={() => setIsNewInvoiceOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -952,12 +1008,12 @@ function StudentProfile() {
               setNewInvoiceData({ title: "", amount: 0, dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0] });
             }} className="p-6 space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">البيان (نوع الرسوم)</label>
-                <input required type="text" value={newInvoiceData.title} onChange={e => setNewInvoiceData({...newInvoiceData, title: e.target.value})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold" />
+                <label className="mb-2 block text-xs font-extrabold text-foreground">البيان (نوع الرسوم) <span className="text-danger">*</span></label>
+                <input required type="text" value={newInvoiceData.title} onChange={e => setNewInvoiceData({...newInvoiceData, title: e.target.value})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" placeholder="مثال: رسوم الفصل الثاني" />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">المبلغ (ر.س)</label>
-                <input required type="number" min="1" value={newInvoiceData.amount || ""} onChange={e => setNewInvoiceData({...newInvoiceData, amount: Number(e.target.value)})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors tabular-nums font-bold" />
+                <label className="mb-2 block text-xs font-extrabold text-foreground">المبلغ ({currency}) <span className="text-danger">*</span></label>
+                <input required type="number" min="1" value={newInvoiceData.amount || ""} onChange={e => setNewInvoiceData({...newInvoiceData, amount: Number(e.target.value)})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-extrabold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" />
               </div>
               <div>
                 <ArabicDatePicker
@@ -968,9 +1024,9 @@ function StudentProfile() {
                   showAgeCalculator={false}
                 />
               </div>
-              <div className="pt-4 flex gap-3 justify-end">
-                <button type="button" onClick={() => setIsNewInvoiceOpen(false)} className="rounded-xl px-6 py-2.5 font-bold hover:bg-accent transition-colors border border-border">إلغاء</button>
-                <button type="submit" className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-md">إصدار الفاتورة</button>
+              <div className="pt-3 flex gap-3 justify-end items-center border-t border-border/50">
+                <button type="button" onClick={() => setIsNewInvoiceOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold hover:bg-accent transition-colors border border-border/80 active:scale-[0.98]">إلغاء</button>
+                <button type="submit" className="rounded-xl bg-primary px-7 py-2.5 text-sm font-extrabold text-primary-foreground hover:bg-primary/90 transition-all shadow-md active:scale-[0.98]">إصدار الفاتورة</button>
               </div>
             </form>
           </div>
@@ -979,11 +1035,18 @@ function StudentProfile() {
 
       {/* Make Payment Modal */}
       {isPaymentOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-border/50 bg-success/5">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-success"><CreditCard className="h-5 w-5" /> تسجيل دفعة جديدة</h2>
-              <button onClick={() => setIsPaymentOpen(false)} className="p-2 hover:bg-accent rounded-full transition-colors"><X className="h-5 w-5" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
+          <div className="w-full max-w-md modal-card-luxury overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-border/50 bg-success/10">
+              <h2 className="text-lg font-black flex items-center gap-2.5 text-success">
+                <div className="h-8 w-8 rounded-xl bg-success/15 text-success flex items-center justify-center">
+                  <CreditCard className="h-4 w-4" />
+                </div>
+                تسجيل دفعة وسند قبض جديد
+              </h2>
+              <button onClick={() => setIsPaymentOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -992,21 +1055,21 @@ function StudentProfile() {
               setIsPaymentOpen(false);
             }} className="p-6 space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">المبلغ المحصل (ر.س)</label>
-                <input required type="number" min="1" value={paymentData.amount || ""} onChange={e => setPaymentData({...paymentData, amount: Number(e.target.value)})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-success focus:outline-none focus:ring-1 focus:ring-success transition-colors tabular-nums font-black text-xl text-success" />
+                <label className="mb-2 block text-xs font-extrabold text-foreground">المبلغ المحصل ({currency}) <span className="text-danger">*</span></label>
+                <input required type="number" min="1" value={paymentData.amount || ""} onChange={e => setPaymentData({...paymentData, amount: Number(e.target.value)})} className="h-12 w-full rounded-xl border border-success/40 bg-background/80 px-4 focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 transition-all tabular-nums font-black text-xl text-success shadow-sm" />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-bold text-muted-foreground">طريقة الدفع</label>
-                <select required value={paymentData.method} onChange={e => setPaymentData({...paymentData, method: e.target.value as any})} className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 focus:border-success focus:outline-none focus:ring-1 focus:ring-success transition-colors font-bold">
+                <label className="mb-2 block text-xs font-extrabold text-foreground">طريقة الدفع</label>
+                <select required value={paymentData.method} onChange={e => setPaymentData({...paymentData, method: e.target.value as any})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 transition-all">
                   <option value="cash">نقدي (كاش)</option>
                   <option value="card">شبكة (مدى/بطاقة ائتمانية)</option>
                   <option value="bank_transfer">حوالة بنكية</option>
                   <option value="cheque">شيك</option>
                 </select>
               </div>
-              <div className="pt-4 flex gap-3 justify-end">
-                <button type="button" onClick={() => setIsPaymentOpen(false)} className="rounded-xl px-6 py-2.5 font-bold hover:bg-accent transition-colors border border-border">إلغاء</button>
-                <button type="submit" className="rounded-xl bg-success px-8 py-2.5 font-bold text-white hover:bg-success/90 transition-colors shadow-md">حفظ الدفعة</button>
+              <div className="pt-3 flex gap-3 justify-end items-center border-t border-border/50">
+                <button type="button" onClick={() => setIsPaymentOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold hover:bg-accent transition-colors border border-border/80 active:scale-[0.98]">إلغاء</button>
+                <button type="submit" className="rounded-xl bg-success px-7 py-2.5 text-sm font-extrabold text-white hover:bg-success/90 transition-all shadow-md active:scale-[0.98]">حفظ الدفعة</button>
               </div>
             </form>
           </div>
@@ -1015,27 +1078,29 @@ function StudentProfile() {
 
       {/* Transport Subscription Modal */}
       {isTransportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
+          <div className="w-full max-w-lg modal-card-luxury overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-border/50 bg-primary/10">
-              <h2 className="text-lg font-black flex items-center gap-2 text-primary">
-                <Bus className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-black flex items-center gap-2.5 text-primary">
+                <div className="h-8 w-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+                  <Bus className="h-4 w-4" />
+                </div>
                 {studentSubscription ? "تعديل اشتراك الترحيل والمسار" : "إضافة الطالب لخط ترحيل جديد"}
               </h2>
-              <button onClick={() => setIsTransportModalOpen(false)} className="p-2 hover:bg-accent rounded-full transition-colors">
-                <X className="h-5 w-5" />
+              <button onClick={() => setIsTransportModalOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveTransport} className="p-6 space-y-5">
+            <form onSubmit={handleSaveTransport} className="p-6 space-y-5 overflow-y-auto custom-scrollbar-modal">
               <div>
-                <label className="mb-2 block text-sm font-extrabold text-foreground flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" /> اختر خط الترحيل / النقل <span className="text-danger">*</span>
+                <label className="mb-2 block text-xs font-extrabold text-foreground flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-primary" /> اختر خط الترحيل / النقل <span className="text-danger">*</span>
                 </label>
                 <select
                   value={transportForm.routeId}
                   onChange={(e) => setTransportForm({ ...transportForm, routeId: e.target.value })}
-                  className="w-full rounded-xl border-2 border-border/60 bg-background px-4 py-3.5 font-bold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer text-sm"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 transition-all cursor-pointer"
                   required
                 >
                   <option value="">-- اختر المسار / الخط المخصص --</option>
@@ -1049,15 +1114,15 @@ function StudentProfile() {
 
               {/* Trip Direction Selection Cards */}
               <div className="space-y-2">
-                <label className="block text-sm font-extrabold text-foreground">نوع الترحيل والاتجاه</label>
+                <label className="block text-xs font-extrabold text-foreground">نوع الترحيل والاتجاه</label>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2.5">
                   <div
                     onClick={() => setTransportForm({ ...transportForm, direction: "round-trip" })}
-                    className={`cursor-pointer p-3 rounded-xl border-2 transition-all text-center space-y-1 ${
+                    className={`cursor-pointer p-3 rounded-2xl border-2 transition-all text-center space-y-1 active:scale-[0.98] ${
                       transportForm.direction === "round-trip"
-                        ? "border-primary bg-primary/10 ring-2 ring-primary/20 shadow-sm"
-                        : "border-border/60 bg-card hover:border-primary/40"
+                        ? "border-primary bg-primary/10 ring-4 ring-primary/15 shadow-sm"
+                        : "border-border/60 bg-card hover:border-primary/40 hover:bg-accent/30"
                     }`}
                   >
                     <RefreshCw className="h-4 w-4 mx-auto text-primary" />
@@ -1067,10 +1132,10 @@ function StudentProfile() {
 
                   <div
                     onClick={() => setTransportForm({ ...transportForm, direction: "going" })}
-                    className={`cursor-pointer p-3 rounded-xl border-2 transition-all text-center space-y-1 ${
+                    className={`cursor-pointer p-3 rounded-2xl border-2 transition-all text-center space-y-1 active:scale-[0.98] ${
                       transportForm.direction === "going"
-                        ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20 shadow-sm"
-                        : "border-border/60 bg-card hover:border-primary/40"
+                        ? "border-amber-500 bg-amber-500/10 ring-4 ring-amber-500/15 shadow-sm"
+                        : "border-border/60 bg-card hover:border-primary/40 hover:bg-accent/30"
                     }`}
                   >
                     <Sun className="h-4 w-4 mx-auto text-amber-600" />
@@ -1080,10 +1145,10 @@ function StudentProfile() {
 
                   <div
                     onClick={() => setTransportForm({ ...transportForm, direction: "returning" })}
-                    className={`cursor-pointer p-3 rounded-xl border-2 transition-all text-center space-y-1 ${
+                    className={`cursor-pointer p-3 rounded-2xl border-2 transition-all text-center space-y-1 active:scale-[0.98] ${
                       transportForm.direction === "returning"
-                        ? "border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/20 shadow-sm"
-                        : "border-border/60 bg-card hover:border-primary/40"
+                        ? "border-indigo-500 bg-indigo-500/10 ring-4 ring-indigo-500/15 shadow-sm"
+                        : "border-border/60 bg-card hover:border-primary/40 hover:bg-accent/30"
                     }`}
                   >
                     <Sunset className="h-4 w-4 mx-auto text-indigo-600" />
@@ -1116,14 +1181,14 @@ function StudentProfile() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-primary text-primary-foreground py-3.5 rounded-xl font-extrabold hover:bg-primary/90 transition-all shadow-md text-sm"
+                  className="flex-1 bg-primary text-primary-foreground py-3 rounded-xl font-extrabold hover:bg-primary/90 transition-all shadow-md text-sm active:scale-[0.98]"
                 >
                   {studentSubscription ? "حفظ وتحديث الاشتراك" : "تأكيد الاشتراك وتوليد الفاتورة"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsTransportModalOpen(false)}
-                  className="bg-muted text-muted-foreground px-5 py-3.5 rounded-xl font-bold hover:bg-muted/80 transition-colors text-sm"
+                  className="bg-muted text-muted-foreground px-5 py-3 rounded-xl font-bold hover:bg-muted/80 transition-colors text-sm active:scale-[0.98]"
                 >
                   إلغاء
                 </button>

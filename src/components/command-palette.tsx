@@ -78,7 +78,6 @@ export function CommandPalette() {
       action: () => {
         localStorage.setItem("darasi_sidebar_mode", "expanded");
         window.dispatchEvent(new Event("storage"));
-        window.location.reload();
       }, 
       keywords: 'sidebar expand شريط كامل عرض' 
     },
@@ -90,7 +89,6 @@ export function CommandPalette() {
       action: () => {
         localStorage.setItem("darasi_sidebar_mode", "rail");
         window.dispatchEvent(new Event("storage"));
-        window.location.reload();
       }, 
       keywords: 'sidebar rail ايقونات مصغر مدمج' 
     },
@@ -102,7 +100,6 @@ export function CommandPalette() {
       action: () => {
         localStorage.setItem("darasi_sidebar_mode", "fullscreen");
         window.dispatchEvent(new Event("storage"));
-        window.location.reload();
       }, 
       keywords: 'sidebar fullscreen كامل شاشة إخفاء' 
     },
@@ -110,6 +107,9 @@ export function CommandPalette() {
 
   const staticCommands = [
     { id: '1', category: 'الأقسام الرئيسية', title: 'لوحة التحكم الرئيسية', icon: Sparkles, to: '/', keywords: 'home dashboard رئيسية لوحة' },
+    { id: 'sup-1', category: 'الحضور وتطبيقات المشرفين', title: 'بوابة المشرفين الميدانيين', icon: Shield, to: '/supervisor', keywords: 'supervisor مشرفين حضور ميداني بوابة' },
+    { id: 'sup-2', category: 'الحضور وتطبيقات المشرفين', title: 'تطبيق رصد حضور الفصول (للهاتف)', icon: Users, to: '/supervisor/classes', keywords: 'supervisor classes فصول غياب رصد هاتف سريع طلاب' },
+    { id: 'sup-3', category: 'الحضور وتطبيقات المشرفين', title: 'بوابة تحضير العمال والكادر', icon: Briefcase, to: '/supervisor/gate', keywords: 'gate عمال نظافة حراس أمن صيانة سائقين استقبال بوابة' },
     { id: '2', category: 'الأقسام الرئيسية', title: 'سجل الطلاب والتسجيل', icon: Users, to: '/students', keywords: 'students طلاب تسجيل جديد' },
     { id: '3', category: 'الأقسام الرئيسية', title: 'المركز المالي والحسابات', icon: CreditCard, to: '/finance', keywords: 'finance مالية رسوم سندات خزينة' },
     { id: '4', category: 'الأقسام الرئيسية', title: 'شؤون الموظفين والرواتب', icon: Briefcase, to: '/hr/dashboard', keywords: 'hr موظفين رواتب إجازات' },
@@ -217,34 +217,34 @@ export function CommandPalette() {
 
   return (
     <div 
-      className="fixed inset-0 z-[999] flex items-start justify-center pt-[10vh] sm:pt-[15vh] bg-black/60 backdrop-blur-md animate-in fade-in duration-200" 
+      className="fixed inset-0 z-[999] flex items-start justify-center pt-[10vh] sm:pt-[15vh] bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200 p-4" 
       onClick={() => setIsOpen(false)} 
       dir="rtl"
     >
       <div 
-        className="w-full max-w-xl bg-card border border-border shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]"
+        className="w-full max-w-xl bg-card/98 dark:bg-card/95 backdrop-blur-2xl border border-border/80 shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Search Header */}
-        <div className="flex items-center px-4 py-3.5 border-b border-border bg-muted/20 gap-3">
+        <div className="flex items-center px-4 py-3.5 border-b border-border/60 bg-muted/30 gap-3">
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary shrink-0">
             <Search className="w-5 h-5" />
           </div>
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground text-foreground"
+            className="flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted-foreground/60 text-foreground"
             placeholder="ابحث عن صفحات، طلاب، موظفين، أو أوامر تحكم... (Esc للإلغاء)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <div className="text-[10px] font-extrabold text-muted-foreground border border-border bg-muted px-2 py-1 rounded-lg shrink-0">
+          <div className="text-[10px] font-extrabold text-muted-foreground border border-border/60 bg-muted/80 px-2.5 py-1 rounded-xl shrink-0">
             ESC
           </div>
         </div>
         
         {/* Command List */}
-        <div className="overflow-y-auto custom-scrollbar p-2 space-y-1 max-h-[420px]">
+        <div className="overflow-y-auto custom-scrollbar-modal p-2 space-y-1 max-h-[420px]">
           {allCommands.length === 0 ? (
             <div className="py-10 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
               <Search className="w-8 h-8 opacity-30" />

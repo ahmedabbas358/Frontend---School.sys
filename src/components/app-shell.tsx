@@ -44,7 +44,14 @@ import {
   SlidersHorizontal,
   Compass,
   ArrowUpRight,
-  ArrowDownLeft
+  ArrowDownLeft,
+  Plus,
+  CalendarDays,
+  Clock,
+  FileText,
+  FolderArchive,
+  Smartphone,
+  UserCheck
 } from "lucide-react";
 import { useStage, EducationalStage } from "@/contexts/StageContext";
 
@@ -55,7 +62,13 @@ import { useStage, EducationalStage } from "@/contexts/StageContext";
 
 export type SidebarMode = "expanded" | "rail" | "fullscreen";
 
-type Leaf = { to: string; label: string; badge?: string };
+type Leaf = { 
+  to: string; 
+  label: string; 
+  icon?: React.ComponentType<{ className?: string }>; 
+  badge?: string; 
+  desc?: string;
+};
 type Group = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -73,9 +86,9 @@ const NAV: Item[] = [
       label: "الطلاب وأولياء الأمور",
       icon: Users,
       items: [
-        { to: "/students", label: "قائمة الطلاب" },
-        { to: "/students/new", label: "تسجيل طالب جديد" },
-        { to: "/guardians", label: "أولياء الأمور" },
+        { to: "/students", label: "قائمة الطلاب", icon: Users, badge: "السجل" },
+        { to: "/students/new", label: "تسجيل طالب جديد", icon: Plus, badge: "سريع" },
+        { to: "/guardians", label: "أولياء الأمور", icon: HeartHandshake, badge: "دليل" },
       ],
     },
   },
@@ -85,11 +98,11 @@ const NAV: Item[] = [
       label: "الإدارة الأكاديمية",
       icon: GraduationCap,
       items: [
-        { to: "/academic/years", label: "السنوات الدراسية" },
-        { to: "/academic/classes", label: "الصفوف والشعب" },
-        { to: "/academic/subjects", label: "المواد التعليمية" },
-        { to: "/academic/assignments", label: "الإسناد التدريسي" },
-        { to: "/schedule", label: "الجدول الأسبوعي" },
+        { to: "/academic/years", label: "السنوات الدراسية", icon: CalendarDays, badge: "التقويم" },
+        { to: "/academic/classes", label: "الصفوف والشعب", icon: Layers3, badge: "الفصول" },
+        { to: "/academic/subjects", label: "المواد التعليمية", icon: BookOpen, badge: "المناهج" },
+        { to: "/academic/assignments", label: "الإسناد التدريسي", icon: UserCog, badge: "الكادر" },
+        { to: "/schedule", label: "الجدول الأسبوعي", icon: CalendarRange, badge: "الحصص" },
       ],
     },
   },
@@ -99,7 +112,7 @@ const NAV: Item[] = [
       label: "المعلمون والكادر",
       icon: UserCog,
       items: [
-        { to: "/teachers", label: "قائمة المعلمين" },
+        { to: "/teachers", label: "قائمة المعلمين", icon: UserCog, badge: "الكادر" },
       ],
     },
   },
@@ -109,10 +122,13 @@ const NAV: Item[] = [
       label: "الحضور والانضباط",
       icon: ShieldAlert,
       items: [
-        { to: "/attendance/take", label: "رصد الحضور (بالحصص)" },
-        { to: "/attendance/reports", label: "السجل الأسبوعي والشهري" },
-        { to: "/discipline/incidents", label: "المخالفات السلوكية" },
-        { to: "/discipline/merits", label: "النقاط والمكافآت" },
+        { to: "/supervisor", label: "بوابة المشرفين الرئيسية", icon: ShieldCheck, badge: "جديد" },
+        { to: "/supervisor/classes", label: "تطبيق المشرفين (رصد الفصول)", icon: Smartphone, badge: "هاتف" },
+        { to: "/supervisor/gate", label: "بوابة تحضير العمال والكادر", icon: UserCheck, badge: "استقبال" },
+        { to: "/attendance/take", label: "رصد الحضور (بالحصص)", icon: Clock, badge: "مباشر" },
+        { to: "/attendance/reports", label: "السجل الأسبوعي والشهري", icon: BarChart3, badge: "تقارير" },
+        { to: "/discipline/incidents", label: "المخالفات السلوكية", icon: ShieldAlert, badge: "سجل" },
+        { to: "/discipline/merits", label: "النقاط والمكافآت", icon: Sparkles, badge: "تحفيز" },
       ],
     },
   },
@@ -122,9 +138,9 @@ const NAV: Item[] = [
       label: "الاختبارات والشهادات",
       icon: ClipboardList,
       items: [
-        { to: "/exams", label: "جدول الاختبارات" },
-        { to: "/exams/grades", label: "النتائج ورصد الدرجات" },
-        { to: "/exams/reports", label: "التقارير والشهادات" },
+        { to: "/exams", label: "جدول الاختبارات", icon: CalendarDays, badge: "مواعيد" },
+        { to: "/exams/grades", label: "النتائج ورصد الدرجات", icon: ClipboardCheck, badge: "رصد" },
+        { to: "/exams/reports", label: "التقارير والشهادات", icon: FileText, badge: "طباعة" },
       ],
     },
   },
@@ -134,14 +150,18 @@ const NAV: Item[] = [
       label: "المركز المالي",
       icon: DollarSign,
       items: [
-        { to: "/finance", label: "لوحة العمليات المالية" },
-        { to: "/finance/students", label: "المالية الطلابية والرسوم" },
-        { to: "/finance/treasury", label: "الخزينة (الصندوق)" },
-        { to: "/finance/banks", label: "الحسابات البنكية" },
-        { to: "/hr/payroll", label: "مسير الرواتب" },
-        { to: "/finance/expenses", label: "المصروفات والموردين" },
-        { to: "/finance/accounts", label: "الدليل المحاسبي" },
-        { to: "/finance/reports", label: "التقارير المالية" },
+        { to: "/finance", label: "لوحة العمليات المالية", icon: BarChart3, badge: "شامل" },
+        { to: "/finance/students", label: "المالية الطلابية والرسوم", icon: CreditCard, badge: "تحصيل" },
+        { to: "/finance/fees", label: "هيكل الرسوم الدراسية", icon: Layers3, badge: "رسوم" },
+        { to: "/finance/discounts", label: "الخصومات والمنح", icon: Sparkles, badge: "منح" },
+        { to: "/finance/payments", label: "سندات القبض والدفع", icon: CreditCard, badge: "سندات" },
+        { to: "/finance/treasury", label: "الخزينة (الصندوق)", icon: DollarSign, badge: "كاشير" },
+        { to: "/finance/banks", label: "الحسابات البنكية", icon: Building2, badge: "بنوك" },
+        { to: "/hr/payroll", label: "مسير الرواتب", icon: DollarSign, badge: "أجور" },
+        { to: "/finance/expenses", label: "المصروفات والموردين", icon: CreditCard, badge: "فواتير" },
+        { to: "/finance/cost-centers", label: "مراكز التكلفة", icon: SlidersHorizontal, badge: "مراكز" },
+        { to: "/finance/accounts", label: "الدليل المحاسبي", icon: Layers3, badge: "شجرة" },
+        { to: "/finance/reports", label: "التقارير المالية", icon: BarChart3, badge: "قوائم" },
       ],
     },
   },
@@ -151,13 +171,15 @@ const NAV: Item[] = [
       label: "المرافق والخدمات",
       icon: Building2,
       items: [
-        { to: "/facilities/dashboard", label: "إحصاءات المرافق" },
-        { to: "/facilities/rooms", label: "المباني والقاعات" },
-        { to: "/facilities/maintenance", label: "طلبات الصيانة" },
-        { to: "/library/books", label: "المكتبة والكتب" },
-        { to: "/inventory/items", label: "المستودعات" },
-        { to: "/clinic/visits", label: "العيادة الطبية" },
-        { to: "/transport/routes", label: "النقل المدرسي" },
+        { to: "/facilities/dashboard", label: "إحصاءات المرافق", icon: BarChart3, badge: "لوحة" },
+        { to: "/facilities/rooms", label: "المباني والقاعات", icon: Building2, badge: "فصول" },
+        { to: "/facilities/maintenance", label: "طلبات الصيانة", icon: SlidersHorizontal, badge: "بلاغات" },
+        { to: "/library/textbooks", label: "الكتب والمقررات", icon: BookOpen, badge: "مقررات" },
+        { to: "/library/distribution", label: "تسليم المقررات للطلاب", icon: Check, badge: "تسليم" },
+        { to: "/inventory/items", label: "المستودعات", icon: Layers3, badge: "مخزون" },
+        { to: "/clinic/visits", label: "العيادة الطبية", icon: ShieldCheck, badge: "صحة" },
+        { to: "/transport/routes", label: "مسارات النقل المدرسي", icon: Compass, badge: "حافلات" },
+        { to: "/transport/students", label: "اشتراكات حافلات الطلاب", icon: Users, badge: "اشتراكات" },
       ],
     },
   },
@@ -167,15 +189,15 @@ const NAV: Item[] = [
       label: "شؤون الموظفين (HR)",
       icon: HeartHandshake,
       items: [
-        { to: "/hr/dashboard", label: "لوحة الموارد البشرية" },
-        { to: "/hr/staff", label: "قائمة الموظفين" },
-        { to: "/hr/attendance", label: "الحضور والانصراف" },
-        { to: "/hr/leaves", label: "طلبات الإجازات" },
-        { to: "/hr/payroll", label: "مسير الرواتب" },
-        { to: "/hr/org-chart", label: "الهيكل التنظيمي" },
-        { to: "/hr/evaluations", label: "تقييم الأداء" },
-        { to: "/hr/contracts", label: "العقود والوثائق" },
-        { to: "/hr/reports", label: "تقارير الموارد البشرية" },
+        { to: "/hr/dashboard", label: "لوحة الموارد البشرية", icon: BarChart3, badge: "مؤشرات" },
+        { to: "/hr/staff", label: "قائمة الموظفين", icon: Users, badge: "كادر" },
+        { to: "/hr/attendance", label: "الحضور والانصراف", icon: Clock, badge: "بصمة" },
+        { to: "/hr/leaves", label: "طلبات الإجازات", icon: CalendarDays, badge: "إجازات" },
+        { to: "/hr/payroll", label: "مسير الرواتب", icon: DollarSign, badge: "شهري" },
+        { to: "/hr/org-chart", label: "الهيكل التنظيمي", icon: Layers3, badge: "شجرة" },
+        { to: "/hr/evaluations", label: "تقييم الأداء", icon: Sparkles, badge: "KPIs" },
+        { to: "/hr/contracts", label: "العقود والوثائق", icon: FileText, badge: "عقود" },
+        { to: "/hr/reports", label: "تقارير الموارد البشرية", icon: BarChart3, badge: "بيانات" },
       ],
     },
   },
@@ -185,13 +207,14 @@ const NAV: Item[] = [
       label: "الإدارة والنظام",
       icon: ShieldCheck,
       items: [
-        { to: "/admin/dashboard", label: "لوحة الإدارة" },
-        { to: "/admin/users", label: "إدارة المستخدمين" },
-        { to: "/admin/roles", label: "الأدوار والصلاحيات" },
-        { to: "/admin/permissions", label: "مصفوفة الأذونات" },
-        { to: "/admin/activity-log", label: "سجل الأنشطة والأمان" },
-        { to: "/admin/backup", label: "النسخ الاحتياطي" },
-        { to: "/admin/notifications", label: "مركز الإشعارات" },
+        { to: "/admin/dashboard", label: "لوحة الإدارة", icon: LayoutDashboard, badge: "نظام" },
+        { to: "/admin/users", label: "إدارة المستخدمين", icon: Users, badge: "حسابات" },
+        { to: "/admin/roles", label: "الأدوار والصلاحيات", icon: ShieldCheck, badge: "أدوار" },
+        { to: "/admin/permissions", label: "مصفوفة الأذونات", icon: SlidersHorizontal, badge: "صلاحيات" },
+        { to: "/admin/activity-log", label: "سجل الأنشطة والأمان", icon: Clock, badge: "أمان" },
+        { to: "/admin/backup", label: "النسخ الاحتياطي", icon: FolderArchive, badge: "حفظ" },
+        { to: "/admin/notifications", label: "مركز الإشعارات", icon: Bell, badge: "تنبيهات" },
+        { to: "/settings/trash", label: "سلة المحذوفات", icon: Trash2, badge: "استعادة" },
       ],
     },
   },
@@ -312,6 +335,20 @@ export function AppShell({
     }
   };
 
+  // Synchronize sidebar mode when changed from command palette or other components
+  useEffect(() => {
+    const handleStorage = () => {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("darasi_sidebar_mode");
+        if (saved === "expanded" || saved === "rail" || saved === "fullscreen") {
+          setSidebarMode(saved);
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   // Keyboard shortcut Ctrl/Cmd + B to cycle sidebar modes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -321,6 +358,7 @@ export function AppShell({
           const next: SidebarMode = prev === "expanded" ? "rail" : prev === "rail" ? "fullscreen" : "expanded";
           if (typeof window !== "undefined") {
             localStorage.setItem("darasi_sidebar_mode", next);
+            window.dispatchEvent(new Event("storage"));
           }
           return next;
         });
@@ -658,7 +696,7 @@ export function AppShell({
                           <div key={n.id} className={`p-3 text-xs hover:bg-accent/50 transition-colors ${n.read ? "opacity-75" : "bg-primary/5 font-semibold"}`}>
                             <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
                               <span className="font-bold text-primary">{n.title}</span>
-                              <span>{new Date(n.timestamp).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}</span>
+                              <span>{new Date(n.timestamp).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", numberingSystem: "latn" })}</span>
                             </div>
                             <p className="text-foreground text-xs">{n.message}</p>
                           </div>
@@ -778,16 +816,18 @@ export function AppShell({
               <div className="flex items-center gap-1.5 min-w-0">
                 {currentActiveGroup.items.map((leaf) => {
                   const isCurrent = pathname === leaf.to || (leaf.to !== "/" && pathname.startsWith(leaf.to + "/"));
+                  const SubIcon = leaf.icon || currentActiveGroup.icon;
                   return (
                     <Link
                       key={leaf.to}
                       to={leaf.to}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all duration-200 ${
+                      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all duration-200 ${
                         isCurrent
                           ? "bg-primary text-primary-foreground shadow-sm glow-primary scale-[1.02]"
                           : "bg-muted/40 text-muted-foreground hover:bg-accent hover:text-foreground border border-border/40"
                       }`}
                     >
+                      <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? "text-white" : "text-primary opacity-80"}`} />
                       <span>{leaf.label}</span>
                       {leaf.badge && (
                         <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
@@ -1001,7 +1041,7 @@ function Sidebar({
               <span>العام الدراسي الحالي</span>
               <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
-            <div className="mt-1 font-bold text-xs text-slate-200">١٤٤٦ هـ — الفصل الأول</div>
+            <div className="mt-1 font-bold text-xs text-slate-200">1446 هـ — الفصل الأول</div>
           </div>
         )}
       </nav>
@@ -1033,7 +1073,7 @@ function SidebarGroupBlock({
   const Icon = group.icon;
   const primaryRoute = group.items[0]?.to || "/";
 
-  // Rail Mode: Render Direct Click Link + Floating Flyout Popover on Hover
+  // Rail Mode: Render Direct Click Link + Floating Dual-Grid Hub Popover on Hover
   if (mode === "rail" && !mobileOpen) {
     const handleMouseEnter = () => {
       if (flyoutTimerRef.current) clearTimeout(flyoutTimerRef.current);
@@ -1043,7 +1083,7 @@ function SidebarGroupBlock({
     const handleMouseLeave = () => {
       flyoutTimerRef.current = setTimeout(() => {
         setFlyoutOpen(false);
-      }, 280); // Generous smooth delay to bridge mouse movement
+      }, 300); // Smooth delay to bridge mouse movement
     };
 
     return (
@@ -1070,33 +1110,34 @@ function SidebarGroupBlock({
           )}
         </Link>
 
-        {/* Dynamic Flyout Submenu Popover with Seamless Cursor Bridge */}
+        {/* Dynamic Dual-Grid Quick Launch Hub with Cursor Bridge */}
         {flyoutOpen && (
           <div 
-            className="absolute right-16 top-0 z-50 w-72 sm:w-80 rounded-2xl glass-rail-popover border border-slate-700/80 shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 before:content-[''] before:absolute before:-right-5 before:top-0 before:bottom-0 before:w-8"
+            className="absolute right-16 top-0 z-50 w-80 sm:w-96 rounded-2xl glass-rail-popover border border-slate-700/80 shadow-2xl p-3.5 animate-in fade-in zoom-in-95 duration-150 before:content-[''] before:absolute before:-right-6 before:top-0 before:bottom-0 before:w-10"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
             {/* Popover Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 px-2 text-xs font-black text-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-xl bg-blue-500/10 text-blue-400">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 px-1 text-xs font-black text-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-500/15 text-blue-400 shadow-xs">
                   <Icon className="h-4 w-4" />
                 </div>
                 <div>
                   <div className="font-extrabold text-sm text-white truncate">{group.label}</div>
-                  <div className="text-[10px] text-slate-400 font-bold mt-0.2">اختر القسم الفرعي للولوج السريع</div>
+                  <div className="text-[10px] text-slate-400 font-bold mt-0.5">اختر القسم الفرعي للولوج السريع</div>
                 </div>
               </div>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-800 text-blue-300 border border-slate-700">
+              <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-800 text-blue-300 border border-slate-700 shadow-xs">
                 {group.items.length} خيارات
               </span>
             </div>
 
-            {/* Sub Items Grid/List */}
-            <div className="mt-2 space-y-1 max-h-80 overflow-y-auto custom-scrollbar">
+            {/* Sub Items Dual-Column Grid */}
+            <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-84 overflow-y-auto custom-scrollbar p-0.5">
               {group.items.map((leaf) => {
                 const active = pathname === leaf.to || (leaf.to !== "/" && pathname.startsWith(leaf.to + "/"));
+                const SubIcon = leaf.icon || group.icon;
                 return (
                   <Link
                     key={leaf.to}
@@ -1106,23 +1147,25 @@ function SidebarGroupBlock({
                       onNavigate();
                     }}
                     className={[
-                      "flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 relative group/flyitem",
+                      "flex items-center gap-2 rounded-xl p-2 text-xs font-bold transition-all duration-150 relative group/flycard border",
                       active
-                        ? "bg-blue-600 text-white shadow-md font-black"
-                        : "text-slate-300 hover:bg-slate-800 hover:text-white hover:translate-x-0.5",
+                        ? "bg-blue-600 text-white shadow-md border-blue-500 font-black scale-[1.02] glow-primary"
+                        : "bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-700 hover:translate-y-[-1px]",
                     ].join(" ")}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white" : "bg-slate-500 group-hover/flyitem:bg-blue-400"}`} />
-                      <span className="truncate">{leaf.label}</span>
+                    <div className={`p-1.5 rounded-lg shrink-0 ${active ? "bg-white/20 text-white" : "bg-slate-800 text-blue-400 group-hover/flycard:bg-blue-500/20"}`}>
+                      <SubIcon className="h-3.5 w-3.5" />
                     </div>
-                    {leaf.badge && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                        active ? "bg-white/20 text-white" : "bg-blue-500/20 text-blue-300"
-                      }`}>
-                        {leaf.badge}
-                      </span>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-right text-[11px] leading-tight">{leaf.label}</div>
+                      {leaf.badge && (
+                        <span className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded mt-0.5 ${
+                          active ? "bg-white/25 text-white" : "bg-blue-500/10 text-blue-400"
+                        }`}>
+                          {leaf.badge}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 );
               })}
@@ -1139,37 +1182,48 @@ function SidebarGroupBlock({
       <button
         onClick={() => setOpen((v) => !v)}
         className={[
-          "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold transition-colors",
+          "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-150",
           isActiveBranch
-            ? "text-white font-bold bg-slate-800/40"
-            : "text-slate-300 hover:bg-slate-800/60 hover:text-white",
+            ? "text-white font-extrabold bg-slate-800/60 shadow-xs"
+            : "text-slate-300 hover:bg-slate-800/40 hover:text-white",
         ].join(" ")}
       >
         <Icon className={`h-4 w-4 shrink-0 ${isActiveBranch ? "text-blue-400" : "text-slate-400"}`} />
         <span className="flex-1 text-right truncate">{group.label}</span>
-        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 text-center">
+        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-800/90 text-slate-400 border border-slate-700/50">
           {group.items.length}
         </span>
         <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${open ? "rotate-180 text-blue-400" : "opacity-60"}`} />
       </button>
       
       {open && (
-        <div className="mr-3.5 mt-1 space-y-0.5 border-r border-slate-800 pr-2.5 animate-in slide-in-from-top-1 duration-200">
+        <div className="mr-3.5 mt-1 space-y-1 border-r border-slate-800 pr-2.5 animate-in slide-in-from-top-1 duration-200">
           {group.items.map((leaf) => {
-            const active = pathname === leaf.to;
+            const active = pathname === leaf.to || (leaf.to !== "/" && pathname.startsWith(leaf.to + "/"));
+            const SubIcon = leaf.icon || group.icon;
             return (
               <Link
                 key={leaf.to}
                 to={leaf.to}
                 onClick={onNavigate}
                 className={[
-                  "block rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-all duration-150",
+                  "flex items-center justify-between rounded-xl px-2.5 py-2 text-xs font-bold transition-all duration-150",
                   active
-                    ? "bg-blue-600/15 text-blue-400 font-bold border-r-2 border-blue-500"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/50",
+                    ? "bg-blue-600 text-white shadow-md font-black"
+                    : "text-slate-400 hover:bg-slate-800/70 hover:text-white",
                 ].join(" ")}
               >
-                {leaf.label}
+                <div className="flex items-center gap-2 truncate">
+                  <SubIcon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-white" : "text-slate-500"}`} />
+                  <span className="truncate">{leaf.label}</span>
+                </div>
+                {leaf.badge && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    active ? "bg-white/25 text-white" : "bg-slate-800 text-slate-400"
+                  }`}>
+                    {leaf.badge}
+                  </span>
+                )}
               </Link>
             );
           })}

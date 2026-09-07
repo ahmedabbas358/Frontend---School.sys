@@ -8,7 +8,7 @@ import {
   Smartphone, KeyRound, Webhook, Copy, RefreshCcw, FileText, QrCode
 } from "lucide-react";
 import { toast } from "sonner";
-import { useGlobalStore } from "@/contexts/GlobalStoreContext";
+import { useGlobalStore, defaultSettings } from "@/contexts/GlobalStoreContext";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "الإعدادات الشاملة | منصة مدارس" }] }),
@@ -39,7 +39,15 @@ const TABS = [
 function SettingsPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("school");
   const [apiKey, setApiKey] = useState("sk_live_school_••••_7F3A9C");
-  const { currency, setCurrency, allAcademicYears, systemSettings, updateSettings } = useGlobalStore();
+  const { currency, setCurrency, allAcademicYears, systemSettings: rawSettings, updateSettings } = useGlobalStore();
+  const systemSettings = { 
+    ...defaultSettings, 
+    ...(rawSettings || {}),
+    defaultChannels: {
+      ...defaultSettings.defaultChannels,
+      ...(rawSettings?.defaultChannels || {})
+    }
+  };
 
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "إعدادات النظام الشاملة" }]}>
@@ -654,7 +662,7 @@ function SettingsIcon(props: any) {
   return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
 }
 
-const inp = "h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/30 transition-all";
+const inp = "h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 disabled:opacity-50";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

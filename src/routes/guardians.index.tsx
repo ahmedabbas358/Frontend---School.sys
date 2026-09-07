@@ -407,54 +407,56 @@ function GuardiansList() {
       />
 
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-0 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-gradient-to-r from-primary to-primary/80 p-6 text-primary-foreground relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-              <div className="flex justify-between items-center relative z-10">
-                <h2 className="font-extrabold text-xl flex items-center gap-2"><Users className="h-5 w-5" /> إضافة ولي أمر جديد</h2>
-                <button onClick={() => setIsAddModalOpen(false)} className="rounded-full p-2 hover:bg-black/20 transition-colors">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
+          <div className="w-full max-w-md modal-card-luxury overflow-hidden">
+            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-primary/10">
+              <h2 className="font-black text-lg flex items-center gap-2.5 text-primary">
+                <div className="h-8 w-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+                  <Users className="h-4 w-4" />
+                </div>
+                إضافة ولي أمر جديد
+              </h2>
+              <button onClick={() => setIsAddModalOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+                <X className="h-4 w-4" />
+              </button>
             </div>
             
-            <form onSubmit={handleAddGuardian} className="p-6 space-y-5">
+            <form onSubmit={handleAddGuardian} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-muted-foreground mb-1.5">الاسم الرباعي</label>
+                <label className="block text-xs font-extrabold text-foreground mb-1.5">الاسم الرباعي <span className="text-danger">*</span></label>
                 <input
                   type="text"
                   required
                   value={newGuardian.name}
                   onChange={e => setNewGuardian(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50"
                   placeholder="مثال: عبدالله محمد السالم"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-muted-foreground mb-1.5">رقم الجوال</label>
+                <label className="block text-xs font-extrabold text-foreground mb-1.5">رقم الجوال <span className="text-danger">*</span></label>
                 <div className="relative">
-                  <Phone className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Phone className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="tel"
                     required
                     value={newGuardian.phone}
                     onChange={e => setNewGuardian(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full rounded-xl border border-border/50 bg-background/50 pr-10 pl-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium tabular-nums"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums"
                     placeholder="05XXXXXXXX"
                     dir="ltr"
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">صلة القرابة</label>
+                  <label className="block text-xs font-extrabold text-foreground mb-1.5">صلة القرابة</label>
                   <select
                     value={newGuardian.relation}
                     onChange={e => setNewGuardian(prev => ({ ...prev, relation: e.target.value }))}
-                    className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 cursor-pointer"
                   >
                     <option value="أب">أب</option>
                     <option value="أم">أم</option>
@@ -467,11 +469,11 @@ function GuardiansList() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-muted-foreground mb-1.5">الجنس</label>
+                  <label className="block text-xs font-extrabold text-foreground mb-1.5">الجنس</label>
                   <select
                     value={newGuardian.gender}
                     onChange={e => setNewGuardian(prev => ({ ...prev, gender: e.target.value }))}
-                    className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium cursor-pointer"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 cursor-pointer"
                   >
                     <option value="ذكر">ذكر</option>
                     <option value="أنثى">أنثى</option>
@@ -481,29 +483,29 @@ function GuardiansList() {
 
               {newGuardian.relation === "غير ذلك" && (
                 <div className="animate-in fade-in zoom-in duration-200">
-                  <label className="block text-sm font-bold text-primary mb-1.5">تحديد صلة القرابة يدوياً <span className="text-danger">*</span></label>
+                  <label className="block text-xs font-extrabold text-primary mb-1.5">تحديد صلة القرابة يدوياً <span className="text-danger">*</span></label>
                   <input
                     type="text"
                     required
                     value={newGuardian.customRelation}
                     onChange={e => setNewGuardian(prev => ({ ...prev, customRelation: e.target.value }))}
-                    className="w-full rounded-xl border border-primary/30 bg-primary/5 px-4 py-3.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                    className="h-11 w-full rounded-xl border border-primary/40 bg-primary/5 px-4 text-sm font-bold transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                     placeholder="مثال: زوج الأم، أخ بالرضاعة..."
                   />
                 </div>
               )}
 
-              <div className="pt-6 flex gap-3">
+              <div className="pt-3 flex gap-3 border-t border-border/50">
                 <button
                   type="submit"
-                  className="flex-1 rounded-xl bg-primary py-3.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                  className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-extrabold text-primary-foreground hover:bg-primary/90 transition-all shadow-md active:scale-[0.98]"
                 >
                   حفظ الإضافة
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-6 rounded-xl border border-border bg-card font-bold hover:bg-accent transition-colors"
+                  className="px-6 rounded-xl border border-border/80 bg-card text-sm font-bold hover:bg-accent transition-colors active:scale-[0.98]"
                 >
                   إلغاء
                 </button>

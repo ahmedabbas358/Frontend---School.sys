@@ -222,39 +222,52 @@ function TeachersList() {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-border/50 shrink-0">
-              <h2 className="text-2xl font-black text-primary">{editingId ? "تعديل بيانات المعلم" : "إضافة معلم جديد"}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-full p-2 hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-border/60 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+                  <Pencil className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-extrabold text-foreground">{editingId ? "تعديل بيانات المعلم" : "إضافة معلم جديد"}</h2>
+                  <p className="text-xs text-muted-foreground">تسجيل بيانات الهوية والتواصل وإسناد المواد والشعب</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
             
             {/* Scrollable Body */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-              <form id="teacher-form" onSubmit={handleSave} className="space-y-8">
+              <form id="teacher-form" onSubmit={handleSave} className="space-y-6">
                 
                 {/* Basic Info Section */}
                 <div>
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><div className="w-1.5 h-5 bg-primary rounded-full"></div>البيانات الأساسية</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <h3 className="text-sm font-extrabold mb-3.5 flex items-center gap-2 text-foreground">
+                    <div className="w-1.5 h-4 bg-primary rounded-full"></div>البيانات الأساسية
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الاسم الرباعي *</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الاسم الرباعي <span className="text-destructive">*</span></label>
                       <input
                         required
-                        placeholder="اسم المعلم"
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold"
+                        placeholder="اسم المعلم كاملاً..."
+                        className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
                         value={formData.name}
                         onChange={e => setFormData({...formData, name: e.target.value})}
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الرقم الوظيفي</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الرقم الوظيفي</label>
                       <input
-                        placeholder="رقم الموظف"
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold tabular-nums text-left"
+                        placeholder="مثال: EMP-204"
+                        className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all tabular-nums text-left placeholder:text-muted-foreground/60"
                         dir="ltr"
                         value={formData.employeeNo}
                         onChange={e => setFormData({...formData, employeeNo: e.target.value})}
@@ -262,30 +275,30 @@ function TeachersList() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-bold text-muted-foreground">رقم الجوال</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-foreground/85">رقم الجوال</label>
                       <input
                         placeholder="05XXXXXXXX"
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold tabular-nums text-left"
+                        className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all tabular-nums text-left placeholder:text-muted-foreground/60"
                         dir="ltr"
                         value={formData.phone}
                         onChange={e => setFormData({...formData, phone: e.target.value})}
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-bold text-muted-foreground">البريد الإلكتروني</label>
+                      <label className="mb-1.5 block text-xs font-semibold text-foreground/85">البريد الإلكتروني</label>
                       <input
                         type="email"
-                        placeholder="email@example.com"
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold text-left"
+                        placeholder="teacher@school.edu.sa"
+                        className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all text-left placeholder:text-muted-foreground/60"
                         dir="ltr"
                         value={formData.email}
                         onChange={e => setFormData({...formData, email: e.target.value})}
                       />
                     </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-bold text-muted-foreground">الحالة الوظيفية</label>
+                    <div className="md:col-span-2">
+                      <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الحالة الوظيفية</label>
                       <select
-                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-bold cursor-pointer"
+                        className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
                         value={formData.status}
                         onChange={e => setFormData({...formData, status: e.target.value as any})}
                       >
@@ -298,43 +311,49 @@ function TeachersList() {
                 </div>
 
                 {/* Assignments Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-muted/30 p-5 rounded-2xl border border-border/50">
-                    <h3 className="text-md font-bold mb-3">المواد المُسندة</h3>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto pl-2 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-muted/30 dark:bg-muted/15 p-4 rounded-2xl border border-border/60">
+                    <h3 className="text-xs font-extrabold mb-3 text-foreground flex items-center justify-between">
+                      <span>المواد المُسندة</span>
+                      <span className="text-[11px] font-bold text-muted-foreground">{formData.subjects.length} مختارة</span>
+                    </h3>
+                    <div className="space-y-1.5 max-h-[180px] overflow-y-auto pe-1 custom-scrollbar">
                       {activeStageSubjects.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">لا توجد مواد مضافة في هذا النظام.</p>
+                        <p className="text-xs text-muted-foreground">لا توجد مواد مضافة في هذا النظام.</p>
                       ) : (
                         activeStageSubjects.map(sub => (
-                          <label key={sub.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors border border-transparent hover:border-border/50">
+                          <label key={sub.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-card cursor-pointer transition-all border border-transparent hover:border-border/60 select-none">
                             <input 
                               type="checkbox" 
-                              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              className="h-4 w-4 rounded-md border-input text-primary focus:ring-primary/20 cursor-pointer"
                               checked={formData.subjects.includes(sub.id)}
                               onChange={() => toggleSubject(sub.id)}
                             />
-                            <span className="font-bold text-sm">{sub.name}</span>
+                            <span className="font-semibold text-xs text-foreground">{sub.name}</span>
                           </label>
                         ))
                       )}
                     </div>
                   </div>
 
-                  <div className="bg-muted/30 p-5 rounded-2xl border border-border/50">
-                    <h3 className="text-md font-bold mb-3">الشُعب المُسندة</h3>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto pl-2 custom-scrollbar">
+                  <div className="bg-muted/30 dark:bg-muted/15 p-4 rounded-2xl border border-border/60">
+                    <h3 className="text-xs font-extrabold mb-3 text-foreground flex items-center justify-between">
+                      <span>الشُعب المُسندة</span>
+                      <span className="text-[11px] font-bold text-muted-foreground">{formData.sections.length} مختارة</span>
+                    </h3>
+                    <div className="space-y-1.5 max-h-[180px] overflow-y-auto pe-1 custom-scrollbar">
                       {activeStageSections.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">لا توجد شُعب مضافة في هذه المرحلة.</p>
+                        <p className="text-xs text-muted-foreground">لا توجد شُعب مضافة في هذه المرحلة.</p>
                       ) : (
                         activeStageSections.map(sec => (
-                          <label key={sec.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors border border-transparent hover:border-border/50">
+                          <label key={sec.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-card cursor-pointer transition-all border border-transparent hover:border-border/60 select-none">
                             <input 
                               type="checkbox" 
-                              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              className="h-4 w-4 rounded-md border-input text-primary focus:ring-primary/20 cursor-pointer"
                               checked={formData.sections.includes(sec.id)}
                               onChange={() => toggleSection(sec.id)}
                             />
-                            <span className="font-bold text-sm">{sec.grade} - شعبة {sec.name}</span>
+                            <span className="font-semibold text-xs text-foreground">{sec.grade} - شعبة {sec.name}</span>
                           </label>
                         ))
                       )}
@@ -345,9 +364,19 @@ function TeachersList() {
             </div>
             
             {/* Footer */}
-            <div className="p-6 pt-4 border-t border-border/50 flex justify-end gap-3 bg-card rounded-b-3xl shrink-0">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 font-bold hover:bg-accent transition-colors">إلغاء</button>
-              <button form="teacher-form" type="submit" className="rounded-xl bg-primary px-8 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm hover:scale-105">
+            <div className="p-6 pt-4 border-t border-border/60 flex justify-end gap-2.5 bg-card/98 dark:bg-card/95 rounded-b-3xl shrink-0">
+              <button 
+                type="button" 
+                onClick={() => setIsModalOpen(false)} 
+                className="h-11 rounded-xl px-5 text-xs font-semibold border border-input bg-background/80 hover:bg-accent active:scale-[0.98] transition-all"
+              >
+                إلغاء
+              </button>
+              <button 
+                form="teacher-form" 
+                type="submit" 
+                className="h-11 rounded-xl bg-primary px-7 text-xs font-extrabold text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary"
+              >
                 {editingId ? "حفظ التعديلات" : "إضافة المعلم"}
               </button>
             </div>
@@ -357,16 +386,26 @@ function TeachersList() {
 
       {/* Delete Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
+          <div className="w-full max-w-sm rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center">
-              <div className="rounded-full bg-danger/10 p-3 text-danger mb-4"><AlertCircle className="h-8 w-8" /></div>
-              <h2 className="text-xl font-bold mb-2">تأكيد الحذف</h2>
-              <p className="text-muted-foreground mb-6 font-bold">هل أنت متأكد أنك تريد حذف بيانات المعلم؟ لا يمكن التراجع.</p>
+              <div className="rounded-2xl bg-destructive/10 p-3.5 text-destructive mb-3.5"><AlertCircle className="h-8 w-8" /></div>
+              <h2 className="text-lg font-extrabold text-foreground mb-1.5">تأكيد حذف المعلم</h2>
+              <p className="text-muted-foreground mb-5 text-xs font-semibold leading-relaxed">هل أنت متأكد أنك تريد حذف بيانات هذا المعلم؟ سيتم إلغاء جميع إسنادات الحصص والشعب المرتبطة به.</p>
               
-              <div className="flex w-full gap-3">
-                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 rounded-xl px-4 py-2.5 font-bold hover:bg-accent transition-colors">إلغاء</button>
-                <button onClick={confirmDelete} className="flex-1 rounded-xl bg-danger px-4 py-2.5 font-bold text-danger-foreground hover:bg-danger/90 transition-colors shadow-sm">نعم، احذف</button>
+              <div className="flex w-full gap-2.5">
+                <button 
+                  onClick={() => setIsDeleteModalOpen(false)} 
+                  className="flex-1 h-11 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all"
+                >
+                  إلغاء
+                </button>
+                <button 
+                  onClick={confirmDelete} 
+                  className="flex-1 h-11 rounded-xl bg-destructive text-destructive-foreground text-xs font-extrabold hover:bg-destructive/90 active:scale-[0.98] transition-all shadow-md"
+                >
+                  نعم، احذف
+                </button>
               </div>
             </div>
           </div>

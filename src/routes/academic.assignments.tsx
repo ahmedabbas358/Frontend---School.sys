@@ -161,7 +161,7 @@ function AssignmentsPage() {
           <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm glass flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">السنة الدراسية المفعلة</p>
-              <p className="text-xl font-bold mt-1">{currentYear?.name || "١٤٤٦ هـ"}</p>
+              <p className="text-xl font-bold mt-1">{currentYear?.name || "1446 هـ"}</p>
             </div>
             <Badge tone="success" className="h-8">مفعل</Badge>
           </div>

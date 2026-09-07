@@ -159,47 +159,65 @@ function InventoryItems() {
 
         {/* Consume Item Modal */}
         {consumeItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-bold flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-warning" />
-                صرف كمية: {consumeItem.name}
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">الكمية المراد صرفها (المتوفر: {consumeItem.quantity})</label>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+            <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
+              <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-amber-500/15 text-amber-600 flex items-center justify-center shadow-inner border border-amber-500/20">
+                    <AlertCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">صرف كمية من المخزون</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">{consumeItem.name} (المتوفر حالياً: {consumeItem.quantity})</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setConsumeItem(null); setConsumeQuantity(1); setConsumeTo(""); }}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">الكمية المراد صرفها</label>
                   <input
                     type="number"
                     min="1"
                     max={consumeItem.quantity}
                     value={consumeQuantity}
                     onChange={(e) => setConsumeQuantity(Number(e.target.value))}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">المستلم (طالب / موظف / قسم)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">المستلم (طالب / موظف / قسم)</label>
                   <input
                     type="text"
                     value={consumeTo}
                     onChange={(e) => setConsumeTo(e.target.value)}
-                    placeholder="مثال: قسم الصيانة"
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    placeholder="مثال: قسم الصيانة، أ. عبد الله، عيادة المدرسة..."
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   />
                 </div>
-                <div className="mt-6 flex justify-end gap-2">
+
+                <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
                   <button
+                    type="button"
                     onClick={() => { setConsumeItem(null); setConsumeQuantity(1); setConsumeTo(""); }}
-                    className="h-10 rounded-lg px-4 text-sm font-medium hover:bg-accent"
+                    className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]"
                   >
                     إلغاء
                   </button>
                   <button
+                    type="button"
                     onClick={handleConsume}
                     disabled={consumeQuantity <= 0 || consumeQuantity > consumeItem.quantity || !consumeTo}
-                    className="h-10 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50 active:scale-[0.98]"
                   >
-                    تأكيد الصرف
+                    تأكيد إذن الصرف
                   </button>
                 </div>
               </div>
@@ -209,62 +227,80 @@ function InventoryItems() {
 
         {/* Add/Edit Item Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
-              <h3 className="mb-4 text-lg font-bold">{editItem ? 'تعديل الصنف' : 'إضافة صنف جديد'}</h3>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">اسم الصنف <span className="text-danger">*</span></label>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+            <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
+              <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
+                    <PackageOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">{editItem ? 'تعديل بيانات الصنف' : 'تعريف صنف مخزني جديد'}</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">تسجيل الأصناف بالمستودع المركزي وتحديد الكميات</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setIsModalOpen(false); reset(); setEditItem(null); }}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">اسم الصنف <span className="text-destructive">*</span></label>
                   <input
                     {...register("name")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                     placeholder="مثال: زي رياضي مقاس L"
                   />
-                  {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
+                  {errors.name && <p className="text-xs font-bold text-destructive">{errors.name.message}</p>}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">التصنيف <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">التصنيف المخزني <span className="text-destructive">*</span></label>
                   <input
                     {...register("category")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
-                    placeholder="أزياء، قرطاسية، أجهزة..."
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+                    placeholder="أزياء، قرطاسية، أجهزة، لوازم معمل..."
                     list="categories-list"
                   />
                   <datalist id="categories-list">
                     {categories.map(c => <option key={c} value={c} />)}
                   </datalist>
-                  {errors.category && <p className="mt-1 text-xs text-danger">{errors.category.message}</p>}
+                  {errors.category && <p className="text-xs font-bold text-destructive">{errors.category.message}</p>}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">السعر التقديري <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">السعر التقديري <span className="text-destructive">*</span></label>
                   <input
                     {...register("price")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                     placeholder={`مثال: 50 ${currency}`}
                   />
-                  {errors.price && <p className="mt-1 text-xs text-danger">{errors.price.message}</p>}
+                  {errors.price && <p className="text-xs font-bold text-destructive">{errors.price.message}</p>}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">الكمية الافتتاحية <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">الكمية الافتتاحية <span className="text-destructive">*</span></label>
                   <input
                     type="number"
                     {...register("quantity")}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:border-ring"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   />
-                  {errors.quantity && <p className="mt-1 text-xs text-danger">{errors.quantity.message}</p>}
+                  {errors.quantity && <p className="text-xs font-bold text-destructive">{errors.quantity.message}</p>}
                 </div>
 
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => { setIsModalOpen(false); reset(); setEditItem(null); }}
-                    className="h-10 rounded-lg px-4 text-sm font-medium hover:bg-accent"
+                    className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]"
                   >
                     إلغاء
                   </button>
                   <button
                     type="submit"
-                    className="h-10 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+                    className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
                   >
                     {editItem ? 'حفظ التعديلات' : 'إضافة الصنف'}
                   </button>
@@ -276,21 +312,21 @@ function InventoryItems() {
 
         {activeTab === 'items' && (
           <>
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+            <div className="rounded-2xl border border-border/70 bg-card/60 p-4 backdrop-blur-xl shadow-sm">
+              <div className="grid gap-3.5 md:grid-cols-[1fr_200px_200px]">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="البحث في أصناف المستودع..."
-                    className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   />
                 </div>
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                  className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
                 >
                   <option value="all">كل التصنيفات</option>
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -298,7 +334,7 @@ function InventoryItems() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                  className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
                 >
                   <option value="all">حالة المخزون (الكل)</option>
                   <option value="available">متوفر</option>

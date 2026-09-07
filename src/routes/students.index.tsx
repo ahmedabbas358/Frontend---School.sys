@@ -269,7 +269,8 @@ function StudentsListPage() {
       sectionId: student.sectionId,
       guardianName: student.guardianName,
       guardianPhone: student.guardianPhone,
-      guardianRelationship: student.guardianRelationship,
+      guardianRelation: student.guardianRelation || student.guardianRelationship,
+      guardianRelationship: student.guardianRelationship || student.guardianRelation,
       status: student.status,
     });
   };
@@ -950,16 +951,16 @@ function StudentsListPage() {
           ========================================================= */}
       {selectedStudentForView && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
           onClick={() => setSelectedStudentForView(null)}
           dir="rtl"
         >
           <div 
-            className="w-full max-w-2xl bg-card border border-border shadow-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-5"
+            className="w-full max-w-2xl bg-card/98 dark:bg-card/95 backdrop-blur-2xl border border-border/80 shadow-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-5 my-8"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
               <div className="flex items-center gap-3">
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-white font-black text-base shadow-sm">
                   {selectedStudentForView.name.split(" ").slice(0, 2).map(n => n[0]).join("")}
@@ -975,7 +976,7 @@ function StudentsListPage() {
               </div>
               <button 
                 onClick={() => setSelectedStudentForView(null)}
-                className="p-1.5 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1009,7 +1010,7 @@ function StudentsListPage() {
               <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1">
                 <div className="text-[11px] font-bold text-muted-foreground">ولي الأمر والقرابة</div>
                 <div className="font-extrabold text-foreground">
-                  {selectedStudentForView.guardianName || "-"} ({selectedStudentForView.guardianRelationship || "ولي أمر"})
+                  {selectedStudentForView.guardianName || "-"} ({selectedStudentForView.guardianRelationship || selectedStudentForView.guardianRelation || "ولي أمر"})
                 </div>
               </div>
             </div>
@@ -1042,7 +1043,7 @@ function StudentsListPage() {
             )}
 
             {/* Footer Buttons */}
-            <div className="pt-3 border-t border-border/60 flex items-center justify-between">
+            <div className="pt-3.5 border-t border-border/60 flex items-center justify-between">
               <Link
                 to="/students/$id"
                 params={{ id: selectedStudentForView.id }}
@@ -1052,7 +1053,7 @@ function StudentsListPage() {
                 <ChevronLeft className="w-4 h-4" />
               </Link>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -1060,16 +1061,16 @@ function StudentsListPage() {
                     setSelectedStudentForView(null);
                     openEditModal(stu);
                   }}
-                  className="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold hover:bg-amber-500/20"
+                  className="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold hover:bg-amber-500/20 transition-colors"
                 >
                   تعديل البيانات
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedStudentForView(null)}
-                  className="px-4 py-2 rounded-xl bg-muted hover:bg-accent text-xs font-bold text-foreground"
+                  className="px-4 py-2 rounded-xl border border-input bg-background hover:bg-accent text-xs font-bold text-foreground transition-colors"
                 >
-                  إغلاق
+                  إلغاء
                 </button>
               </div>
             </div>
@@ -1082,27 +1083,27 @@ function StudentsListPage() {
           ========================================================= */}
       {editingStudent && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
           onClick={() => setEditingStudent(null)}
           dir="rtl"
         >
           <div 
-            className="w-full max-w-xl bg-card border border-border shadow-2xl rounded-3xl p-6 sm:p-7 overflow-visible animate-in zoom-in-95 duration-150 space-y-4 my-8"
+            className="w-full max-w-xl bg-card/98 dark:bg-card/95 backdrop-blur-2xl border border-border/80 shadow-2xl rounded-3xl p-6 sm:p-7 overflow-visible animate-in zoom-in-95 duration-150 space-y-4 my-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-primary/10 text-primary">
                   <Pencil className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="font-black text-base text-foreground">تعديل بيانات الطالب</h3>
-                  <div className="text-xs text-muted-foreground mt-0.5">{editingStudent.id}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 font-medium">{editingStudent.id}</div>
                 </div>
               </div>
               <button 
                 onClick={() => setEditingStudent(null)}
-                className="p-1 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1110,25 +1111,25 @@ function StudentsListPage() {
 
             <form onSubmit={handleSaveStudentEdit} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-foreground mb-1">الاسم الرباعي الكامل *</label>
+                <label className="block text-xs font-bold text-foreground mb-1.5">الاسم الرباعي الكامل *</label>
                 <input
                   required
                   type="text"
                   value={editFormData.name || ""}
                   onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">الرقم الوطني / الإقامة *</label>
+                  <label className="block text-xs font-bold text-foreground mb-1.5">الرقم الوطني / الإقامة *</label>
                   <input
                     required
                     type="text"
                     value={editFormData.nationalId || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, nationalId: e.target.value })}
-                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary tabular-nums"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs tabular-nums"
                   />
                 </div>
 
@@ -1141,13 +1142,13 @@ function StudentsListPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">الصف الدراسي *</label>
+                  <label className="block text-xs font-bold text-foreground mb-1.5">الصف الدراسي *</label>
                   <select
                     value={editFormData.grade || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, grade: e.target.value })}
-                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs cursor-pointer"
                   >
                     {availableGrades.map(g => (
                       <option key={g} value={g}>{g}</option>
@@ -1156,11 +1157,11 @@ function StudentsListPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">الشعبة الدراسية</label>
+                  <label className="block text-xs font-bold text-foreground mb-1.5">الشعبة الدراسية</label>
                   <select
                     value={editFormData.sectionId || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, sectionId: e.target.value })}
-                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs cursor-pointer"
                   >
                     <option value="">-- بدون تعيين --</option>
                     {allSections.filter(s => s.stage === stage).map(sec => (
@@ -1172,39 +1173,39 @@ function StudentsListPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">اسم ولي الأمر</label>
+                  <label className="block text-xs font-bold text-foreground mb-1.5">اسم ولي الأمر</label>
                   <input
                     type="text"
                     value={editFormData.guardianName || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, guardianName: e.target.value })}
-                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">هاتف ولي الأمر</label>
+                  <label className="block text-xs font-bold text-foreground mb-1.5">هاتف ولي الأمر</label>
                   <input
                     type="text"
                     value={editFormData.guardianPhone || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, guardianPhone: e.target.value })}
-                    className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary tabular-nums"
+                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs tabular-nums"
                   />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2">
+              <div className="pt-3.5 border-t border-border/60 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setEditingStudent(null)}
-                  className="px-4 py-2 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent"
+                  className="px-5 py-2.5 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent text-foreground transition-colors"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all glow-primary"
+                  className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all active:scale-[0.98] glow-primary"
                 >
                   حفظ التعديلات
                 </button>
@@ -1219,22 +1220,24 @@ function StudentsListPage() {
           ========================================================= */}
       {isTransferModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
           onClick={() => setIsTransferModalOpen(false)}
           dir="rtl"
         >
           <div 
-            className="w-full max-w-md bg-card border border-border shadow-2xl rounded-3xl p-6 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4"
+            className="w-full max-w-md bg-card/98 dark:bg-card/95 backdrop-blur-2xl border border-border/80 shadow-2xl rounded-3xl p-6 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4 my-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2">
-                <ArrowRightLeft className="w-5 h-5 text-primary" />
-                <h3 className="font-extrabold text-sm text-foreground">نقل الطلاب المحددين لشعبة جديدة</h3>
+            <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary shrink-0">
+                  <ArrowRightLeft className="w-5 h-5" />
+                </div>
+                <h3 className="font-black text-base text-foreground">نقل الطلاب المحددين لشعبة جديدة</h3>
               </div>
               <button 
                 onClick={() => setIsTransferModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1249,7 +1252,7 @@ function StudentsListPage() {
               <select
                 value={targetTransferSectionId}
                 onChange={(e) => setTargetTransferSectionId(e.target.value)}
-                className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-bold text-foreground outline-none hover:border-primary/45 focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all shadow-xs cursor-pointer"
               >
                 <option value="">-- اختر الشعبة --</option>
                 {allSections.filter(s => s.stage === stage).map(sec => (
@@ -1260,18 +1263,18 @@ function StudentsListPage() {
               </select>
             </div>
 
-            <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2">
+            <div className="pt-3.5 border-t border-border/60 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsTransferModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent"
+                className="px-5 py-2.5 rounded-xl border border-input bg-background text-xs font-bold hover:bg-accent text-foreground transition-colors"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleBulkTransfer}
-                className="px-6 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all glow-primary"
+                className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all active:scale-[0.98] glow-primary"
               >
                 تنفيذ النقل
               </button>
@@ -1282,7 +1285,7 @@ function StudentsListPage() {
 
       {/* Advanced Print Engine */}
       <AdvancedPrintEngine
-        open={isPrintOpen}
+        isOpen={isPrintOpen}
         onClose={() => setIsPrintOpen(false)}
         templates={[
           {

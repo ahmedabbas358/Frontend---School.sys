@@ -112,8 +112,8 @@ export interface UserAcc {
 /* ------- seed ------- */
 
 export const academicYears: AcademicYear[] = [
-  { id: "y1", name: "١٤٤٥ هـ", startDate: "2023-09-01", endDate: "2024-06-15", isCurrent: false },
-  { id: "y2", name: "١٤٤٦ هـ", startDate: "2024-09-01", endDate: "2025-06-15", isCurrent: true },
+  { id: "y1", name: "1445 هـ", startDate: "2023-09-01", endDate: "2024-06-15", isCurrent: false },
+  { id: "y2", name: "1446 هـ", startDate: "2024-09-01", endDate: "2025-06-15", isCurrent: true },
 ];
 export const terms: Term[] = [
   { id: "t1", name: "الفصل الأول", yearId: "y2" },

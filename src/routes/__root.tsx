@@ -1,3 +1,4 @@
+import "@/lib/force-latin-numbers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -44,30 +45,65 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4" dir="rtl">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8" dir="rtl">
+      <div className="max-w-lg w-full text-center bg-card p-6 md:p-8 rounded-3xl border border-border shadow-xl space-y-4">
+        <div className="mx-auto w-12 h-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center font-black text-xl">
+          !
+        </div>
+        <h1 className="text-2xl font-black tracking-tight text-foreground">
           تعذر تحميل الصفحة
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          حدث خطأ ما. يمكنك المحاولة مرة أخرى أو العودة للرئيسية.
+        <p className="text-sm font-medium text-muted-foreground">
+          حدث خطأ أثناء تحميل محتوى هذه الصفحة. يمكنك محاولة إعادة التحميل أو الانتقال إلى الصفحة الرئيسية.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+
+        {error?.message && (
+          <div className="text-right p-3 rounded-xl bg-destructive/5 border border-destructive/20 text-xs font-mono text-destructive break-all max-h-32 overflow-y-auto">
+            {error.message}
+          </div>
+        )}
+
+        {error?.stack && (
+          <details className="text-right text-xs text-muted-foreground">
+            <summary className="cursor-pointer font-bold hover:underline mb-1">
+              عرض التفاصيل الفنية للمطورين
+            </summary>
+            <pre className="p-3 rounded-xl bg-muted/50 border border-border text-[11px] font-mono text-left overflow-x-auto whitespace-pre-wrap max-h-40" dir="ltr">
+              {error.stack}
+            </pre>
+          </details>
+        )}
+
+        <div className="pt-2 flex flex-wrap justify-center gap-3">
           <button
+            type="button"
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/90"
           >
             إعادة المحاولة
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-xl border border-input bg-background px-5 py-2.5 text-sm font-bold text-foreground transition-all hover:bg-accent"
           >
             الرئيسية
           </a>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                if (typeof window !== "undefined") {
+                  window.location.reload();
+                }
+              } catch (e) {}
+            }}
+            className="inline-flex items-center justify-center rounded-xl border border-border px-4 py-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          >
+            تحديث المتصفح
+          </button>
         </div>
       </div>
     </div>

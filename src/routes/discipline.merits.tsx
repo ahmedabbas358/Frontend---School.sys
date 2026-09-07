@@ -163,19 +163,19 @@ function DisciplineMerits() {
       <div className="space-y-5">
         
         {/* Top Filters Bar */}
-        <PageCard title="عوامل التصفية">
-          <div className="grid gap-3 md:grid-cols-5">
+        <div className="rounded-2xl border border-border/70 bg-card/60 p-4 backdrop-blur-xl shadow-sm">
+          <div className="grid gap-3.5 md:grid-cols-5">
             <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="البحث باسم الطالب..."
-                className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm font-bold outline-none focus:border-success focus:ring-1 focus:ring-success transition-all"
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15"
               />
             </div>
             <select 
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold cursor-pointer outline-none focus:border-success focus:ring-1 focus:ring-success transition-all"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 cursor-pointer"
               value={filterGrade}
               onChange={e => setFilterGrade(e.target.value)}
             >
@@ -183,7 +183,7 @@ function DisciplineMerits() {
               {uniqueGrades.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
             <select 
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold cursor-pointer outline-none focus:border-success focus:ring-1 focus:ring-success transition-all"
+              className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 cursor-pointer disabled:opacity-50"
               value={filterSection}
               onChange={e => setFilterSection(e.target.value)}
               disabled={!filterGrade}
@@ -196,7 +196,7 @@ function DisciplineMerits() {
             <div className="flex flex-col">
               <input 
                 type="date" 
-                className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none focus:border-success focus:ring-1 focus:ring-success transition-all" 
+                className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 cursor-pointer" 
                 value={filterDateFrom}
                 onChange={e => setFilterDateFrom(e.target.value)}
                 title="من تاريخ"
@@ -205,14 +205,14 @@ function DisciplineMerits() {
             <div className="flex flex-col">
               <input 
                 type="date" 
-                className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold outline-none focus:border-success focus:ring-1 focus:ring-success transition-all" 
+                className="h-11 rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 cursor-pointer" 
                 value={filterDateTo}
                 onChange={e => setFilterDateTo(e.target.value)}
                 title="إلى تاريخ"
               />
             </div>
           </div>
-        </PageCard>
+        </div>
 
         <PageCard>
           <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
@@ -243,16 +243,32 @@ function DisciplineMerits() {
 
       {/* Add Merit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-lg flex flex-col rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="p-6 pb-4 border-b border-border/50 shrink-0">
-              <h3 className="text-2xl font-black text-success">منح نقاط مكافأة / تميز</h3>
-            </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-              <form id="merit-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+          <div className="w-full max-w-lg rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
+            <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-success/15 text-success flex items-center justify-center shadow-inner border border-success/20">
+                  <Star className="h-5 w-5" />
+                </div>
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">اسم الطالب ({getStageLabel(stage)}) <span className="text-danger">*</span></label>
+                  <h2 className="text-lg font-bold text-foreground">منح نقاط مكافأة / تميز</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">تسجيل سلوك إيجابي وتعزيز تميز الطالب ({getStageLabel(stage)})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setIsModalOpen(false); reset(); }}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="max-h-[calc(85vh-140px)] overflow-y-auto custom-scrollbar-modal p-6">
+              <form id="merit-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">اسم الطالب المتميز <span className="text-destructive">*</span></label>
                   <Controller
                     name="studentId"
                     control={control}
@@ -261,54 +277,55 @@ function DisciplineMerits() {
                         value={field.value}
                         onChange={field.onChange}
                         options={studentOptions}
-                        placeholder="-- اختر الطالب المتميز --"
-                        searchPlaceholder="ابحث باسم الطالب..."
+                        placeholder="-- ابحث بالاسم أو اختر الطالب --"
+                        searchPlaceholder="ابحث باسم الطالب أو رقمه..."
                       />
                     )}
                   />
-                  {errors.studentId && <p className="mt-1.5 text-xs font-bold text-danger">{errors.studentId.message}</p>}
+                  {errors.studentId && <p className="text-xs font-bold text-destructive">{errors.studentId.message}</p>}
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">سبب التميز <span className="text-danger">*</span></label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">سبب التميز أو المكافأة <span className="text-destructive">*</span></label>
                   <select
                     {...register("categoryId")}
-                    className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold outline-none focus:border-success focus:ring-1 focus:ring-success transition-all cursor-pointer"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 cursor-pointer"
                   >
-                    <option value="">-- اختر المكافأة --</option>
+                    <option value="">-- اختر نوع التميز أو المكافأة --</option>
                     {allDisciplineCategories.filter(c => c.defaultPoints > 0).map(c => (
                       <option key={c.id} value={c.id}>{c.name} (+{c.defaultPoints} نقطة)</option>
                     ))}
                   </select>
-                  {errors.categoryId && <p className="mt-1.5 text-xs font-bold text-danger">{errors.categoryId.message}</p>}
+                  {errors.categoryId && <p className="text-xs font-bold text-destructive">{errors.categoryId.message}</p>}
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-bold text-muted-foreground">تفاصيل إضافية (اختياري)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">تفاصيل إضافية حول التميز (اختياري)</label>
                   <textarea
                     {...register("description")}
-                    className="w-full rounded-2xl border border-border/50 bg-background p-4 text-sm font-medium outline-none focus:border-success focus:ring-1 focus:ring-success transition-all resize-none custom-scrollbar"
+                    className="w-full rounded-xl border border-border/80 bg-background/80 p-3.5 text-sm font-medium shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 resize-none custom-scrollbar-modal"
                     rows={3}
-                    placeholder="ملاحظات إضافية حول التميز..."
+                    placeholder="ملاحظات تفصيلية أو إشادة خاصة حول الموقف الإيجابي..."
                   />
-                  {errors.description && <p className="mt-1.5 text-xs font-bold text-danger">{errors.description.message}</p>}
+                  {errors.description && <p className="text-xs font-bold text-destructive">{errors.description.message}</p>}
                 </div>
               </form>
             </div>
-            <div className="p-6 pt-4 border-t border-border/50 flex justify-end gap-3 bg-card rounded-b-3xl shrink-0">
+
+            <div className="p-5 border-t border-border/50 flex justify-end gap-2.5 bg-muted/10">
               <button
                 type="button"
                 onClick={() => { setIsModalOpen(false); reset(); }}
-                className="rounded-xl px-5 py-2.5 font-bold hover:bg-accent transition-colors"
+                className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]"
               >
                 إلغاء
               </button>
               <button
                 form="merit-form"
                 type="submit"
-                className="rounded-xl bg-success px-8 py-2.5 font-bold text-success-foreground hover:bg-success/90 transition-all shadow-sm hover:scale-105"
+                className="rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-success-foreground hover:bg-success/90 transition-all shadow-md shadow-success/20 active:scale-[0.98]"
               >
-                حفظ المكافأة
+                منح المكافأة
               </button>
             </div>
           </div>
