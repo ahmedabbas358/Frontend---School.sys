@@ -11,6 +11,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { SearchableSelect, SearchableSelectOption } from "@/components/searchable-select";
+import { ModalStudentGradeSectionFilter } from "@/components/grade-section-control";
 
 export const Route = createFileRoute("/discipline/merits")({
   component: DisciplineMerits,
@@ -36,6 +37,8 @@ function DisciplineMerits() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [modalGrade, setModalGrade] = useState("");
+  const [modalSection, setModalSection] = useState("");
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<MeritForm>({
     resolver: zodResolver(meritSchema),
@@ -70,20 +73,32 @@ function DisciplineMerits() {
     toast.success("تم منح المكافأة بنجاح");
     setIsModalOpen(false);
     reset();
+    setModalGrade("");
+    setModalSection("");
   };
 
-  const studentOptions: SearchableSelectOption[] = activeStageStudents.map(st => {
-    const enrollment = allStudentEnrollments.find(e => e.studentId === st.id && e.academicYearId === currentAcademicYearId);
-    const secId = enrollment?.sectionId || st.sectionId;
-    const secName = activeStageSections.find(s => s.id === secId)?.name || '';
-    return {
-      id: st.id,
-      title: st.name,
-      subtitle: `${st.grade} ${secId ? `- شعبة ${secName}` : ''}`
-    };
-  });
-
   const uniqueGrades = useMemo(() => Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean), [activeStageSections]);
+
+  const modalStudentOptions: SearchableSelectOption[] = useMemo(() => {
+    return activeStageStudents
+      .filter(st => {
+        if (modalGrade && st.grade !== modalGrade) return false;
+        const enrollment = allStudentEnrollments.find(e => e.studentId === st.id && e.academicYearId === currentAcademicYearId);
+        const secId = enrollment?.sectionId || st.sectionId;
+        if (modalSection && secId !== modalSection) return false;
+        return true;
+      })
+      .map(st => {
+        const enrollment = allStudentEnrollments.find(e => e.studentId === st.id && e.academicYearId === currentAcademicYearId);
+        const secId = enrollment?.sectionId || st.sectionId;
+        const secName = activeStageSections.find(s => s.id === secId)?.name || '';
+        return {
+          id: st.id,
+          title: st.name,
+          subtitle: `${st.grade} ${secId ? `- شعبة ${secName}` : ''}`
+        };
+      });
+  }, [activeStageStudents, modalGrade, modalSection, allStudentEnrollments, currentAcademicYearId, activeStageSections]);
 
   const filtered = useMemo(() => {
     return allBehaviorTransactions.filter((tx) => {
@@ -267,22 +282,37 @@ function DisciplineMerits() {
             <div className="max-h-[calc(85vh-140px)] overflow-y-auto custom-scrollbar-modal p-6">
               <form id="merit-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">اسم الطالب المتميز <span className="text-destructive">*</span></label>
-                  <Controller
-                    name="studentId"
-                    control={control}
-                    render={({ field }) => (
-                      <SearchableSelect
-                        value={field.value}
-                        onChange={field.onChange}
-                        options={studentOptions}
-                        placeholder="-- ابحث بالاسم أو اختر الطالب --"
-                        searchPlaceholder="ابحث باسم الطالب أو رقمه..."
-                      />
-                    )}
+                <div className="space-y-2.5">
+                  <ModalStudentGradeSectionFilter
+                    grades={uniqueGrades}
+                    selectedGrade={modalGrade}
+                    onSelectGrade={setModalGrade}
+                    sections={activeStageSections}
+                    selectedSectionId={modalSection}
+                    onSelectSectionId={setModalSection}
+                    onReset={() => { setModalGrade(""); setModalSection(""); }}
                   />
-                  {errors.studentId && <p className="text-xs font-bold text-destructive">{errors.studentId.message}</p>}
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted-foreground">
+                      اسم الطالب المتميز ({getStageLabel(stage)}) <span className="text-destructive">*</span>
+                      {modalGrade && <span className="text-success mr-1">({modalStudentOptions.length} طالب مطابق)</span>}
+                    </label>
+                    <Controller
+                      name="studentId"
+                      control={control}
+                      render={({ field }) => (
+                        <SearchableSelect
+                          value={field.value}
+                          onChange={field.onChange}
+                          options={modalStudentOptions}
+                          placeholder={modalGrade ? `-- اختر الطالب من ${modalGrade} --` : "-- ابحث بالاسم أو اختر الطالب --"}
+                          searchPlaceholder="ابحث باسم الطالب أو رقمه..."
+                        />
+                      )}
+                    />
+                    {errors.studentId && <p className="text-xs font-bold text-destructive">{errors.studentId.message}</p>}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">

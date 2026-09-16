@@ -3,9 +3,11 @@ import { useState, useMemo } from "react";
 import { AppShell, Badge, PageCard } from "@/components/app-shell";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
-import { getGradesForStage, isItemAllowedForGrade } from "@/lib/school-structure";
+import { getGradesForStage, isItemAllowedForGrade, isGradeMatch } from "@/lib/school-structure";
 import { SearchableSelect } from "@/components/searchable-select";
-import { Plus, Trash2, Users, Printer, Search, Filter } from "lucide-react";
+import { LuxurySelect } from "@/components/ui/luxury-select";
+import { TeacherPicker } from "@/components/teacher-picker";
+import { Plus, Trash2, Users, Printer, Search, Filter, BookOpen, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 
@@ -36,22 +38,23 @@ function AssignmentsPage() {
 
   const teachersList = useMemo(() => activeStageStaff
     .filter(s => s.role.includes("معلم") || s.role.includes("مربي"))
-    .map(t => ({ id: t.id, title: t.name, subtitle: t.role })), [activeStageStaff]);
+    .map(t => ({ id: t.id, title: t.name, subtitle: t.role, icon: Users })), [activeStageStaff]);
 
   const grades = useMemo(() => getGradesForStage(stage), [stage]);
+
   const formSections = useMemo(() => (
-    form.grade ? activeStageSections.filter(section => section.grade === form.grade) : []
+    form.grade ? activeStageSections.filter(section => isGradeMatch(section.grade, form.grade)) : []
   ), [activeStageSections, form.grade]);
 
   const subjectsList = useMemo(() => activeStageSubjects
     .filter(subject => form.grade && isItemAllowedForGrade(subject, stage, form.grade))
-    .map(s => ({ id: s.id, title: s.name, subtitle: s.code })), [activeStageSubjects, form.grade, stage]);
+    .map(s => ({ id: s.id, title: s.name, subtitle: s.code, icon: BookOpen })), [activeStageSubjects, form.grade, stage]);
 
   const sectionsList = useMemo(() => formSections
-    .map(s => ({ id: s.id, title: `شعبة ${s.name}`, subtitle: s.grade })), [formSections]);
+    .map(s => ({ id: s.id, title: `شعبة ${s.name}`, subtitle: s.roomName || s.grade, badge: `سعة: ${s.capacity || 30}`, icon: Filter })), [formSections]);
 
   const filterSections = useMemo(() => (
-    filterGrade ? activeStageSections.filter(section => section.grade === filterGrade) : activeStageSections
+    filterGrade ? activeStageSections.filter(section => isGradeMatch(section.grade, filterGrade)) : activeStageSections
   ), [activeStageSections, filterGrade]);
 
   const filteredAssignments = useMemo(() => {
@@ -167,53 +170,101 @@ function AssignmentsPage() {
           </div>
         </div>
 
-        <PageCard title="بناء إسناد جديد" description="اختيار الفصل يفتح الشعب والمواد المطابقة فقط، ثم يتم ربط المعلم بالشعبة.">
+        <PageCard title="بناء إسناد جديد" description="اختر المعلم، ثم حدد الفصل ليفتح آلياً الشعب والمواد المطابقة فقط، ثم نفّذ الإسناد مباشرة.">
           <div className="grid gap-4 md:grid-cols-5 items-end">
-            <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5 px-1">المعلم</label>
-              <SearchableSelect 
-                value={form.teacherId} 
-                onChange={(v) => setForm({...form, teacherId: v})} 
-                options={teachersList} 
-                placeholder="-- اختر المعلم --" 
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-foreground mb-1.5 px-1 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-primary" />
+                <span>المعلم المكلف</span>
+              </label>
+              <TeacherPicker
+                teachers={activeStageStaff}
+                selectedTeacherId={form.teacherId}
+                onSelect={(id) => setForm({ ...form, teacherId: id })}
+                subjectName={activeStageSubjects.find(s => s.id === form.subjectId)?.name}
+                sectionName={activeStageSections.find(s => s.id === form.sectionId)?.name}
+                placeholder="انقر لاختيار وإسناد المعلم..."
               />
             </div>
+
             <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5 px-1">الفصل</label>
-              <select
+              <label className="block text-xs font-bold text-foreground mb-1.5 px-1 flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-primary" />
+                <span>الفصل الدراسي</span>
+              </label>
+              <LuxurySelect
                 value={form.grade}
-                onChange={(event) => setForm({ ...form, grade: event.target.value, sectionId: "", subjectId: "" })}
-                className="h-12 w-full rounded-2xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
-              >
-                <option value="">-- اختر الفصل --</option>
-                {grades.map(grade => <option key={grade} value={grade}>{grade}</option>)}
-              </select>
+                onChange={(val) => setForm({ ...form, grade: val, sectionId: "", subjectId: "" })}
+                options={grades.map(g => ({ value: g, label: g, icon: GraduationCap }))}
+                placeholder="-- اختر الفصل --"
+                icon={GraduationCap}
+              />
             </div>
+
             <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5 px-1">الشعبة</label>
+              <label className="block text-xs font-bold text-foreground mb-1.5 px-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-primary" />
+                  <span>الشعبة</span>
+                </span>
+                {form.grade && sectionsList.length > 0 ? (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 shadow-xs animate-in fade-in">
+                    ✨ {sectionsList.length} شعب متاحة
+                  </span>
+                ) : form.grade ? (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                    لا توجد شعب
+                  </span>
+                ) : null}
+              </label>
               <SearchableSelect 
                 value={form.sectionId} 
                 onChange={(v) => setForm({...form, sectionId: v})} 
                 options={sectionsList} 
-                placeholder={form.grade ? "-- اختر الشعبة --" : "اختر الفصل أولاً"}
-                emptyMessage="لا توجد شعب لهذا الفصل"
+                disabled={!form.grade}
+                disabledHint="⏳ بانتظار تحديد الفصل أولاً"
+                onDisabledClick={() => toast.info("يرجى اختيار الفصل الدراسي أولاً ليتم تصفية الشعب المتاحة تلقائياً")}
+                placeholder={form.grade ? (sectionsList.length > 0 ? "-- اختر الشعبة --" : "لا توجد شعب مضافة") : "اختر الفصل أولاً"}
+                emptyMessage="لا توجد شعب مسجلة لهذا الفصل"
+                icon={Filter}
               />
             </div>
+
             <div>
-              <label className="block text-xs font-bold text-muted-foreground mb-1.5 px-1">المادة</label>
+              <label className="block text-xs font-bold text-foreground mb-1.5 px-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-primary" />
+                  <span>المادة الدراسية</span>
+                </span>
+                {form.grade && subjectsList.length > 0 ? (
+                  <span className="text-[10px] text-primary font-extrabold bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 shadow-xs animate-in fade-in">
+                    📚 {subjectsList.length} مادة دراسية
+                  </span>
+                ) : form.grade ? (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-extrabold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                    لا توجد مواد
+                  </span>
+                ) : null}
+              </label>
               <SearchableSelect 
                 value={form.subjectId} 
                 onChange={(v) => setForm({...form, subjectId: v})} 
                 options={subjectsList} 
-                placeholder={form.grade ? "-- اختر المادة --" : "اختر الفصل أولاً"}
+                disabled={!form.grade}
+                disabledHint="⏳ بانتظار تحديد الفصل أولاً"
+                onDisabledClick={() => toast.info("يرجى اختيار الفصل الدراسي أولاً ليتم تصفية المواد المطابقة تلقائياً")}
+                placeholder={form.grade ? (subjectsList.length > 0 ? "-- اختر المادة --" : "لا توجد مواد") : "اختر الفصل أولاً"}
                 emptyMessage="لا توجد مواد مرتبطة بهذا الفصل"
+                icon={BookOpen}
               />
             </div>
+
             <button 
               onClick={add} 
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-sm hover:scale-105 active:scale-95"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-xs sm:text-sm font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md glow-primary hover:scale-[1.02] active:scale-95"
             >
-              <Plus className="h-5 w-5" /> تنفيذ الإسناد
+              <Plus className="h-5 w-5" />
+              <span>تنفيذ الإسناد</span>
             </button>
           </div>
         </PageCard>
@@ -226,20 +277,35 @@ function AssignmentsPage() {
                 value={search}
                 onChange={event => setSearch(event.target.value)}
                 placeholder="بحث بالمعلم أو المادة أو الشعبة..."
-                className="h-11 w-full rounded-xl border border-border/50 bg-background pr-10 pl-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
+                className="h-12 w-full rounded-2xl border border-border/80 bg-background pr-10 pl-4 text-xs sm:text-sm font-bold shadow-xs focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
               />
             </div>
-            <div className="relative">
-              <Filter className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <select value={filterGrade} onChange={event => { setFilterGrade(event.target.value); setFilterSection(""); }} className="h-11 w-full rounded-xl border border-border/50 bg-background pr-10 pl-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none">
-                <option value="">كل الفصول</option>
-                {grades.map(grade => <option key={grade} value={grade}>{grade}</option>)}
-              </select>
+            <div>
+              <LuxurySelect
+                value={filterGrade}
+                onChange={(val) => { setFilterGrade(val); setFilterSection(""); }}
+                options={[
+                  { value: "", label: "كل الفصول" },
+                  ...grades.map(g => ({ value: g, label: g }))
+                ]}
+                placeholder="كل الفصول"
+                icon={GraduationCap}
+              />
             </div>
-            <select disabled={!filterGrade} value={filterSection} onChange={event => setFilterSection(event.target.value)} className="h-11 w-full rounded-xl border border-border/50 bg-background px-4 text-sm font-bold shadow-sm focus:border-primary focus:outline-none disabled:opacity-50">
-              <option value="">كل الشعب</option>
-              {filterSections.map(section => <option key={section.id} value={section.id}>شعبة {section.name}</option>)}
-            </select>
+            <div>
+              <LuxurySelect
+                value={filterSection}
+                onChange={(val) => setFilterSection(val)}
+                disabled={!filterGrade}
+                disabledHint="حدد فصلاً أولاً"
+                options={[
+                  { value: "", label: "كل الشعب" },
+                  ...filterSections.map(s => ({ value: s.id, label: `شعبة ${s.name}` }))
+                ]}
+                placeholder="كل الشعب"
+                icon={Filter}
+              />
+            </div>
           </div>
         </PageCard>
 

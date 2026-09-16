@@ -63,6 +63,8 @@ function HrPayroll() {
     allStaffAttendance, 
     allStaffLeaves, 
     allStaffAdvances, 
+    allSections,
+    addExpense,
     addJournalEntry, 
     currentAcademicYearId 
   } = useGlobalStore();
@@ -135,8 +137,29 @@ function HrPayroll() {
           // Estimate from schedule slots if no attendance logged yet (e.g. 4 lessons/week * 4 weeks)
           totalLessonsTaught = teachingAssns.length * 4;
         }
-        calculatedBasic = totalLessonsTaught * (staff.rate || baseRate || 100);
-        details = `${totalLessonsTaught} حصة × ${staff.rate || baseRate || 100} ${currency}`;
+        
+        // Multi-stage rate calculation if staff has stageRates
+        const stageRates = (staff as any).stageRates;
+        if (stageRates && typeof stageRates === "object" && teachingAssns.length > 0) {
+          let stageTotal = 0;
+          teachingAssns.forEach(ta => {
+            const sec = (allSections || []).find(s => s.id === ta.sectionId);
+            const stg = sec?.stage || staff.stage || "primary";
+            const rate = stageRates[stg] || (staff as any).rate || baseRate || 80;
+            stageTotal += 4 * rate;
+          });
+          calculatedBasic = stageTotal > 0 ? stageTotal : totalLessonsTaught * ((staff as any).rate || baseRate || 100);
+          details = `متعدد المراحل: ${totalLessonsTaught} حصة (حسب تسعيرة المراحل)`;
+        } else {
+          calculatedBasic = totalLessonsTaught * ((staff as any).rate || baseRate || 100);
+          details = `${totalLessonsTaught} حصة × ${(staff as any).rate || baseRate || 100} ${currency}`;
+        }
+      } else if (paymentType === "Hourly") {
+        const hourlyRate = (staff as any).rate || (staff as any).hourlyRate || 80;
+        const totalHours = Math.round((teachingAssns.length * 4 * 45) / 60) || 16;
+        calculatedBasic = totalHours * hourlyRate;
+        calculatedAttendanceDeduction = attendanceRecords.reduce((sum, r) => sum + (r.deductionAmount || 0), 0);
+        details = `${totalHours} ساعة × ${hourlyRate} ${currency}`;
       } else if (paymentType === "Weekly") {
         const weeksCount = 4;
         const weeklyRate = (staff as any).rate || Math.round(baseRate / 4) || baseRate;
@@ -373,8 +396,21 @@ function HrPayroll() {
       sourceDocumentType: "payroll" as any,
     }, lines as any);
 
+    // Also record expenses for each staff member to reflect on staff profile and ledger
+    selectedData.forEach(payroll => {
+      addExpense({
+        title: `صرف راتب شهر ${payrollMonth} - ${payroll.name}`,
+        amount: payroll.net,
+        date: new Date().toISOString().split("T")[0],
+        categoryId: "EXPCAT-1",
+        beneficiary: payroll.name,
+        method: "bank_transfer",
+        notes: `مسير رواتب ${payrollMonth} - كود الاستحقاق: PAY-${payrollMonth}-${payroll.id}`
+      });
+    });
+
     setPaidMonths(prev => [...prev, payrollMonth]);
-    toast.success("تم تنفيذ صرف الرواتب وتحديث الرصيد البنكي بنجاح!");
+    toast.success("تم تنفيذ صرف الرواتب وتحديث الرصيد البنكي وسندات الصرف بنجاح!");
   };
 
   const printTemplates: PrintTemplate[] = [
@@ -419,6 +455,7 @@ function HrPayroll() {
       case "Monthly": return "شهري (Monthly)";
       case "Weekly": return "أسبوعي (Weekly)";
       case "PerLesson": return "بالحصة (Per Lesson)";
+      case "Hourly": return "بالساعة (Hourly)";
       case "Daily": return "يومي (Daily)";
       default: return type;
     }
@@ -493,6 +530,7 @@ function HrPayroll() {
               <option value="Monthly">نظام الراتب الشهري الثابت 📅</option>
               <option value="Weekly">نظام الراتب الأسبوعي ⏱️</option>
               <option value="PerLesson">نظام الحصة الدراسية 📚</option>
+              <option value="Hourly">نظام الأجر بالساعة ⏳</option>
               <option value="Daily">نظام الأجر اليومي ☀️</option>
             </select>
 

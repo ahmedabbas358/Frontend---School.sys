@@ -65,7 +65,7 @@ if (typeof window !== "undefined") {
         : "ar-EG";
       return new OrigDateTimeFormat(loc, opts);
     };
-    Intl.DateTimeFormat.prototype = OrigDateTimeFormat.prototype;
+    (Intl.DateTimeFormat as any).prototype = OrigDateTimeFormat.prototype;
     Intl.DateTimeFormat.supportedLocalesOf = OrigDateTimeFormat.supportedLocalesOf;
   }
 
@@ -77,7 +77,7 @@ if (typeof window !== "undefined") {
       const opts: Intl.NumberFormatOptions = { ...options, numberingSystem: "latn" };
       return new OrigNumberFormat("en-US", opts);
     };
-    Intl.NumberFormat.prototype = OrigNumberFormat.prototype;
+    (Intl.NumberFormat as any).prototype = OrigNumberFormat.prototype;
     Intl.NumberFormat.supportedLocalesOf = OrigNumberFormat.supportedLocalesOf;
   }
 }

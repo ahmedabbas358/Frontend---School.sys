@@ -489,7 +489,9 @@ export function AdvancedPrintEngine({
             position: relative !important;
             display: block !important;
             width: 100% !important;
+            min-width: 100% !important;
             max-width: 100% !important;
+            box-sizing: border-box !important;
             box-shadow: none !important;
             border: none !important;
             outline: none !important;
@@ -499,6 +501,9 @@ export function AdvancedPrintEngine({
             background: #ffffff !important;
             color: #000000 !important;
           }
+          .print-paper-canvas * {
+            box-sizing: border-box !important;
+          }
           .print-header-grid {
             display: flex !important;
             flex-direction: row !important;
@@ -506,25 +511,26 @@ export function AdvancedPrintEngine({
             align-items: center !important;
             width: 100% !important;
             min-width: 100% !important;
+            box-sizing: border-box !important;
             margin-bottom: 20px !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
           .print-header-col-right {
-            width: 32% !important;
-            min-width: 32% !important;
+            width: 33% !important;
+            min-width: 33% !important;
             text-align: right !important;
             flex-shrink: 0 !important;
           }
           .print-header-col-center {
-            width: 36% !important;
-            min-width: 36% !important;
+            width: 34% !important;
+            min-width: 34% !important;
             text-align: center !important;
             flex-shrink: 0 !important;
           }
           .print-header-col-left {
-            width: 32% !important;
-            min-width: 32% !important;
+            width: 33% !important;
+            min-width: 33% !important;
             text-align: left !important;
             flex-shrink: 0 !important;
           }
@@ -770,7 +776,9 @@ export function AdvancedPrintEngine({
         left: auto !important;
         top: auto !important;
         width: 100% !important;
+        min-width: 100% !important;
         max-width: 100% !important;
+        box-sizing: border-box !important;
         min-height: auto !important;
         margin: 0 !important;
         box-shadow: none !important;
@@ -782,6 +790,9 @@ export function AdvancedPrintEngine({
         page-break-after: auto !important;
         break-after: auto !important;
       }
+      .print-paper-canvas * {
+        box-sizing: border-box !important;
+      }
 
       .print-header-grid {
         display: flex !important;
@@ -790,28 +801,29 @@ export function AdvancedPrintEngine({
         align-items: center !important;
         width: 100% !important;
         min-width: 100% !important;
+        box-sizing: border-box !important;
         margin-bottom: 20px !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
       }
 
       .print-header-col-right {
-        width: 32% !important;
-        min-width: 32% !important;
+        width: 33% !important;
+        min-width: 33% !important;
         text-align: right !important;
         flex-shrink: 0 !important;
       }
 
       .print-header-col-center {
-        width: 36% !important;
-        min-width: 36% !important;
+        width: 34% !important;
+        min-width: 34% !important;
         text-align: center !important;
         flex-shrink: 0 !important;
       }
 
       .print-header-col-left {
-        width: 32% !important;
-        min-width: 32% !important;
+        width: 33% !important;
+        min-width: 33% !important;
         text-align: left !important;
         flex-shrink: 0 !important;
       }

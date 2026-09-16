@@ -39,9 +39,14 @@ import {
   HeartHandshake,
   UserCheck,
   FileSpreadsheet,
-  MoreHorizontal
+  MoreHorizontal,
+  RotateCcw,
+  ArrowUpDown,
+  Activity
 } from "lucide-react";
 import { toast } from "sonner";
+import { LuxurySelect, LuxurySelectOption } from "@/components/ui/luxury-select";
+import { isGradeMatch } from "@/lib/school-structure";
 
 export const Route = createFileRoute("/students/")({
   head: () => ({
@@ -122,7 +127,7 @@ function StudentsListPage() {
   const availableSections = useMemo(() => {
     let secs = allSections.filter(s => s.stage === stage);
     if (selectedGrade !== "all") {
-      secs = secs.filter(s => s.grade === selectedGrade);
+      secs = secs.filter(s => isGradeMatch(s.grade, selectedGrade));
     }
     return secs;
   }, [allSections, stage, selectedGrade]);
@@ -151,7 +156,7 @@ function StudentsListPage() {
       }
 
       // Grade Filter
-      if (selectedGrade !== "all" && s.grade !== selectedGrade) return false;
+      if (selectedGrade !== "all" && !isGradeMatch(s.grade, selectedGrade)) return false;
 
       // Section Filter
       if (selectedSectionId !== "all" && s.sectionId !== selectedSectionId) return false;
@@ -194,6 +199,128 @@ function StudentsListPage() {
     });
     return counts;
   }, [baseStudents]);
+
+  // Grade Options for LuxurySelect Popup
+  const gradeSelectOptions: LuxurySelectOption[] = useMemo(() => {
+    const totalCount = gradeCounts.all || 0;
+    const opts: LuxurySelectOption[] = [
+      {
+        value: "all",
+        label: "جميع الصفوف الدراسية",
+        badge: `${totalCount} طالب`,
+        badgeTone: "primary",
+        icon: Users,
+      },
+    ];
+
+    availableGrades.forEach((g) => {
+      const count = gradeCounts[g] || 0;
+      opts.push({
+        value: g,
+        label: g,
+        badge: `${count} طالب`,
+        badgeTone: "muted",
+        icon: GraduationCap,
+      });
+    });
+
+    return opts;
+  }, [availableGrades, gradeCounts]);
+
+  // Section Options for LuxurySelect Popup
+  const sectionSelectOptions: LuxurySelectOption[] = useMemo(() => {
+    if (selectedGrade === "all") {
+      const opts: LuxurySelectOption[] = [
+        {
+          value: "all",
+          label: `كل الشُعب (${availableSections.length} شعبة)`,
+          badge: `${baseStudents.length} طالب`,
+          badgeTone: "primary",
+          icon: Layers3,
+        },
+      ];
+
+      availableSections.forEach((sec) => {
+        const count = baseStudents.filter((s) => s.sectionId === sec.id).length;
+        opts.push({
+          value: sec.id,
+          label: `شعبة ${sec.name}`,
+          sublabel: sec.grade,
+          badge: `${count} طالب`,
+          badgeTone: "muted",
+          icon: Layers3,
+        });
+      });
+
+      return opts;
+    }
+
+    const opts: LuxurySelectOption[] = [
+      {
+        value: "all",
+        label: `كل شُعب (${selectedGrade})`,
+        badge: `${availableSections.length} شُعب`,
+        badgeTone: "primary",
+        icon: Layers3,
+      },
+    ];
+
+    availableSections.forEach((sec) => {
+      const count = baseStudents.filter((s) => s.sectionId === sec.id).length;
+      opts.push({
+        value: sec.id,
+        label: `شعبة ${sec.name}`,
+        badge: `${count} طالب`,
+        badgeTone: "muted",
+        icon: Layers3,
+      });
+    });
+
+    return opts;
+  }, [selectedGrade, availableSections, baseStudents]);
+
+  // Status Filter Options for LuxurySelect
+  const statusOptions: LuxurySelectOption[] = useMemo(() => [
+    { value: "active", label: "الطلاب النشطون", badge: "نشط", badgeTone: "success" },
+    { value: "all", label: "جميع الحالات (الكل)" },
+    { value: "inactive", label: "إيقاف قيد / منقطع", badge: "منقطع", badgeTone: "warning" },
+    { value: "trash", label: "سلة المهملات", badge: "محذوف", badgeTone: "danger" },
+  ], []);
+
+  // Gender Filter Options for LuxurySelect
+  const genderOptions: LuxurySelectOption[] = useMemo(() => [
+    { value: "all", label: "الجنس: الكل" },
+    { value: "ذكر", label: "بنين (ذكور)" },
+    { value: "أنثى", label: "بنات (إناث)" },
+  ], []);
+
+  // Sort Options for LuxurySelect
+  const sortOptions: LuxurySelectOption[] = useMemo(() => [
+    { value: "name", label: "ترتيب أبجدي (الاسم)" },
+    { value: "grade", label: "ترتيب حسب الصف" },
+    { value: "id", label: "ترتيب برقم القيد" },
+  ], []);
+
+  // Check if any filter is active
+  const hasActiveFilters = 
+    selectedGrade !== "all" ||
+    selectedSectionId !== "all" ||
+    genderFilter !== "all" ||
+    statusFilter !== "active" ||
+    q.trim() !== "";
+
+  // Reset all filters to default
+  const handleResetFilters = () => {
+    setSelectedGrade("all");
+    setSelectedSectionId("all");
+    setGenderFilter("all");
+    setStatusFilter("active");
+    setSortBy("name");
+    setQ("");
+    setDebouncedQ("");
+    setCurrentPage(1);
+    toast.info("تمت إعادة ضبط جميع الفلاتر");
+  };
 
   // Bulk selection helpers
   const handleToggleSelectAllPage = () => {
@@ -341,210 +468,267 @@ function StudentsListPage() {
       <div className="space-y-5 animate-in fade-in duration-300">
         
         {/* =========================================================
-            Grade Filtering Navigation Bar (الصفوف الدراسية)
+            Unified Luxury Control, Search & Filtering Command Center
             ========================================================= */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-          <button
-            onClick={() => {
-              setSelectedGrade("all");
-              setSelectedSectionId("all");
-              setCurrentPage(1);
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all shadow-xs ${
-              selectedGrade === "all"
-                ? "bg-primary text-primary-foreground shadow-md glow-primary scale-[1.02]"
-                : "bg-card hover:bg-accent border border-border/70 text-foreground"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>جميع الصفوف</span>
-            <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
-              selectedGrade === "all" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
-            }`}>
-              {gradeCounts.all || 0}
-            </span>
-          </button>
-
-          {availableGrades.map((g) => {
-            const count = gradeCounts[g] || 0;
-            const isSelected = selectedGrade === g;
-            return (
-              <button
-                key={g}
-                onClick={() => {
-                  setSelectedGrade(g);
-                  setSelectedSectionId("all");
-                  setCurrentPage(1);
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all shadow-xs ${
-                  isSelected
-                    ? "bg-primary text-primary-foreground shadow-md glow-primary scale-[1.02]"
-                    : "bg-card hover:bg-accent border border-border/70 text-foreground"
-                }`}
-              >
-                <GraduationCap className="w-4 h-4" />
-                <span>{g}</span>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
-                  isSelected ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* =========================================================
-            Section Chips Bar (الشُعب التابعة للصف المحدد)
-            ========================================================= */}
-        {availableSections.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto p-2 rounded-2xl bg-card/60 border border-border/60 custom-scrollbar">
-            <span className="text-[11px] font-bold text-muted-foreground shrink-0 px-2 flex items-center gap-1.5">
-              <Layers3 className="w-3.5 h-3.5 text-primary" />
-              <span>الشعبة:</span>
-            </span>
-
-            <button
-              onClick={() => {
-                setSelectedSectionId("all");
-                setCurrentPage(1);
-              }}
-              className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                selectedSectionId === "all"
-                  ? "bg-primary text-primary-foreground font-black"
-                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              كل الشُعب ({availableSections.length})
-            </button>
-
-            {availableSections.map((sec) => {
-              const count = baseStudents.filter(s => s.sectionId === sec.id).length;
-              const isSelected = selectedSectionId === sec.id;
-              return (
-                <button
-                  key={sec.id}
-                  onClick={() => {
-                    setSelectedSectionId(sec.id);
-                    setCurrentPage(1);
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground font-black"
-                      : "bg-muted/40 hover:bg-muted text-foreground border border-border/40"
-                  }`}
-                >
-                  <span>شعبة {sec.name}</span>
-                  <span className="text-[10px] opacity-80 tabular-nums">({count})</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* =========================================================
-            Unified Search, Filter Controls & Bulk Actions Toolbar
-            ========================================================= */}
-        <div className="p-4 rounded-3xl border border-border/70 glass-card space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+        <div className="p-4 sm:p-5 rounded-3xl border border-border/70 glass-card space-y-3.5 shadow-sm">
+          
+          {/* Main Controls Row: Search + Academic Hierarchy (Grade & Section Popups) + View Switcher */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
             
-            {/* Realtime Search Input */}
-            <div className="md:col-span-5 relative">
+            {/* Realtime Search Input (4 cols on lg) */}
+            <div className="sm:col-span-2 lg:col-span-4 relative">
               <Search className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="بحث سريع باسم الطالب، رقم القيد، الهوية، أو ولي الأمر..."
-                className="w-full h-11 rounded-2xl border border-input bg-background/80 pr-10 pl-4 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="w-full h-11 rounded-2xl border border-border/80 bg-card/90 pr-10 pl-14 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-xs"
               />
-              {q && (
-                <button
-                  onClick={() => setQ("")}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-muted text-muted-foreground"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {q ? (
+                  <button
+                    onClick={() => setQ("")}
+                    className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                    title="مسح البحث"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="hidden xl:inline text-[10px] font-bold border border-border/60 bg-muted/50 text-muted-foreground px-1.5 py-0.5 rounded opacity-70">
+                    Ctrl K
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Gender Filter */}
-            <div className="md:col-span-2">
-              <select
-                value={genderFilter}
-                onChange={(e) => {
-                  setGenderFilter(e.target.value);
+            {/* Grade Luxury Select Popup (3 cols on lg) */}
+            <div className="sm:col-span-1 lg:col-span-3">
+              <LuxurySelect
+                value={selectedGrade}
+                onChange={(val) => {
+                  setSelectedGrade(val);
+                  setSelectedSectionId("all");
                   setCurrentPage(1);
                 }}
-                className="w-full h-11 rounded-2xl border border-input bg-background/80 px-3 text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="all">الجنس: الكل</option>
-                <option value="ذكر">بنين (ذكور)</option>
-                <option value="أنثى">بنات (إناث)</option>
-              </select>
+                options={gradeSelectOptions}
+                placeholder="الصف الدراسي"
+                icon={GraduationCap}
+                size="md"
+                searchable={availableGrades.length > 5}
+              />
             </div>
 
+            {/* Section Luxury Select Popup (3 cols on lg) */}
+            <div className="sm:col-span-1 lg:col-span-3">
+              <LuxurySelect
+                value={selectedSectionId}
+                onChange={(val) => {
+                  setSelectedSectionId(val);
+                  setCurrentPage(1);
+                }}
+                options={sectionSelectOptions}
+                placeholder="الشعبة"
+                icon={Layers3}
+                size="md"
+                disabled={selectedGrade !== "all" && availableSections.length === 0}
+                disabledHint="لا توجد شُعب مسجلة لهذا الصف"
+                searchable={availableSections.length > 5}
+              />
+            </div>
+
+            {/* View Mode Toggle (2 cols on lg) */}
+            <div className="sm:col-span-2 lg:col-span-2 flex items-center justify-end">
+              <div className="flex items-center p-1 rounded-2xl border border-border/80 bg-card/90 shadow-xs h-11 w-full justify-center sm:w-auto">
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`flex items-center justify-center gap-1.5 px-3.5 h-9 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                    viewMode === "list"
+                      ? "bg-primary text-primary-foreground shadow-xs font-black"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  }`}
+                  title="عرض الجدول"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>جدول</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`flex items-center justify-center gap-1.5 px-3.5 h-9 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                    viewMode === "grid"
+                      ? "bg-primary text-primary-foreground shadow-xs font-black"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  }`}
+                  title="عرض البطاقات"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>بطاقات</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary Quick Filters Bar: Status, Gender, Sort */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-center pt-2.5 border-t border-border/50">
+            
             {/* Status Filter */}
-            <div className="md:col-span-2">
-              <select
+            <div>
+              <LuxurySelect
                 value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
+                onChange={(val) => {
+                  setStatusFilter(val);
                   setSelected(new Set());
                   setCurrentPage(1);
                 }}
-                className={`w-full h-11 rounded-2xl border px-3 text-xs font-extrabold outline-none cursor-pointer ${
-                  statusFilter === "trash"
-                    ? "bg-danger/10 border-danger/30 text-danger"
-                    : "border-input bg-background/80 text-foreground"
-                }`}
-              >
-                <option value="active">الطلاب النشطون</option>
-                <option value="all">الكل (نشط وغير نشط)</option>
-                <option value="inactive">إيقاف قيد / منقطع</option>
-                <option value="trash">🗑️ سلة المهملات</option>
-              </select>
+                options={statusOptions}
+                placeholder="حالة الطالب"
+                icon={Activity}
+                size="md"
+              />
+            </div>
+
+            {/* Gender Filter */}
+            <div>
+              <LuxurySelect
+                value={genderFilter}
+                onChange={(val) => {
+                  setGenderFilter(val);
+                  setCurrentPage(1);
+                }}
+                options={genderOptions}
+                placeholder="الجنس"
+                icon={Users}
+                size="md"
+              />
             </div>
 
             {/* Sort Order */}
-            <div className="md:col-span-2">
-              <select
+            <div>
+              <LuxurySelect
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full h-11 rounded-2xl border border-input bg-background/80 px-3 text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="name">ترتيب أبجدي (الاسم)</option>
-                <option value="grade">ترتيب بالصف</option>
-                <option value="id">ترتيب برقم القيد</option>
-              </select>
-            </div>
-
-            {/* View Mode Toggle (Table / Grid) */}
-            <div className="md:col-span-1 flex items-center justify-end gap-1">
-              <button
-                onClick={() => setViewMode("list")}
-                className={`grid h-11 w-11 place-items-center rounded-2xl border transition-all ${
-                  viewMode === "list"
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-background border-input text-muted-foreground hover:bg-muted"
-                }`}
-                title="عرض الجدول"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`grid h-11 w-11 place-items-center rounded-2xl border transition-all ${
-                  viewMode === "grid"
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-background border-input text-muted-foreground hover:bg-muted"
-                }`}
-                title="عرض البطاقات"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
+                onChange={(val) => setSortBy(val)}
+                options={sortOptions}
+                placeholder="الترتيب"
+                icon={ArrowUpDown}
+                size="md"
+              />
             </div>
           </div>
+
+          {/* Active Filter Badges & Quick Reset Strip */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-border/60 animate-in fade-in duration-150">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-extrabold text-muted-foreground flex items-center gap-1.5 pl-1">
+                  <Filter className="w-3.5 h-3.5 text-primary" />
+                  <span>تصفية مخصصة:</span>
+                </span>
+
+                {selectedGrade !== "all" && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-primary/10 text-primary border border-primary/25 text-xs font-bold shadow-xs">
+                    <GraduationCap className="w-3 h-3" />
+                    <span>الصف: {selectedGrade}</span>
+                    <button
+                      onClick={() => {
+                        setSelectedGrade("all");
+                        setSelectedSectionId("all");
+                        setCurrentPage(1);
+                      }}
+                      className="hover:bg-primary/20 rounded-md p-0.5 text-primary transition-colors"
+                      title="إلغاء تصفية الصف"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {selectedSectionId !== "all" && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-bold shadow-xs">
+                    <Layers3 className="w-3 h-3" />
+                    <span>
+                      الشعبة: {allSections.find(s => s.id === selectedSectionId)?.name ? `شعبة ${allSections.find(s => s.id === selectedSectionId)?.name}` : selectedSectionId}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelectedSectionId("all");
+                        setCurrentPage(1);
+                      }}
+                      className="hover:bg-blue-500/20 rounded-md p-0.5 text-blue-600 dark:text-blue-400 transition-colors"
+                      title="إلغاء تصفية الشعبة"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {genderFilter !== "all" && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/25 text-xs font-bold shadow-xs">
+                    <span>الجنس: {genderFilter === "ذكر" ? "بنين" : "بنات"}</span>
+                    <button
+                      onClick={() => {
+                        setGenderFilter("all");
+                        setCurrentPage(1);
+                      }}
+                      className="hover:bg-purple-500/20 rounded-md p-0.5 text-purple-600 dark:text-purple-400 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {statusFilter !== "active" && (
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold shadow-xs border ${
+                    statusFilter === "trash"
+                      ? "bg-danger/10 text-danger border-danger/30"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                  }`}>
+                    <span>الحالة: {statusFilter === "trash" ? "سلة المهملات" : statusFilter === "all" ? "الكل" : "إيقاف قيد"}</span>
+                    <button
+                      onClick={() => {
+                        setStatusFilter("active");
+                        setCurrentPage(1);
+                      }}
+                      className="hover:bg-black/10 dark:hover:bg-white/10 rounded-md p-0.5 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {debouncedQ && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted text-foreground border border-border text-xs font-bold shadow-xs">
+                    <Search className="w-3 h-3 text-muted-foreground" />
+                    <span className="truncate max-w-[150px]">البحث: "{debouncedQ}"</span>
+                    <button
+                      onClick={() => {
+                        setQ("");
+                        setDebouncedQ("");
+                      }}
+                      className="hover:bg-muted-foreground/20 rounded-md p-0.5 text-muted-foreground transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                <button
+                  onClick={handleResetFilters}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-danger hover:bg-danger/10 text-xs font-extrabold transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>مسح جميع الفلاتر</span>
+                </button>
+              </div>
+
+              {/* Dynamic live match counter pill */}
+              <div className="flex items-center gap-1.5 text-xs font-extrabold text-muted-foreground">
+                <span>النتائج المطابقة:</span>
+                <span className="px-2 py-0.5 rounded-lg bg-primary/15 text-primary border border-primary/25 font-black tabular-nums">
+                  {filteredStudents.length} طالب
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Bulk Selection Operations Action Strip */}
           {selected.size > 0 && (

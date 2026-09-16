@@ -4,10 +4,15 @@ import { EducationalStage, useStage, GRADE_OPTIONS } from "./StageContext";
 export interface Guardian {
   id: string;
   name: string;
+  nationalId?: string;
   phone: string;
+  phoneSecond?: string;
+  email?: string;
+  job?: string;
   relation: string;
   address?: string;
   gender?: "ذكر" | "أنثى";
+  notes?: string;
   isDeleted?: boolean;
   deletedAt?: string;
 }
@@ -18,6 +23,19 @@ export interface EnrollmentRecord {
   grade: string;
   status: "ناجح" | "راسب" | "منقول" | "خريج";
   date: string;
+}
+
+export interface StudentGuardianLink {
+  id?: string;
+  name: string;
+  relation: string;
+  phone: string;
+  phoneSecond?: string;
+  email?: string;
+  job?: string;
+  isPrimary: boolean;
+  address?: string;
+  notes?: string;
 }
 
 export interface Student {
@@ -36,6 +54,7 @@ export interface Student {
   guardianPhone?: string;
   guardianRelation?: string;
   guardianRelationship?: string;
+  guardians?: StudentGuardianLink[];
   bloodType?: string;
   medicalNotes?: string;
   enrollmentDate?: string;
@@ -63,12 +82,27 @@ export interface StudentEnrollment {
   enrollmentDate: string;
 }
 
+export interface TermConfig {
+  id: string;
+  name: string; // e.g. "الفصل الدراسي الأول", "الفصل الدراسي الثاني", "الفصل الدراسي الثالث", "الفصل الصيفي"
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  status: "completed" | "active" | "upcoming";
+  examStartDate?: string;
+  examEndDate?: string;
+  weightPercent?: number;
+  notes?: string;
+}
+
 export interface AcademicYear {
   id: string;
   name: string; // e.g. "١٤٤٥ / ١٤٤٦ هـ"
   startDate: string;
   endDate: string;
   isCurrent: boolean;
+  termSystem?: "3_terms" | "2_terms" | "custom";
+  activeTermId?: string;
+  terms?: TermConfig[];
 }
 
 export interface TeachingAssignment {
@@ -329,9 +363,16 @@ export interface Staff {
   basicSalary?: number;
   allowance?: number;
   deduction?: number;
-  // New Payroll Fields
-  paymentType?: "Monthly" | "Weekly" | "PerLesson" | "Daily";
+  // Comprehensive Payroll & Salary Scheme Fields
+  paymentType?: "Monthly" | "Weekly" | "PerLesson" | "Hourly" | "Daily";
   rate?: number;
+  stageRates?: Record<string, number>; // per lesson rate per stage
+  subjectRates?: Record<string, number>; // per lesson rate per subject
+  bankName?: string;
+  iban?: string;
+  accountNumber?: string;
+  allowanceDetails?: Array<{ id: string; name: string; amount: number }>;
+  deductionDetails?: Array<{ id: string; name: string; amount: number }>;
   hireDate?: string;
 }
 
@@ -346,8 +387,15 @@ export interface EmployeeAssignment {
   basicSalary?: number;
   allowance?: number;
   deduction?: number;
-  paymentType?: "Monthly" | "Weekly" | "PerLesson" | "Daily";
+  paymentType?: "Monthly" | "Weekly" | "PerLesson" | "Hourly" | "Daily";
   rate?: number;
+  stageRates?: Record<string, number>;
+  subjectRates?: Record<string, number>;
+  bankName?: string;
+  iban?: string;
+  accountNumber?: string;
+  allowanceDetails?: Array<{ id: string; name: string; amount: number }>;
+  deductionDetails?: Array<{ id: string; name: string; amount: number }>;
   subjects?: string[];
   sections?: string[];
 }
@@ -371,6 +419,7 @@ export interface AttendanceSession {
   teacherId: string;
   periodNumber: number;
   date: string;
+  stage?: EducationalStage;
   status: "open" | "closed";
   createdBy: string;
   createdAt: string;
@@ -458,6 +507,30 @@ export interface ScheduleSlot {
   subjectId: string;
   teacherId: string;
   stage: EducationalStage;
+  roomId?: string;
+  roomName?: string;
+  sectionName?: string;
+  subjectName?: string;
+  notes?: string;
+}
+
+export interface SavedTimetable {
+  id: string;
+  name: string; // e.g. "جدول الصف الأول - شعبة أ المعتمد"
+  stage: EducationalStage;
+  grade: string; // e.g. "الصف الأول"
+  sectionId?: string; // specific section or undefined for whole grade
+  sectionName?: string; // e.g. "شعبة أ" or "كافة الشُعب"
+  academicYearId: string;
+  termId?: string;
+  termName?: string;
+  status: "published" | "draft" | "archived";
+  isDefault?: boolean;
+  slotsCount: number;
+  totalSlots: number;
+  createdAt: string;
+  updatedAt: string;
+  notes?: string;
 }
 
 export interface Exam {
@@ -590,6 +663,8 @@ export interface StaffAttendanceRecord {
   minutesLate?: number;
   deductionAmount?: number;
   notes?: string;
+  markedAt?: string;
+  markedBy?: string;
 }
 
 export interface StaffAdvance {
@@ -598,7 +673,7 @@ export interface StaffAdvance {
   staffName: string;
   amount: number;
   date: string;
-  status: "pending" | "approved" | "rejected" | "paid";
+  status: "pending" | "approved" | "rejected" | "paid" | "deducted";
   notes?: string;
   deductFromPayrollDate?: string;
   deductionMonth?: string;
@@ -619,9 +694,13 @@ export interface Textbook {
   title: string;
   subject: string;
   gradeId: string;
+  grade?: string;
   term?: string;
   copies: number;
   stage: string;
+  inventoryItemId?: string;
+  edition?: string;
+  price?: number;
 }
 
 export interface TextbookDistribution {
@@ -629,8 +708,15 @@ export interface TextbookDistribution {
   textbookId: string;
   studentId: string;
   date: string;
-  status: string;
+  status: "delivered" | "returned" | "damaged" | "lost" | string;
   stage: string;
+  term?: string;
+  academicYearId?: string;
+  condition?: "جديد" | "ممتاز" | "مقبول" | "تالف" | string;
+  issuedBy?: string;
+  receivedByGuardian?: boolean;
+  returnedDate?: string;
+  notes?: string;
 }
 
 export interface TransportRoute {
@@ -661,6 +747,11 @@ export interface TimetableSettings {
   breakDuration: number;
   periodDuration: number;
   stage: string;
+  startTime?: string; // e.g. "07:30"
+  studyDays?: string[];
+  periodsCount?: number;
+  breaks?: { afterPeriod: number; name: string; duration?: number }[];
+  preventConflicts?: boolean;
 }
 
 export interface AppNotification {
@@ -830,10 +921,10 @@ function generateFullEnterpriseSchoolData() {
   const familyNames = ["العتيبي", "القحطاني", "الشمري", "الدوسري", "الزهراني", "المطيري", "الغامدي", "العنزي", "الشهري", "السبيعي", "الحربي", "البقمي", "المالكي", "التميمي", "السعيد", "الأحمدي", "العوفي", "السلمي", "الرويلي", "الزيعي"];
   
   const gradesMap: Record<EducationalStage, string[]> = {
-    kindergarten: ["روضة 1", "روضة 2", "تمهيدي"],
-    primary: ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي", "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"],
-    middle: ["الصف الأول المتوسط", "الصف الثاني المتوسط", "الصف الثالث المتوسط"],
-    high: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
+    kindergarten: GRADE_OPTIONS.kindergarten,
+    primary: GRADE_OPTIONS.primary,
+    middle: GRADE_OPTIONS.middle,
+    high: GRADE_OPTIONS.high,
   };
 
   // --- 1. Transport Routes ---
@@ -1254,7 +1345,170 @@ function generateFullEnterpriseSchoolData() {
   };
 }
 
+// --- Comprehensive Enterprise Textbooks & Warehouse Generator ---
+export function generateEnterpriseTextbooksAndInventory(enrollments: StudentEnrollment[]) {
+  const textbooks: Textbook[] = [];
+  const textbookInventoryItems: InventoryItem[] = [];
+  const textbookDistributions: TextbookDistribution[] = [];
+
+  const stageGradeConfigs: { stage: EducationalStage; grades: string[] }[] = [
+    {
+      stage: "primary",
+      grades: ["الصف الأول", "الصف الثاني", "الصف الثالث", "الصف الرابع", "الصف الخامس", "الصف السادس"]
+    },
+    {
+      stage: "middle",
+      grades: ["الصف الأول المتوسط", "الصف الثاني المتوسط", "الصف الثالث المتوسط"]
+    },
+    {
+      stage: "high",
+      grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"]
+    },
+    {
+      stage: "kindergarten",
+      grades: ["روضة 1", "روضة 2"]
+    }
+  ];
+
+  const terms = ["الفصل الأول", "الفصل الثاني", "الفصل الثالث"];
+
+  stageGradeConfigs.forEach(({ stage, grades }) => {
+    grades.forEach(grade => {
+      let subjectDefinitions: { name: string; isAnnual?: boolean; price: number }[] = [];
+
+      if (stage === "primary") {
+        const isUpper = grade.includes("الرابع") || grade.includes("الخامس") || grade.includes("السادس");
+        subjectDefinitions = [
+          { name: "لغتي", price: 35 },
+          { name: "الرياضيات", price: 40 },
+          { name: "العلوم", price: 40 },
+          { name: "الدراسات الإسلامية", price: 35 },
+          { name: "اللغة الإنجليزية We Can", price: 45 },
+          { name: "التربية الفنية", isAnnual: true, price: 30 },
+          { name: "التربية البدنية والدفاع عن النفس", isAnnual: true, price: 25 },
+          ...(isUpper ? [
+            { name: "المهارات الرقمية", price: 35 },
+            { name: "الدراسات الاجتماعية", price: 35 },
+            { name: "المهارات الحياتية والأسرية", isAnnual: true, price: 30 },
+          ] : [])
+        ];
+      } else if (stage === "middle") {
+        subjectDefinitions = [
+          { name: "لغتي الخالدة", price: 40 },
+          { name: "الرياضيات", price: 45 },
+          { name: "العلوم", price: 45 },
+          { name: "الدراسات الإسلامية", price: 40 },
+          { name: "اللغة الإنجليزية Super Goal", price: 50 },
+          { name: "الدراسات الاجتماعية", price: 40 },
+          { name: "المهارات الرقمية", price: 40 },
+          { name: "التربية الفنية", isAnnual: true, price: 35 },
+          { name: "التربية البدنية والدفاع عن النفس", isAnnual: true, price: 30 },
+          ...(grade.includes("الثالث") ? [{ name: "التفكير الناقد", price: 45 }] : [])
+        ];
+      } else if (stage === "high") {
+        subjectDefinitions = [
+          { name: "الرياضيات", price: 50 },
+          { name: "الفيزياء", price: 55 },
+          { name: "الكيمياء", price: 55 },
+          { name: "الأحياء", price: 55 },
+          { name: "التقنية الرقمية", price: 45 },
+          { name: "اللغة الإنجليزية Mega Goal", price: 60 },
+          { name: "الكفايات اللغوية", price: 45 },
+          { name: "الدراسات الإسلامية", price: 40 },
+          { name: "علم البيئة", isAnnual: true, price: 50 }
+        ];
+      } else {
+        subjectDefinitions = [
+          { name: "أحرفي الهجائية الممتعة", price: 30 },
+          { name: "أرقامي ورياضياتي الأولى", price: 30 },
+          { name: "عالمي الصغير والاستكشاف", price: 35 },
+          { name: "أخلاقي وقيمي الإسلامية", isAnnual: true, price: 25 },
+          { name: "حروفي بالإنجليزية", price: 35 }
+        ];
+      }
+
+      subjectDefinitions.forEach(sub => {
+        const subTerms = sub.isAnnual ? ["مقرر سنوي"] : (stage === "kindergarten" ? ["الفصل الأول", "الفصل الثاني"] : terms);
+
+        subTerms.forEach((termName, termIdx) => {
+          const safeGrade = grade.replace(/\s+/g, "-");
+          const safeSub = sub.name.replace(/\s+/g, "-");
+          const tbId = `TB-${safeGrade}-${safeSub}-T${termIdx + 1}`;
+          const invId = `ITM-BK-${safeGrade}-${safeSub}-T${termIdx + 1}`;
+          const title = `كتاب ${sub.name} - ${grade} (${termName})`;
+          const copiesTotal = 650;
+
+          textbooks.push({
+            id: tbId,
+            title,
+            subject: sub.name,
+            gradeId: grade,
+            term: termName,
+            copies: copiesTotal,
+            stage,
+            inventoryItemId: invId,
+            edition: "طبعة 1446 هـ المعتمدة",
+            price: sub.price
+          });
+
+          textbookInventoryItems.push({
+            id: invId,
+            name: title,
+            category: "الكتب والمقررات الدراسية",
+            quantity: copiesTotal,
+            price: `${sub.price} ر.س`,
+            status: "available"
+          });
+        });
+      });
+    });
+  });
+
+  // Seed sample distributions for initial student enrollments
+  let distSeq = 1000;
+  (enrollments || []).slice(0, 160).forEach((enr, studentIdx) => {
+    const studentGrade = enr.grade;
+    const gradeBooks = textbooks.filter(tb => tb.gradeId === studentGrade && (tb.term === "الفصل الأول" || tb.term === "مقرر سنوي"));
+
+    let booksToDeliver: Textbook[] = [];
+    if (studentIdx % 10 < 8) {
+      booksToDeliver = gradeBooks; // 80% complete
+    } else if (studentIdx % 10 < 9) {
+      booksToDeliver = gradeBooks.slice(0, Math.ceil(gradeBooks.length / 2)); // 10% partial
+    } // 10% not received yet
+
+    booksToDeliver.forEach(tb => {
+      distSeq++;
+      textbookDistributions.push({
+        id: `TBD-${distSeq}`,
+        textbookId: tb.id,
+        studentId: enr.studentId,
+        date: "2024-09-01",
+        status: "delivered",
+        stage: enr.stage,
+        term: tb.term || "الفصل الأول",
+        condition: "جديد",
+        issuedBy: "أمين المستودع المركزي",
+        receivedByGuardian: true
+      });
+
+      const invItem = textbookInventoryItems.find(i => i.id === tb.inventoryItemId);
+      if (invItem && invItem.quantity > 0) {
+        invItem.quantity -= 1;
+      }
+    });
+  });
+
+  return {
+    textbooks,
+    textbookInventoryItems,
+    textbookDistributions
+  };
+}
+
 const enterpriseData = generateFullEnterpriseSchoolData();
+const textbookEnterpriseData = generateEnterpriseTextbooksAndInventory(enterpriseData.generatedEnrollments);
+
 const initialStudents: Student[] = enterpriseData.generatedStudents;
 const initialGuardians: Guardian[] = enterpriseData.generatedGuardians;
 const initialStudentEnrollments: StudentEnrollment[] = enterpriseData.generatedEnrollments;
@@ -1268,7 +1522,12 @@ const initialSections: Section[] = enterpriseData.generatedSections;
 const initialRooms: Room[] = enterpriseData.generatedRooms;
 const initialSubjects: Subject[] = enterpriseData.generatedSubjects;
 const initialBooks: Book[] = enterpriseData.generatedBooks;
-const initialInventoryItems: InventoryItem[] = enterpriseData.generatedInventoryItems;
+const initialTextbooks: Textbook[] = textbookEnterpriseData.textbooks;
+const initialTextbookDistributions: TextbookDistribution[] = textbookEnterpriseData.textbookDistributions;
+const initialInventoryItems: InventoryItem[] = [
+  ...enterpriseData.generatedInventoryItems,
+  ...textbookEnterpriseData.textbookInventoryItems
+];
 const initialExpenses: Expense[] = enterpriseData.generatedExpenses;
 
 const initialExams: Exam[] = [];
@@ -1346,14 +1605,241 @@ const initialAccounts: Account[] = [
 const initialJournalEntries: JournalEntry[] = [];
 const initialJournalLines: JournalLine[] = [];
 
+export const enrichYearWithTerms = (year: AcademicYear): AcademicYear => {
+  if (!year) return { id: "Y-default", name: "العام الحالي", startDate: "2026-08-20", endDate: "2027-06-18", isCurrent: true, terms: [] };
+  if (year.terms && year.terms.length > 0) return year;
+  if (!year.startDate || !year.endDate) return year;
+  const start = new Date(year.startDate).getTime();
+  const end = new Date(year.endDate).getTime();
+  const duration = Math.max(1, end - start);
+  const oneThird = duration / 3;
+
+  const d1End = new Date(start + oneThird - 86400000 * 7);
+  const d2Start = new Date(start + oneThird + 86400000 * 7);
+  const d2End = new Date(start + oneThird * 2 - 86400000 * 7);
+  const d3Start = new Date(start + oneThird * 2 + 86400000 * 7);
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+  const terms: TermConfig[] = [
+    {
+      id: `term-${year.id}-1`,
+      name: "الفصل الدراسي الأول",
+      startDate: year.startDate,
+      endDate: fmt(d1End),
+      status: "completed",
+      weightPercent: 33,
+      examStartDate: fmt(new Date(d1End.getTime() - 86400000 * 8)),
+      examEndDate: fmt(d1End),
+    },
+    {
+      id: `term-${year.id}-2`,
+      name: "الفصل الدراسي الثاني",
+      startDate: fmt(d2Start),
+      endDate: fmt(d2End),
+      status: year.isCurrent ? "active" : "completed",
+      weightPercent: 33,
+      examStartDate: fmt(new Date(d2End.getTime() - 86400000 * 8)),
+      examEndDate: fmt(d2End),
+    },
+    {
+      id: `term-${year.id}-3`,
+      name: "الفصل الدراسي الثالث",
+      startDate: fmt(d3Start),
+      endDate: year.endDate,
+      status: year.isCurrent ? "upcoming" : "completed",
+      weightPercent: 34,
+      examStartDate: fmt(new Date(new Date(year.endDate).getTime() - 86400000 * 8)),
+      examEndDate: year.endDate,
+    },
+  ];
+
+  return {
+    ...year,
+    termSystem: year.termSystem || "3_terms",
+    activeTermId: year.activeTermId || (year.isCurrent ? `term-${year.id}-2` : `term-${year.id}-3`),
+    terms
+  };
+};
+
 const initialAcademicYears: AcademicYear[] = [
-  { id: "Y-1000", name: "1444 هـ", startDate: "2022-08-21", endDate: "2023-06-12", isCurrent: false },
-  { id: "Y-1001", name: "1445 هـ", startDate: "2023-08-20", endDate: "2024-06-10", isCurrent: false },
-  { id: "Y-1002", name: "1446 هـ", startDate: "2024-08-18", endDate: "2025-06-15", isCurrent: true },
+  { 
+    id: "Y-1000", 
+    name: "1444 هـ", 
+    startDate: "2024-08-20", 
+    endDate: "2025-06-12", 
+    isCurrent: false,
+    termSystem: "3_terms",
+    activeTermId: "term-1000-3",
+    terms: [
+      { id: "term-1000-1", name: "الفصل الدراسي الأول", startDate: "2024-08-20", endDate: "2024-11-24", status: "completed", examStartDate: "2024-11-14", examEndDate: "2024-11-24", weightPercent: 33 },
+      { id: "term-1000-2", name: "الفصل الدراسي الثاني", startDate: "2024-12-04", endDate: "2025-03-02", status: "completed", examStartDate: "2025-02-20", examEndDate: "2025-03-02", weightPercent: 33 },
+      { id: "term-1000-3", name: "الفصل الدراسي الثالث", startDate: "2025-03-12", endDate: "2025-06-12", status: "completed", examStartDate: "2025-06-02", examEndDate: "2025-06-12", weightPercent: 34 },
+    ]
+  },
+  { 
+    id: "Y-1001", 
+    name: "1445 هـ", 
+    startDate: "2025-08-24", 
+    endDate: "2026-06-15", 
+    isCurrent: false,
+    termSystem: "3_terms",
+    activeTermId: "term-1001-3",
+    terms: [
+      { id: "term-1001-1", name: "الفصل الدراسي الأول", startDate: "2025-08-24", endDate: "2025-11-25", status: "completed", examStartDate: "2025-11-15", examEndDate: "2025-11-25", weightPercent: 33 },
+      { id: "term-1001-2", name: "الفصل الدراسي الثاني", startDate: "2025-12-05", endDate: "2026-03-01", status: "completed", examStartDate: "2026-02-20", examEndDate: "2026-03-01", weightPercent: 33 },
+      { id: "term-1001-3", name: "الفصل الدراسي الثالث", startDate: "2026-03-10", endDate: "2026-06-15", status: "completed", examStartDate: "2026-06-05", examEndDate: "2026-06-15", weightPercent: 34 },
+    ]
+  },
+  { 
+    id: "Y-1002", 
+    name: "العام الدراسي 1446 - 1447 هـ", 
+    startDate: "2026-08-20", 
+    endDate: "2027-06-18", 
+    isCurrent: true,
+    termSystem: "3_terms",
+    activeTermId: "term-1002-2",
+    terms: [
+      { id: "term-1002-1", name: "الفصل الدراسي الأول", startDate: "2026-08-20", endDate: "2026-11-20", status: "completed", examStartDate: "2026-11-10", examEndDate: "2026-11-20", weightPercent: 33 },
+      { id: "term-1002-2", name: "الفصل الدراسي الثاني", startDate: "2026-12-01", endDate: "2027-02-26", status: "active", examStartDate: "2027-02-16", examEndDate: "2027-02-26", weightPercent: 33 },
+      { id: "term-1002-3", name: "الفصل الدراسي الثالث", startDate: "2027-03-08", endDate: "2027-06-18", status: "upcoming", examStartDate: "2027-06-08", examEndDate: "2027-06-18", weightPercent: 34 },
+    ]
+  },
 ];
 
-const initialTeachingAssignments: TeachingAssignment[] = [];
-const initialScheduleSlots: ScheduleSlot[] = [];
+function generateEnterpriseAcademicSchedules(
+  sections: Section[],
+  subjects: Subject[],
+  staff: Staff[],
+  rooms: Room[]
+): {
+  assignments: TeachingAssignment[];
+  slots: ScheduleSlot[];
+  savedTimetables: SavedTimetable[];
+} {
+  const assignments: TeachingAssignment[] = [];
+  const slots: ScheduleSlot[] = [];
+  const savedTimetables: SavedTimetable[] = [];
+
+  const studyDays = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+  const periodsCount = 7;
+  const stages: EducationalStage[] = ["kindergarten", "primary", "middle", "high"];
+
+  // Filter teachers pool
+  const teachers = staff.filter(s => s.role.includes("معلم") || s.role.includes("أستاذ") || s.department === "الشؤون الأكاديمية" || s.role.includes("مربية"));
+
+  // Keep track of section and slot index
+  sections.forEach((sec, secIdx) => {
+    const secSubjects = subjects.filter(sub => sub.stage === "all" || sub.stage === sec.stage);
+    if (secSubjects.length === 0) return;
+
+    const subjectTeacherMap = new Map<string, string>();
+    secSubjects.forEach((sub, subIdx) => {
+      const teacher = teachers[(secIdx * 3 + subIdx) % teachers.length] || staff[0];
+      subjectTeacherMap.set(sub.id, teacher.id);
+
+      assignments.push({
+        id: `TA-${sec.id}-${sub.id}`,
+        teacherId: teacher.id,
+        subjectId: sub.id,
+        sectionId: sec.id,
+        yearId: "Y-1002",
+        stage: sec.stage
+      });
+    });
+
+    let sIdx = 0;
+    studyDays.forEach(day => {
+      for (let p = 1; p <= periodsCount; p++) {
+        const sub = secSubjects[sIdx % secSubjects.length];
+        const teacherId = subjectTeacherMap.get(sub.id) || teachers[0]?.id || "EMP-1003";
+        
+        // Intelligent Room Routing
+        let roomId = sec.roomId || rooms[sIdx % rooms.length]?.id;
+        let roomName = sec.roomName || rooms[sIdx % rooms.length]?.name;
+        
+        const subLower = (sub.name + " " + sub.code).toLowerCase();
+        if (subLower.includes("حاسب") || subLower.includes("رقمية") || subLower.includes("comp")) {
+          const compLab = rooms.find(r => r.id === "RM-LAB1" || r.name.includes("حاسب"));
+          if (compLab) { roomId = compLab.id; roomName = `${compLab.name} (${compLab.building})`; }
+        } else if (subLower.includes("علوم") || subLower.includes("فيزياء") || subLower.includes("كيمياء") || subLower.includes("أحياء")) {
+          if (p === 3 || p === 4) {
+            const sciLab = rooms.find(r => r.id === "RM-LAB2" || r.name.includes("علوم"));
+            if (sciLab) { roomId = sciLab.id; roomName = `${sciLab.name} (${sciLab.building})`; }
+          }
+        } else if (subLower.includes("بدنية") || subLower.includes("رياضة")) {
+          const sportHall = rooms.find(r => r.id === "RM-HALL1" || r.name.includes("صالة") || r.name.includes("رياض"));
+          if (sportHall) { roomId = sportHall.id; roomName = `${sportHall.name} (${sportHall.building})`; }
+        }
+
+        slots.push({
+          id: `SCH-${sec.id}-${day}-${p}`,
+          sectionId: sec.id,
+          day,
+          period: p,
+          subjectId: sub.id,
+          teacherId,
+          stage: sec.stage,
+          roomId,
+          roomName
+        });
+        sIdx++;
+      }
+    });
+
+    savedTimetables.push({
+      id: `TT-${sec.id}`,
+      name: `جدول ${sec.grade} - شعبة (${sec.name}) المعتمد`,
+      stage: sec.stage,
+      grade: sec.grade,
+      sectionId: sec.id,
+      sectionName: `شعبة ${sec.name}`,
+      academicYearId: "Y-1002",
+      termId: "term-1002-2",
+      termName: "الفصل الدراسي الثاني",
+      status: "published",
+      isDefault: true,
+      slotsCount: 35,
+      totalSlots: 35,
+      createdAt: "2026-08-20",
+      updatedAt: "2026-09-01",
+      notes: "الجدول الأسبوعي المعتمد للفصل الدراسي الثاني"
+    });
+  });
+
+  // Grade panoramic matrix timetables
+  stages.forEach(stage => {
+    (GRADE_OPTIONS[stage] || []).forEach(grade => {
+      const gradeSecs = sections.filter(s => s.stage === stage && s.grade === grade);
+      if (gradeSecs.length > 0) {
+        savedTimetables.push({
+          id: `TT-GRADE-${stage}-${encodeURIComponent(grade)}`,
+          name: `مصفوفة ${grade} الشاملة (جميع الشُعب)`,
+          stage,
+          grade,
+          sectionId: undefined,
+          sectionName: `كافة شُعب ${grade} (${gradeSecs.length} شُعب)`,
+          academicYearId: "Y-1002",
+          termId: "term-1002-2",
+          termName: "الفصل الدراسي الثاني",
+          status: "published",
+          isDefault: false,
+          slotsCount: gradeSecs.length * 35,
+          totalSlots: gradeSecs.length * 35,
+          createdAt: "2026-08-20",
+          updatedAt: "2026-09-01",
+          notes: "مصفوفة توحيد الجداول لكافة شُعب الصف"
+        });
+      }
+    });
+  });
+
+  return { assignments, slots, savedTimetables };
+}
+
+const enterpriseSchedules = generateEnterpriseAcademicSchedules(initialSections, initialSubjects, initialStaff, initialRooms);
+const initialTeachingAssignments: TeachingAssignment[] = enterpriseSchedules.assignments;
+const initialScheduleSlots: ScheduleSlot[] = enterpriseSchedules.slots;
+const initialSavedTimetables: SavedTimetable[] = enterpriseSchedules.savedTimetables;
 
 const initialMaintenanceRequests: MaintenanceRequest[] = [
   { id: "MR-1001", title: "إصلاح مكيف", description: "مكيف معطل في المعمل", location: "معمل الحاسب", priority: "high", status: "new", costEstimate: 500, dateRequested: "2023-10-20" }
@@ -1432,7 +1918,7 @@ interface GlobalStoreContextType {
   allScheduleSlots: ScheduleSlot[];
   allAcademicYears: AcademicYear[];
   allTeachingAssignments: TeachingAssignment[];
-
+  allSavedTimetables: SavedTimetable[];
   
   allMaintenanceRequests: MaintenanceRequest[];
   allRooms: Room[];
@@ -1460,7 +1946,7 @@ interface GlobalStoreContextType {
   activeStageSubjects: Subject[];
   activeStageScheduleSlots: ScheduleSlot[];
   activeStageTeachingAssignments: TeachingAssignment[];
-
+  activeStageSavedTimetables: SavedTimetable[];
 
   // Actions
   addStudent: (student: Omit<Student, "id">) => string;
@@ -1517,6 +2003,19 @@ interface GlobalStoreContextType {
   deleteStaff: (id: string) => void;
   upsertStaffAttendance: (record: StaffAttendanceRecord) => void;
   addStaffAdvance: (record: Omit<StaffAdvance, "id">) => void;
+  disburseStaffSalary: (payload: {
+    staffId: string;
+    staffName: string;
+    amount: number;
+    month: string;
+    treasuryId: string;
+    treasuryName?: string;
+    method: "cash" | "bank_transfer" | "card" | "cheque";
+    referenceNo: string;
+    title?: string;
+    notes?: string;
+    settleAdvances?: boolean;
+  }) => void;
   addClinicVisit: (visit: Omit<ClinicVisit, "id" | "studentName" | "stage">) => void;
   addDisciplineIncident: (incident: Omit<DisciplineIncident, "id">) => void;
   addAttendanceSession: (session: Omit<AttendanceSession, "id">, records: Omit<AttendanceRecord, "id" | "sessionId">[]) => void;
@@ -1567,6 +2066,11 @@ interface GlobalStoreContextType {
   updateAcademicYear: (id: string, updates: Partial<AcademicYear>) => void;
   addTeachingAssignment: (assignment: Omit<TeachingAssignment, "id">) => void;
   deleteTeachingAssignment: (id: string) => void;
+  saveTimetable: (data: Omit<SavedTimetable, "id" | "createdAt" | "updatedAt"> & { id?: string }) => string;
+  deleteSavedTimetable: (id: string) => void;
+  setTimetableStatus: (id: string, status: "published" | "draft" | "archived") => void;
+  cloneTimetableToSection: (sourceSectionId: string, targetSectionId: string) => void;
+  batchSaveScheduleSlots: (newSlots: ScheduleSlot[]) => void;
   assignStudentToSection: (studentId: string, sectionId?: string) => void;
   promoteStudents: (promotions: { studentId: string; nextGrade: string; nextAcademicYearId: string; status: "ناجح" | "راسب" | "منقول" | "خريج" }[]) => void;
   promoteStaff: (promotions: { employeeId: string; nextRole: string; nextAcademicYearId: string; status: "active" | "on_leave" | "terminated"; basicSalary: number }[]) => void;
@@ -1604,6 +2108,7 @@ interface GlobalStoreContextType {
   updateTextbook: (id: string, updates: Partial<Textbook>) => void;
   deleteTextbook: (id: string) => void;
   distributeTextbook: (distribution: Omit<TextbookDistribution, "id" | "date" | "status">) => void;
+  distributeBatchToSection: (sectionId: string, term?: string) => { distributedCount: number; studentCount: number };
   removeDistribution: (id: string) => void;
 
   // Transport
@@ -1631,6 +2136,11 @@ interface GlobalStoreContextType {
   addNotification: (n: Omit<AppNotification, "id" | "timestamp" | "read">) => void;
 
   currentAcademicYearId: string | undefined;
+  currentAcademicYear?: AcademicYear;
+  activeAcademicTerm?: TermConfig;
+  updateAcademicYearTerms: (yearId: string, terms: TermConfig[]) => void;
+  setActiveTerm: (yearId: string, termId: string) => void;
+  switchYearTermSystem: (yearId: string, system: "3_terms" | "2_terms") => void;
 }
 
 const GlobalStoreContext = createContext<GlobalStoreContextType | undefined>(undefined);
@@ -1664,8 +2174,42 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [libraryIssues, setLibraryIssues] = useState<LibraryIssue[]>(initialLibraryIssues);
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(initialInventoryItems);
-  const [inventoryTransactions, setInventoryTransactions] = useState<InventoryTransaction[]>(initialInventoryTransactions);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_inventory_items") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure textbook inventory items exist if newly added
+        const hasTextbooks = parsed.some((item: InventoryItem) => item.category === "كتب ومقررات دراسية");
+        if (hasTextbooks) return parsed;
+        return [...parsed, ...textbookEnterpriseData.textbookInventoryItems];
+      }
+    } catch {}
+    return initialInventoryItems;
+  });
+  const [inventoryTransactions, setInventoryTransactions] = useState<InventoryTransaction[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_inventory_transactions") : null;
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return initialInventoryTransactions;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_inventory_items", JSON.stringify(inventoryItems));
+      } catch {}
+    }
+  }, [inventoryItems]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_inventory_transactions", JSON.stringify(inventoryTransactions));
+      } catch {}
+    }
+  }, [inventoryTransactions]);
   const [staff, setStaff] = useState<Staff[]>(initialStaff);
   const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>(initialEmployeeAssignments);
   const [clinicVisits, setClinicVisits] = useState<ClinicVisit[]>(initialClinicVisits);
@@ -1711,9 +2255,72 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     }
   });
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>(initialScheduleSlots);
-  const [academicYears, setAcademicYears] = useState<AcademicYear[]>(initialAcademicYears);
-  const [teachingAssignments, setTeachingAssignments] = useState<TeachingAssignment[]>(initialTeachingAssignments);
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_schedule_slots") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialScheduleSlots;
+  });
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_academic_years") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(enrichYearWithTerms);
+        }
+      }
+    } catch {}
+    return initialAcademicYears.map(enrichYearWithTerms);
+  });
+  const [teachingAssignments, setTeachingAssignments] = useState<TeachingAssignment[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_teaching_assignments") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialTeachingAssignments;
+  });
+  const [savedTimetables, setSavedTimetables] = useState<SavedTimetable[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_saved_timetables") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialSavedTimetables;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_schedule_slots", JSON.stringify(scheduleSlots));
+      } catch {}
+    }
+  }, [scheduleSlots]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_teaching_assignments", JSON.stringify(teachingAssignments));
+      } catch {}
+    }
+  }, [teachingAssignments]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_saved_timetables", JSON.stringify(savedTimetables));
+      } catch {}
+    }
+  }, [savedTimetables]);
 
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>(initialMaintenanceRequests);
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
@@ -1794,27 +2401,94 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [currency]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_academic_years", JSON.stringify(academicYears));
+      } catch (e) {
+        console.error("Error persisting academic years:", e);
+      }
+    }
+  }, [academicYears]);
   
   const updateSettings = (updates: Partial<SystemSettings>) => {
     setSystemSettings(prev => ({ ...prev, ...updates }));
   };
 
-  const [textbooks, setTextbooks] = useState<Textbook[]>([]);
-  const [textbookDistributions, setTextbookDistributions] = useState<TextbookDistribution[]>([]);
+  const [textbooks, setTextbooks] = useState<Textbook[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_textbooks") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialTextbooks;
+  });
+
+  const [textbookDistributions, setTextbookDistributions] = useState<TextbookDistribution[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_textbook_distributions") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialTextbookDistributions;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_textbooks", JSON.stringify(textbooks));
+      } catch {}
+    }
+  }, [textbooks]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_textbook_distributions", JSON.stringify(textbookDistributions));
+      } catch {}
+    }
+  }, [textbookDistributions]);
 
   const [transportRoutes, setTransportRoutes] = useState<TransportRoute[]>(initialTransportRoutes);
   const [transportSubscriptions, setTransportSubscriptions] = useState<TransportSubscription[]>(initialTransportSubscriptions);
 
-
-
-  const [timetableSettings, setTimetableSettings] = useState<TimetableSettings>({
-    maxPeriodsPerDay: 7,
-    breakDuration: 45,
-    periodDuration: 45,
-    stage: "all"
+  const [timetableSettings, setTimetableSettings] = useState<TimetableSettings>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_timetable_settings") : null;
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      maxPeriodsPerDay: 7,
+      breakDuration: 25,
+      periodDuration: 45,
+      stage: "all",
+      startTime: "07:30",
+      studyDays: ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"],
+      periodsCount: 7,
+      breaks: [{ afterPeriod: 3, name: "الفسحة الأولى", duration: 25 }, { afterPeriod: 5, name: "الفسحة الثانية", duration: 20 }],
+      preventConflicts: true,
+    };
   });
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_timetable_settings", JSON.stringify(timetableSettings));
+      } catch {}
+    }
+  }, [timetableSettings]);
+
   const currentAcademicYearId = useMemo(() => academicYears.find(y => y.isCurrent)?.id, [academicYears]);
+  const currentAcademicYear = useMemo(() => academicYears.find(y => y.isCurrent) || academicYears[0], [academicYears]);
+  const activeAcademicTerm = useMemo(() => {
+    if (!currentAcademicYear?.terms?.length) return undefined;
+    return currentAcademicYear.terms.find(t => t.status === "active" || t.id === currentAcademicYear.activeTermId) || currentAcademicYear.terms[0];
+  }, [currentAcademicYear]);
 
   // Derived state filtered by the global active stage and active year
   const activeStageStudents = useMemo(() => {
@@ -1863,11 +2537,12 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const activeStageSubjects = useMemo(() => subjects.filter(sub => sub.stage === activeStage || sub.stage === "all"), [subjects, activeStage]);
   const activeStageScheduleSlots = useMemo(() => scheduleSlots.filter(s => s.stage === activeStage), [scheduleSlots, activeStage]);
   const activeStageTeachingAssignments = useMemo(() => teachingAssignments.filter(ta => ta.stage === activeStage), [teachingAssignments, activeStage]);
+  const activeStageSavedTimetables = useMemo(() => savedTimetables.filter(t => t.stage === activeStage), [savedTimetables, activeStage]);
 
 
 
-  const activeStageTextbooks = useMemo(() => textbooks.filter(t => t.stage === activeStage), [textbooks, activeStage]);
-  const activeStageDistributions = useMemo(() => textbookDistributions.filter(d => d.stage === activeStage), [textbookDistributions, activeStage]);
+  const activeStageTextbooks = useMemo(() => (activeStage as string) === "all" ? textbooks : textbooks.filter(t => !t.stage || t.stage === activeStage), [textbooks, activeStage]);
+  const activeStageDistributions = useMemo(() => (activeStage as string) === "all" ? textbookDistributions : textbookDistributions.filter(d => !d.stage || d.stage === activeStage), [textbookDistributions, activeStage]);
   const activeStageTimetableSettings = useMemo(() => timetableSettings.stage === activeStage || timetableSettings.stage === "all" ? timetableSettings : timetableSettings, [timetableSettings, activeStage]);
 
   // --- Actions ---
@@ -2469,6 +3144,43 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setStaffAdvances(prev => [{ ...advanceData, id: `ADV-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
   };
 
+  const disburseStaffSalary = (payload: {
+    staffId: string;
+    staffName: string;
+    amount: number;
+    month: string;
+    treasuryId: string;
+    treasuryName?: string;
+    method: "cash" | "bank_transfer" | "card" | "cheque";
+    referenceNo: string;
+    title?: string;
+    notes?: string;
+    settleAdvances?: boolean;
+  }) => {
+    addExpense({
+      title: payload.title || `صرف مستحقات وراتب شهر ${payload.month} - ${payload.staffName}`,
+      amount: payload.amount,
+      date: new Date().toISOString().split("T")[0],
+      categoryId: "EXPCAT-1", // رواتب ومستحقات الكادر
+      beneficiary: payload.staffName,
+      method: payload.method === "card" ? "bank_transfer" : payload.method,
+      referenceNo: payload.referenceNo,
+      notes: payload.notes || `صرف مستحقات معتمدة من الخزينة/بنكك (${payload.treasuryName || "الخزينة المدرسية"})`,
+      status: "posted",
+      sessionId: payload.treasuryId,
+    });
+
+    if (payload.settleAdvances) {
+      setStaffAdvances(prev => prev.map(a => {
+        const match = a.staffId === payload.staffId || a.staffName === payload.staffName;
+        if (match && a.status === "paid" && (a.deductionMonth === payload.month || (a.deductionMonth && a.deductionMonth <= payload.month))) {
+          return { ...a, status: "deducted" as const };
+        }
+        return a;
+      }));
+    }
+  };
+
   const updateStaff = (id: string, updates: Partial<Staff>) => {
     setStaff(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
     setEmployeeAssignments(prev => prev.map(a => (a.employeeId === id && a.academicYearId === currentAcademicYearId) ? { ...a, ...updates } as EmployeeAssignment : a));
@@ -2842,13 +3554,108 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setScheduleSlots(prev => prev.filter(s => !(s.sectionId === sectionId && s.day === day && s.period === period)));
   };
 
+  const saveTimetable = (data: Omit<SavedTimetable, "id" | "createdAt" | "updatedAt"> & { id?: string }): string => {
+    const now = new Date().toISOString().split("T")[0];
+    const targetId = data.id || `TT-${data.sectionId || data.grade.replace(/\s+/g, '_')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    
+    setSavedTimetables(prev => {
+      const existingIdx = prev.findIndex(t => t.id === targetId || (data.sectionId && t.sectionId === data.sectionId && t.termId === data.termId));
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          ...data,
+          id: updated[existingIdx].id,
+          updatedAt: now
+        };
+        return updated;
+      } else {
+        const newRecord: SavedTimetable = {
+          ...data,
+          id: targetId,
+          createdAt: now,
+          updatedAt: now
+        };
+        return [newRecord, ...prev];
+      }
+    });
+
+    return targetId;
+  };
+
+  const deleteSavedTimetable = (id: string) => {
+    setSavedTimetables(prev => prev.filter(t => t.id !== id));
+  };
+
+  const setTimetableStatus = (id: string, status: "published" | "draft" | "archived") => {
+    setSavedTimetables(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: new Date().toISOString().split("T")[0] } : t));
+  };
+
+  const cloneTimetableToSection = (sourceSectionId: string, targetSectionId: string) => {
+    const sourceSlots = scheduleSlots.filter(s => s.sectionId === sourceSectionId);
+    if (sourceSlots.length === 0) return;
+
+    const targetSec = sections.find(s => s.id === targetSectionId);
+    if (!targetSec) return;
+
+    const otherSlots = scheduleSlots.filter(s => s.sectionId !== targetSectionId);
+    const newSlots: ScheduleSlot[] = sourceSlots.map(s => ({
+      ...s,
+      id: `SCH-${targetSectionId}-${s.day}-${s.period}`,
+      sectionId: targetSectionId,
+      stage: targetSec.stage,
+      roomId: targetSec.roomId || s.roomId,
+      roomName: targetSec.roomName || s.roomName
+    }));
+
+    setScheduleSlots([...otherSlots, ...newSlots]);
+
+    const now = new Date().toISOString().split("T")[0];
+    setSavedTimetables(prev => {
+      const existingIdx = prev.findIndex(t => t.sectionId === targetSectionId);
+      const ttData: SavedTimetable = {
+        id: existingIdx >= 0 ? prev[existingIdx].id : `TT-${targetSectionId}`,
+        name: `جدول ${targetSec.grade} - شعبة (${targetSec.name}) المعتمد`,
+        stage: targetSec.stage,
+        grade: targetSec.grade,
+        sectionId: targetSectionId,
+        sectionName: `شعبة ${targetSec.name}`,
+        academicYearId: currentAcademicYearId || "Y-1002",
+        termId: activeAcademicTerm?.id || "term-1002-2",
+        termName: activeAcademicTerm?.name || "الفصل الدراسي الثاني",
+        status: "published",
+        isDefault: true,
+        slotsCount: newSlots.length,
+        totalSlots: 35,
+        createdAt: now,
+        updatedAt: now,
+        notes: `تم نسخه وتعميمه من جدول ${sourceSectionId}`
+      };
+
+      if (existingIdx >= 0) {
+        const copy = [...prev];
+        copy[existingIdx] = ttData;
+        return copy;
+      }
+      return [ttData, ...prev];
+    });
+  };
+
+  const batchSaveScheduleSlots = (newSlots: ScheduleSlot[]) => {
+    setScheduleSlots(prev => {
+      const filtered = prev.filter(s => !newSlots.some(ns => ns.sectionId === s.sectionId && ns.day === s.day && ns.period === s.period));
+      return [...filtered, ...newSlots];
+    });
+  };
+
   const addAcademicYear = (yearData: Omit<AcademicYear, "id">) => {
     setAcademicYears(prev => {
       let newState = [...prev];
       if (yearData.isCurrent) {
         newState = newState.map(y => ({ ...y, isCurrent: false }));
       }
-      newState.push({ ...yearData, id: `Y-${Math.floor(1000 + Math.random() * 9000)}` });
+      const newYearRaw: AcademicYear = { ...yearData, id: `Y-${Math.floor(1000 + Math.random() * 9000)}` };
+      newState.push(enrichYearWithTerms(newYearRaw));
       return newState;
     });
   };
@@ -2862,6 +3669,122 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       newState = newState.map(y => y.id === id ? { ...y, ...updates } : y);
       return newState;
     });
+  };
+
+  const updateAcademicYearTerms = (yearId: string, terms: TermConfig[]) => {
+    setAcademicYears(prev => prev.map(y => {
+      if (y.id === yearId) {
+        const activeTerm = terms.find(t => t.status === "active") || terms[0];
+        return { ...y, terms, activeTermId: activeTerm?.id || y.activeTermId };
+      }
+      return y;
+    }));
+  };
+
+  const setActiveTerm = (yearId: string, termId: string) => {
+    setAcademicYears(prev => prev.map(y => {
+      if (y.id === yearId) {
+        const targetIdx = (y.terms || []).findIndex(t => t.id === termId);
+        const updatedTerms = (y.terms || []).map((t, idx) => {
+          if (t.id === termId) {
+            return { ...t, status: "active" as const };
+          }
+          if (targetIdx !== -1) {
+            return { ...t, status: idx < targetIdx ? ("completed" as const) : ("upcoming" as const) };
+          }
+          return { ...t, status: "upcoming" as const };
+        });
+        return { ...y, activeTermId: termId, terms: updatedTerms };
+      }
+      return y;
+    }));
+  };
+
+  const switchYearTermSystem = (yearId: string, system: "3_terms" | "2_terms") => {
+    setAcademicYears(prev => prev.map(y => {
+      if (y.id === yearId) {
+        const start = new Date(y.startDate).getTime();
+        const end = new Date(y.endDate).getTime();
+        const duration = Math.max(1, end - start);
+        const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+        let newTerms: TermConfig[] = [];
+        if (system === "2_terms") {
+          const mid = start + duration / 2;
+          const t1End = new Date(mid - 86400000 * 10);
+          const t2Start = new Date(mid + 86400000 * 4);
+          newTerms = [
+            { 
+              id: `term-${y.id}-1`, 
+              name: "الفصل الدراسي الأول", 
+              startDate: y.startDate, 
+              endDate: fmt(t1End), 
+              status: "completed", 
+              weightPercent: 50,
+              examStartDate: fmt(new Date(t1End.getTime() - 86400000 * 10)),
+              examEndDate: fmt(t1End),
+            },
+            { 
+              id: `term-${y.id}-2`, 
+              name: "الفصل الدراسي الثاني", 
+              startDate: fmt(t2Start), 
+              endDate: y.endDate, 
+              status: y.isCurrent ? "active" : "completed", 
+              weightPercent: 50,
+              examStartDate: fmt(new Date(new Date(y.endDate).getTime() - 86400000 * 10)),
+              examEndDate: y.endDate,
+            },
+          ];
+        } else {
+          const oneThird = duration / 3;
+          const t1End = new Date(start + oneThird - 86400000 * 7);
+          const t2Start = new Date(start + oneThird + 86400000 * 7);
+          const t2End = new Date(start + oneThird * 2 - 86400000 * 7);
+          const t3Start = new Date(start + oneThird * 2 + 86400000 * 7);
+          newTerms = [
+            { 
+              id: `term-${y.id}-1`, 
+              name: "الفصل الدراسي الأول", 
+              startDate: y.startDate, 
+              endDate: fmt(t1End), 
+              status: "completed", 
+              weightPercent: 33,
+              examStartDate: fmt(new Date(t1End.getTime() - 86400000 * 8)),
+              examEndDate: fmt(t1End),
+            },
+            { 
+              id: `term-${y.id}-2`, 
+              name: "الفصل الدراسي الثاني", 
+              startDate: fmt(t2Start), 
+              endDate: fmt(t2End), 
+              status: y.isCurrent ? "active" : "completed", 
+              weightPercent: 33,
+              examStartDate: fmt(new Date(t2End.getTime() - 86400000 * 8)),
+              examEndDate: fmt(t2End),
+            },
+            { 
+              id: `term-${y.id}-3`, 
+              name: "الفصل الدراسي الثالث", 
+              startDate: fmt(t3Start), 
+              endDate: y.endDate, 
+              status: y.isCurrent ? "upcoming" : "completed", 
+              weightPercent: 34,
+              examStartDate: fmt(new Date(new Date(y.endDate).getTime() - 86400000 * 8)),
+              examEndDate: y.endDate,
+            },
+          ];
+        }
+
+        const activeTerm = newTerms.find(t => t.status === "active") || newTerms[0];
+        return {
+          ...y,
+          termSystem: system,
+          terms: newTerms,
+          activeTermId: activeTerm.id
+        };
+      }
+      return y;
+    }));
   };
 
   const addTeachingAssignment = (assignmentData: Omit<TeachingAssignment, "id">) => {
@@ -3157,14 +4080,178 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   const updateTextbook = (id: string, updates: Partial<Textbook>) => setTextbooks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
   const deleteTextbook = (id: string) => setTextbooks(prev => prev.filter(t => t.id !== id));
   const distributeTextbook = (distribution: Omit<TextbookDistribution, "id" | "date" | "status">) => {
-    setTextbookDistributions(prev => [{
-      id: `TBD-${Math.floor(1000 + Math.random() * 9000)}`,
+    const newId = `TBD-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newDist: TextbookDistribution = {
+      id: newId,
+      condition: "جديد",
+      issuedBy: "أمين المستودع المدرسي",
+      receivedByGuardian: true,
       ...distribution,
       date: new Date().toISOString().split('T')[0],
-      status: "distributed",
-    }, ...prev]);
+      status: "delivered",
+    };
+    setTextbookDistributions(prev => [newDist, ...prev]);
+
+    // Warehouse inventory stock sync
+    const tb = textbooks.find(t => t.id === distribution.textbookId);
+    if (tb) {
+      const invItem = inventoryItems.find(i => (tb.inventoryItemId && i.id === tb.inventoryItemId) || i.name.includes(tb.title));
+      if (invItem) {
+        setInventoryItems(prev => prev.map(i => {
+          if (i.id === invItem.id) {
+            const newQty = Math.max(0, i.quantity - 1);
+            return {
+              ...i,
+              quantity: newQty,
+              status: newQty === 0 ? "out_of_stock" : newQty <= 10 ? "low_stock" : "available"
+            };
+          }
+          return i;
+        }));
+
+        const student = students.find(s => s.id === distribution.studentId);
+        const newTxn: InventoryTransaction = {
+          id: `TRX-${Math.floor(1000 + Math.random() * 9000)}`,
+          itemId: invItem.id,
+          itemName: invItem.name,
+          type: "issue",
+          quantity: 1,
+          date: new Date().toISOString().split("T")[0],
+          by: "أمين المستودع المدرسي",
+          to: student ? student.name : "طالب",
+        };
+        setInventoryTransactions(prev => [newTxn, ...prev]);
+      }
+    }
   };
-  const removeDistribution = (id: string) => setTextbookDistributions(prev => prev.filter(d => d.id !== id));
+
+  const removeDistribution = (id: string) => {
+    const dist = textbookDistributions.find(d => d.id === id);
+    if (dist) {
+      const tb = textbooks.find(t => t.id === dist.textbookId);
+      if (tb) {
+        const invItem = inventoryItems.find(i => (tb.inventoryItemId && i.id === tb.inventoryItemId) || i.name.includes(tb.title));
+        if (invItem) {
+          setInventoryItems(prev => prev.map(i => {
+            if (i.id === invItem.id) {
+              const newQty = i.quantity + 1;
+              return {
+                ...i,
+                quantity: newQty,
+                status: newQty <= 10 ? "low_stock" : "available"
+              };
+            }
+            return i;
+          }));
+
+          const student = students.find(s => s.id === dist.studentId);
+          const newTxn: InventoryTransaction = {
+            id: `TRX-${Math.floor(1000 + Math.random() * 9000)}`,
+            itemId: invItem.id,
+            itemName: invItem.name,
+            type: "receive",
+            quantity: 1,
+            date: new Date().toISOString().split("T")[0],
+            by: student ? student.name : "طالب",
+            to: "المستودع المدرسي",
+          };
+          setInventoryTransactions(prev => [newTxn, ...prev]);
+        }
+      }
+    }
+    setTextbookDistributions(prev => prev.filter(d => d.id !== id));
+  };
+
+  const distributeBatchToSection = (sectionId: string, term?: string) => {
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return { distributedCount: 0, studentCount: 0 };
+
+    const enrolledIds = studentEnrollments
+      .filter(e => e.sectionId === sectionId)
+      .map(e => e.studentId);
+
+    const targetStudents = enrolledIds.length > 0
+      ? students.filter(s => enrolledIds.includes(s.id))
+      : students.filter(s => s.grade === section.grade);
+
+    const targetTextbooks = textbooks.filter(tb => {
+      const gradeMatches = tb.gradeId === section.grade || tb.grade === section.grade || (tb as any).gradeId === section.name;
+      const termMatches = term ? (!tb.term || tb.term === term || tb.term === "all" || tb.term === "الفصل الأول") : true;
+      return gradeMatches && termMatches;
+    });
+
+    if (targetStudents.length === 0 || targetTextbooks.length === 0) {
+      return { distributedCount: 0, studentCount: targetStudents.length };
+    }
+
+    const newDistributions: TextbookDistribution[] = [];
+    const itemDecrements: Record<string, { invItem: InventoryItem; count: number }> = {};
+
+    targetStudents.forEach(st => {
+      targetTextbooks.forEach(tb => {
+        const alreadyHas = textbookDistributions.some(
+          d => d.studentId === st.id && d.textbookId === tb.id
+        ) || newDistributions.some(
+          d => d.studentId === st.id && d.textbookId === tb.id
+        );
+
+        if (!alreadyHas) {
+          newDistributions.push({
+            id: `TBD-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(Math.random() * 1000)}`,
+            textbookId: tb.id,
+            studentId: st.id,
+            date: new Date().toISOString().split('T')[0],
+            status: "delivered",
+            stage: tb.stage,
+            term: tb.term || term || "الفصل الأول",
+            academicYearId: currentAcademicYearId || "",
+            condition: "جديد",
+            issuedBy: "أمين المستودع المدرسي",
+            receivedByGuardian: true,
+          });
+
+          const invItem = inventoryItems.find(i => (tb.inventoryItemId && i.id === tb.inventoryItemId) || i.name.includes(tb.title));
+          if (invItem) {
+            if (!itemDecrements[invItem.id]) {
+              itemDecrements[invItem.id] = { invItem, count: 0 };
+            }
+            itemDecrements[invItem.id].count += 1;
+          }
+        }
+      });
+    });
+
+    if (newDistributions.length > 0) {
+      setTextbookDistributions(prev => [...newDistributions, ...prev]);
+
+      setInventoryItems(prev => prev.map(i => {
+        if (itemDecrements[i.id]) {
+          const dec = itemDecrements[i.id].count;
+          const newQty = Math.max(0, i.quantity - dec);
+          return {
+            ...i,
+            quantity: newQty,
+            status: newQty === 0 ? "out_of_stock" : newQty <= 10 ? "low_stock" : "available"
+          };
+        }
+        return i;
+      }));
+
+      const newTxns: InventoryTransaction[] = Object.values(itemDecrements).map(dec => ({
+        id: `TRX-${Math.floor(1000 + Math.random() * 9000)}`,
+        itemId: dec.invItem.id,
+        itemName: dec.invItem.name,
+        type: "issue",
+        quantity: dec.count,
+        date: new Date().toISOString().split("T")[0],
+        by: "أمين المستودع المدرسي",
+        to: `شعبة ${section.name} (${section.grade})`,
+      }));
+      setInventoryTransactions(prev => [...newTxns, ...prev]);
+    }
+
+    return { distributedCount: newDistributions.length, studentCount: targetStudents.length };
+  };
 
   const addTransportRoute = (r: Omit<TransportRoute, "id">) => setTransportRoutes(prev => [{ ...r, id: `RT-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
   const updateTransportRoute = (id: string, updates: Partial<TransportRoute>) => setTransportRoutes(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
@@ -3266,6 +4353,9 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       assignSectionToRoom,
       allExams: exams, allExamSubjects: examSubjects, allExamResults: examResults, allSubjects: subjects,
       allScheduleSlots: scheduleSlots, allAcademicYears: academicYears, allTeachingAssignments: teachingAssignments,
+      allSavedTimetables: savedTimetables,
+      activeStageSavedTimetables,
+      saveTimetable, deleteSavedTimetable, cloneTimetableToSection, setTimetableStatus, batchSaveScheduleSlots,
       
       allMaintenanceRequests: maintenanceRequests, allRooms: rooms,
       allStaffEvaluations: staffEvaluations, allStaffContracts: staffContracts, allStaffLeaves: staffLeaves,
@@ -3293,6 +4383,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       updateTextbook,
       deleteTextbook,
       distributeTextbook,
+      distributeBatchToSection,
       removeDistribution,
       transportRoutes,
       transportSubscriptions,
@@ -3318,7 +4409,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       allVendors: vendors, addVendor, payVendor,
       addAccount, updateAccount, deleteAccount, toggleAccountStatus,
       addBook, issueBook, returnBook, addInventoryItem, updateInventoryItem, deleteInventoryItem,
-      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, quickCheckInStaff, addStaffAdvance, addClinicVisit, addDisciplineIncident, addAttendanceSession, bulkRecordStudentAttendance, addBehaviorTransaction,
+      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, quickCheckInStaff, addStaffAdvance, disburseStaffSalary, addClinicVisit, addDisciplineIncident, addAttendanceSession, bulkRecordStudentAttendance, addBehaviorTransaction,
       addSection, updateSection, deleteSection, 
 
       currency,
@@ -3343,7 +4434,12 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       deleteNotification,
       addNotification,
       addAuditLog,
-      currentAcademicYearId
+      currentAcademicYearId,
+      currentAcademicYear,
+      activeAcademicTerm,
+      updateAcademicYearTerms,
+      setActiveTerm,
+      switchYearTermSystem
     }}>
       {children}
     </GlobalStoreContext.Provider>
@@ -3352,6 +4448,8 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
 export function useGlobalStore() {
   const context = useContext(GlobalStoreContext);
-  if (context === undefined) throw new Error("useGlobalStore must be used within a GlobalStoreProvider");
+  if (context === undefined) {
+    return {} as Partial<GlobalStoreContextType> as GlobalStoreContextType;
+  }
   return context;
 }

@@ -132,7 +132,7 @@ export function SupervisorGateAttendance() {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         worker.name.toLowerCase().includes(q) ||
-        worker.employeeNo.toLowerCase().includes(q) ||
+        (worker.employeeNo && worker.employeeNo.toLowerCase().includes(q)) ||
         (worker.nationalId && worker.nationalId.includes(q)) ||
         worker.role.toLowerCase().includes(q) ||
         worker.department.toLowerCase().includes(q);
@@ -217,8 +217,8 @@ export function SupervisorGateAttendance() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-32 font-sans antialiased" dir="rtl">
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 px-4 py-3 shadow-xs">
+      {/* Top Header — Natural scrolling */}
+      <header className="relative z-20 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 px-4 py-3 shadow-xs">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <Link

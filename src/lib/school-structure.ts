@@ -66,4 +66,12 @@ export const isItemAllowedForGrade = (item: StageGradeScoped, stage: Educational
   return stageMatches && gradeMatches;
 };
 
+export const isGradeMatch = (secGrade: string, targetGrade: string): boolean => {
+  if (!secGrade || !targetGrade) return false;
+  if (secGrade.trim() === targetGrade.trim()) return true;
+  const s1 = secGrade.replace(/الابتدائي|المتوسط|الثانوي/g, "").replace(/\s+/g, " ").trim();
+  const s2 = targetGrade.replace(/الابتدائي|المتوسط|الثانوي/g, "").replace(/\s+/g, " ").trim();
+  return s1 === s2;
+};
+
 export const getGradesForStage = (stage: EducationalStage) => getConfiguredGrades(stage);

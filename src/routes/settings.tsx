@@ -62,7 +62,7 @@ function SettingsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
-        <nav className="space-y-1 rounded-xl border border-border bg-card p-3 shadow-sm sticky top-4">
+        <nav className="space-y-1 rounded-xl border border-border bg-card p-3 shadow-sm">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
@@ -643,7 +643,7 @@ function SettingsPage() {
             </PageCard>
           )}
 
-           <div className="flex justify-end mt-8 sticky bottom-4">
+           <div className="flex justify-end mt-8">
              <div className="bg-card/80 backdrop-blur border border-border p-3 rounded-xl shadow-lg flex items-center gap-4 w-full">
                 <span className="text-xs text-muted-foreground font-bold hidden sm:inline-block">تأكد من مراجعة الإعدادات قبل الحفظ</span>
                 <button onClick={() => toast.success("تم حفظ التعديلات المركزية بنجاح")}

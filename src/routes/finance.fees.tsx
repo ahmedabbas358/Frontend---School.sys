@@ -301,7 +301,7 @@ function FinanceFees() {
 
                   <div className="grid grid-cols-2 gap-4 max-h-52 overflow-y-auto custom-scrollbar-modal p-1">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-muted-foreground mb-2 sticky top-0 bg-card py-1">
+                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-muted-foreground mb-2 bg-card py-1">
                         <GraduationCap className="h-3.5 w-3.5 text-primary" /> الفصول الدراسية
                       </div>
                       {uniqueGrades.length === 0 ? (
@@ -333,7 +333,7 @@ function FinanceFees() {
                     </div>
 
                     <div className="space-y-2 border-r border-border/50 pr-4">
-                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-muted-foreground mb-2 sticky top-0 bg-card py-1">
+                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-muted-foreground mb-2 bg-card py-1">
                         <Building className="h-3.5 w-3.5 text-primary" /> الشعب الدراسية
                       </div>
                       {targetSections.length === 0 ? (

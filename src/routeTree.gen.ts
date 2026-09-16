@@ -34,6 +34,7 @@ import { Route as StudentsIndexRouteImport } from './routes/students.index'
 import { Route as GuardiansIndexRouteImport } from './routes/guardians.index'
 import { Route as FinanceIndexRouteImport } from './routes/finance.index'
 import { Route as ExamsIndexRouteImport } from './routes/exams.index'
+import { Route as AttendanceIndexRouteImport } from './routes/attendance.index'
 import { Route as TransportStudentsRouteImport } from './routes/transport.students'
 import { Route as TransportRoutesRouteImport } from './routes/transport.routes'
 import { Route as TeachersIdRouteImport } from './routes/teachers.$id'
@@ -216,6 +217,11 @@ const ExamsIndexRoute = ExamsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ExamsRoute,
+} as any)
+const AttendanceIndexRoute = AttendanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AttendanceRoute,
 } as any)
 const TransportStudentsRoute = TransportStudentsRouteImport.update({
   id: '/students',
@@ -578,6 +584,7 @@ export interface FileRoutesByFullPath {
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
+  '/attendance/': typeof AttendanceIndexRoute
   '/exams/': typeof ExamsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
@@ -591,7 +598,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/academic': typeof AcademicRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
-  '/attendance': typeof AttendanceRouteWithChildren
   '/clinic': typeof ClinicRouteWithChildren
   '/discipline': typeof DisciplineRouteWithChildren
   '/facilities': typeof FacilitiesRouteWithChildren
@@ -657,6 +663,7 @@ export interface FileRoutesByTo {
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
+  '/attendance': typeof AttendanceIndexRoute
   '/exams': typeof ExamsIndexRoute
   '/finance': typeof FinanceIndexRoute
   '/guardians': typeof GuardiansIndexRoute
@@ -742,6 +749,7 @@ export interface FileRoutesById {
   '/teachers/$id': typeof TeachersIdRoute
   '/transport/routes': typeof TransportRoutesRoute
   '/transport/students': typeof TransportStudentsRoute
+  '/attendance/': typeof AttendanceIndexRoute
   '/exams/': typeof ExamsIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/guardians/': typeof GuardiansIndexRoute
@@ -828,6 +836,7 @@ export interface FileRouteTypes {
     | '/teachers/$id'
     | '/transport/routes'
     | '/transport/students'
+    | '/attendance/'
     | '/exams/'
     | '/finance/'
     | '/guardians/'
@@ -841,7 +850,6 @@ export interface FileRouteTypes {
     | '/'
     | '/academic'
     | '/admin'
-    | '/attendance'
     | '/clinic'
     | '/discipline'
     | '/facilities'
@@ -907,6 +915,7 @@ export interface FileRouteTypes {
     | '/teachers/$id'
     | '/transport/routes'
     | '/transport/students'
+    | '/attendance'
     | '/exams'
     | '/finance'
     | '/guardians'
@@ -991,6 +1000,7 @@ export interface FileRouteTypes {
     | '/teachers/$id'
     | '/transport/routes'
     | '/transport/students'
+    | '/attendance/'
     | '/exams/'
     | '/finance/'
     | '/guardians/'
@@ -1203,6 +1213,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/exams/'
       preLoaderRoute: typeof ExamsIndexRouteImport
       parentRoute: typeof ExamsRoute
+    }
+    '/attendance/': {
+      id: '/attendance/'
+      path: '/'
+      fullPath: '/attendance/'
+      preLoaderRoute: typeof AttendanceIndexRouteImport
+      parentRoute: typeof AttendanceRoute
     }
     '/transport/students': {
       id: '/transport/students'
@@ -1649,11 +1666,13 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface AttendanceRouteChildren {
   AttendanceReportsRoute: typeof AttendanceReportsRoute
   AttendanceTakeRoute: typeof AttendanceTakeRoute
+  AttendanceIndexRoute: typeof AttendanceIndexRoute
 }
 
 const AttendanceRouteChildren: AttendanceRouteChildren = {
   AttendanceReportsRoute: AttendanceReportsRoute,
   AttendanceTakeRoute: AttendanceTakeRoute,
+  AttendanceIndexRoute: AttendanceIndexRoute,
 }
 
 const AttendanceRouteWithChildren = AttendanceRoute._addFileChildren(

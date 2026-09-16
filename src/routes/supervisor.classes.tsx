@@ -308,8 +308,8 @@ export function SupervisorClassesAttendance() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-36 font-sans antialiased" dir="rtl">
-      {/* Mobile Top App Bar */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 px-4 py-3 shadow-xs">
+      {/* Mobile Top App Bar — Natural scrolling */}
+      <header className="relative z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 px-4 py-3 shadow-xs">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <Link

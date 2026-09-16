@@ -7,6 +7,7 @@ import { FileWarning, Save, Users, BookOpen, Clock, AlertTriangle, Search, Print
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
+import { GradeSectionPills } from "@/components/grade-section-control";
 
 export const Route = createFileRoute("/attendance/take")({
   component: TakeAttendance,
@@ -26,6 +27,14 @@ function TakeAttendance() {
   const { stage, getStageLabel } = useStage();
   
   const [activeTab, setActiveTab] = useState<"take" | "weekly">("take");
+
+  const availableGrades = useMemo(() => {
+    return Array.from(new Set(activeStageSections.map(s => s.grade))).filter(Boolean);
+  }, [activeStageSections]);
+
+  const [selectedGrade, setSelectedGrade] = useState<string>(() => {
+    return activeStageSections[0]?.grade || "الصف الأول";
+  });
 
   const [sectionId, setSectionId] = useState(activeStageSections[0]?.id || "");
   const [subjectId, setSubjectId] = useState(activeStageSubjects[0]?.id || "");
@@ -79,14 +88,36 @@ function TakeAttendance() {
   const setAllMarks = (st: Status) => setMarks(Object.fromEntries(baseList.map((s) => [s.id, st])));
 
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+
+  const selectedSubject = activeStageSubjects.find(sub => sub.id === subjectId);
+
+  const printData = useMemo(() => {
+    return list.map((s, idx) => ({
+      id: s.id,
+      index: idx + 1,
+      nationalId: s.nationalId,
+      name: s.name,
+      gradeSection: selectedSection ? `${selectedSection.grade} - شعبة ${selectedSection.name}` : "—",
+      status: marks[s.id] ? LABELS[marks[s.id] as Status] : "لم يُرصد",
+      notes: marks[s.id] === "absent" ? "غياب غير مبرر" : marks[s.id] === "excused" ? "عذر رسمي" : marks[s.id] === "late" ? "تأخر عن الحصة" : "حضور منتظم"
+    }));
+  }, [list, selectedSection, marks]);
+
   const printTemplates: PrintTemplate[] = [
     {
-      id: "attendance_report", name: "تقرير الحضور المعبأ اليومي", category: "الحضور والانصراف", type: "table",
+      id: "attendance_report", 
+      name: "تقرير الحضور المعبأ اليومي", 
+      category: "الحضور والانصراف", 
+      type: "table",
       columns: [
+        { key: "index", label: "#" },
         { key: "nationalId", label: "الرقم الوطني" },
         { key: "name", label: "اسم الطالب" },
-        { key: "status", label: "الحالة", render: (r) => marks[r.id] ? LABELS[marks[r.id] as Status] : "لم يُرصد" }
-      ]
+        { key: "gradeSection", label: "الصف والشعبة" },
+        { key: "status", label: "حالة الحضور" },
+        { key: "notes", label: "ملاحظات وتوجيه" }
+      ],
+      description: "كشف حضور وغياب الطلاب اليومي معتمد للإدارة المدرسية"
     }
   ];
 
@@ -140,7 +171,21 @@ function TakeAttendance() {
   }
 
   return (
-    <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الطلاب" }, { label: "رصد الحضور والغياب" }]}>
+    <AppShell 
+      breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الطلاب" }, { label: "رصد الحضور والغياب" }]}
+      actions={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPrintOpen(true)}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary/10 border border-primary/30 px-3.5 text-xs font-black text-primary hover:bg-primary/20 transition-all shadow-xs"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            <span>طباعة الكشف</span>
+          </button>
+        </div>
+      }
+    >
       <div className="space-y-6">
         
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end border-b border-border pb-4">
@@ -156,42 +201,47 @@ function TakeAttendance() {
 
         {activeTab === "take" && (
           <>
-            <PageCard title="معايير الرصد" description={`قم بتحديد الشعبة والمادة وإدخال رقم الحصة - ${getStageLabel(stage)}`}>
-              <div className="grid gap-4 md:grid-cols-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3"/> الشعبة</label>
-                  <select value={sectionId} onChange={(e) => setSectionId(e.target.value)} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary">
-                    {activeStageSections.map((s) => <option key={s.id} value={s.id}>{s.grade} - {s.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-muted-foreground flex items-center gap-1"><BookOpen className="h-3 w-3"/> المادة</label>
-                  <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary">
-                    {activeStageSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3"/> رقم الحصة</label>
-                  <select value={period} onChange={(e) => setPeriod(e.target.value ? Number(e.target.value) : "")} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary text-primary">
-                    <option value="">-- اختر الحصة --</option>
-                    {[1,2,3,4,5,6,7,8,9,10].map(p => {
-                      const slot = todaySchedule.find(s => s.period === p);
-                      const subjectName = slot ? activeStageSubjects.find(sub => sub.id === slot.subjectId)?.name : null;
-                      return (
-                        <option key={p} value={p}>
-                          الحصة {p} {subjectName ? `- ${subjectName}` : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-                <div>
-                  <ArabicDatePicker
-                    label="تاريخ الرصد"
-                    value={date}
-                    onChange={(newVal) => setDate(newVal)}
-                    showAgeCalculator={false}
-                  />
+            <PageCard title="معايير واختيار الفصل الدراسي" description={`قم باختيار الصف والشعبة والمادة وإدخال رقم الحصة - ${getStageLabel(stage)}`}>
+              <div className="space-y-4">
+                <GradeSectionPills
+                  grades={availableGrades}
+                  selectedGrade={selectedGrade}
+                  onSelectGrade={(g) => setSelectedGrade(g)}
+                  sections={activeStageSections}
+                  selectedSectionId={sectionId}
+                  onSelectSectionId={(sId) => setSectionId(sId)}
+                />
+
+                <div className="grid gap-4 md:grid-cols-3 pt-3 border-t border-border/60">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-muted-foreground flex items-center gap-1"><BookOpen className="h-3 w-3"/> المادة</label>
+                    <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary">
+                      {activeStageSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3"/> رقم الحصة</label>
+                    <select value={period} onChange={(e) => setPeriod(e.target.value ? Number(e.target.value) : "")} className="w-full rounded-xl border border-input bg-background px-4 py-2.5 font-bold outline-none focus:border-primary text-primary">
+                      <option value="">-- اختر الحصة --</option>
+                      {[1,2,3,4,5,6,7,8,9,10].map(p => {
+                        const slot = todaySchedule.find(s => s.period === p);
+                        const subjectName = slot ? activeStageSubjects.find(sub => sub.id === slot.subjectId)?.name : null;
+                        return (
+                          <option key={p} value={p}>
+                            الحصة {p} {subjectName ? `- ${subjectName}` : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  <div>
+                    <ArabicDatePicker
+                      label="تاريخ الرصد"
+                      value={date}
+                      onChange={(newVal) => setDate(newVal)}
+                      showAgeCalculator={false}
+                    />
+                  </div>
                 </div>
               </div>
             </PageCard>
@@ -245,18 +295,16 @@ function TakeAttendance() {
 
         {activeTab === "weekly" && (
           <PageCard title="السجل الأسبوعي والشهري (لشعبة محددة)">
-            <div className="flex gap-4 items-end mb-6 border-b border-border pb-4">
-               <div className="flex-1">
-                  <label className="mb-1 block text-sm font-medium text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3"/> الشعبة المستهدفة</label>
-                  <select value={sectionId} onChange={(e) => setSectionId(e.target.value)} className="w-full rounded-xl border border-input bg-background px-4 py-2 font-bold outline-none focus:border-primary">
-                    {activeStageSections.map((s) => <option key={s.id} value={s.id}>{s.grade} - {s.name}</option>)}
-                  </select>
-               </div>
-               <div>
-                 <button className="bg-muted text-foreground px-4 py-2 rounded-lg font-bold text-sm hover:bg-accent border border-border flex items-center gap-2">
-                   <Filter className="w-4 h-4" /> تخصيص الفترة
-                 </button>
-               </div>
+            <div className="space-y-4 mb-6 border-b border-border pb-4">
+              <GradeSectionPills
+                grades={availableGrades}
+                selectedGrade={selectedGrade}
+                onSelectGrade={(g) => setSelectedGrade(g)}
+                sections={activeStageSections}
+                selectedSectionId={sectionId}
+                onSelectSectionId={(sId) => setSectionId(sId)}
+                size="sm"
+              />
             </div>
 
             <div className="overflow-x-auto">
@@ -305,7 +353,13 @@ function TakeAttendance() {
         )}
       </div>
 
-      <AdvancedPrintEngine isOpen={isPrintOpen} onClose={() => setIsPrintOpen(false)} title="تقرير الحضور والغياب" data={list} templates={printTemplates} />
+      <AdvancedPrintEngine 
+        isOpen={isPrintOpen} 
+        onClose={() => setIsPrintOpen(false)} 
+        title={`كشف حضور ${selectedSection ? `${selectedSection.grade} - شعبة ${selectedSection.name}` : ''} - الحصة (${period || 1})`} 
+        data={printData} 
+        templates={printTemplates} 
+      />
     </AppShell>
   );
 }

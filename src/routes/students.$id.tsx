@@ -4,7 +4,7 @@ import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
 import { EducationalStage, STAGE_LIST } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
-import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus, RefreshCw, Sun, Sunset, Sparkles, CheckCircle2 } from "lucide-react";
+import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus, RefreshCw, Sun, Sunset, Sparkles, CheckCircle2, Check, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialTimeline } from "@/components/financial-components";
@@ -164,8 +164,37 @@ function EditStudentModal({ isOpen, onClose, student }: { isOpen: boolean, onClo
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-xs font-extrabold text-foreground">ملاحظات طبية / أمراض مزمنة / حساسية</label>
-                <textarea value={formData.medicalNotes} onChange={e => setFormData({...formData, medicalNotes: e.target.value})} rows={3} className="w-full rounded-xl border border-border/80 bg-background/80 p-3.5 text-sm font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 resize-none"></textarea>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-extrabold text-foreground">ملاحظات طبية / أمراض مزمنة / حساسية</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isCurrentlyHealthy = formData.medicalNotes === "سليم" || formData.medicalNotes === "سليم معافى";
+                      setFormData({ ...formData, medicalNotes: isCurrentlyHealthy ? "" : "سليم" });
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+                      formData.medicalNotes === "سليم" || formData.medicalNotes === "سليم معافى"
+                        ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+                        : "bg-muted border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded flex items-center justify-center ${
+                      formData.medicalNotes === "سليم" || formData.medicalNotes === "سليم معافى"
+                        ? "bg-emerald-600 text-white"
+                        : "border border-muted-foreground/50 bg-background"
+                    }`}>
+                      {(formData.medicalNotes === "سليم" || formData.medicalNotes === "سليم معافى") && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                    </div>
+                    <span>سليم (لائق طبياً)</span>
+                  </button>
+                </div>
+                <textarea 
+                  value={formData.medicalNotes} 
+                  onChange={e => setFormData({...formData, medicalNotes: e.target.value})} 
+                  rows={2} 
+                  placeholder="اكتب الملاحظات الطبية أو انقر على خيار (سليم) بالأعلى..."
+                  className="w-full rounded-xl border border-border/80 bg-background/80 p-3 text-sm font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 resize-none"
+                ></textarea>
               </div>
 
               <div className="md:col-span-2 border-b border-border/60 pb-2.5 mb-1 mt-3 flex items-center justify-between">
@@ -258,13 +287,16 @@ function StudentProfile() {
     currency, allStudents, allStudentEnrollments, activeStageStudents, allInvoices, allPayments, allClinicVisits, allDisciplineIncidents, 
     allSections, activeStageFeeStructures, addInvoice, addPayment, allTextbooks, 
     allTextbookDistributions, transportSubscriptions, transportRoutes,
-    addTransportSubscription, updateTransportSubscription, deleteTransportSubscription
+    addTransportSubscription, updateTransportSubscription, deleteTransportSubscription,
+    distributeTextbook, removeDistribution, allInventoryItems
   } = useGlobalStore();
 
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [profileActiveTerm, setProfileActiveTerm] = useState<string>("الفصل الأول");
+  const [isProfileReceiptOpen, setIsProfileReceiptOpen] = useState(false);
   
   const [isTransportModalOpen, setIsTransportModalOpen] = useState(false);
   const [transportForm, setTransportForm] = useState({
@@ -281,10 +313,12 @@ function StudentProfile() {
   const [paymentData, setPaymentData] = useState({
     invoiceId: "",
     amount: 0,
-    method: "cash" as "cash" | "bank_transfer" | "card" | "cheque"
+    method: "cash" as "cash" | "bank_transfer" | "card" | "cheque" | "bankak",
+    bankakRef: "",
   });
 
-  const student = useMemo(() => {
+
+  const student = useMemo((): Student | undefined => {
     // 1. Direct match in allStudents
     const direct = allStudents.find((s) => s.id === id);
     if (direct) return direct;
@@ -294,14 +328,28 @@ function StudentProfile() {
     if (enrollment) {
       const baseStudent = allStudents.find((s) => s.id === enrollment.studentId);
       if (baseStudent) {
-        return { ...baseStudent, ...enrollment, id: baseStudent.id, enrollmentId: enrollment.id };
+        return { ...baseStudent, ...enrollment, id: baseStudent.id } as Student;
       }
-      return { ...enrollment, studentId: enrollment.studentId || enrollment.id };
+      return {
+        ...enrollment,
+        id: enrollment.studentId || enrollment.id,
+        name: "طالب مسجل",
+        nationalId: "1000000000",
+        dob: "2015-01-01",
+        gender: "ذكر",
+        grade: enrollment.grade,
+        stage: enrollment.stage,
+        guardianName: "ولي الأمر",
+        guardianRelation: "أب",
+        guardianPhone: "0500000000",
+        address: "العنوان",
+        medicalNotes: "سليم",
+      } as unknown as Student;
     }
 
     // 3. Match in activeStageStudents
     const activeMatch = activeStageStudents?.find((s: any) => s.id === id || s.studentId === id || s.nationalId === id);
-    if (activeMatch) return activeMatch;
+    if (activeMatch) return activeMatch as Student;
 
     return undefined;
   }, [id, allStudents, allStudentEnrollments, activeStageStudents]);
@@ -378,8 +426,63 @@ function StudentProfile() {
     }
   };
 
+  const handleGenerateStandardInstallments = () => {
+    if (!student) return;
+    const baseTuition = 120000;
+    const registration = Math.round(baseTuition * 0.40);
+    const installmentNov = Math.round(baseTuition * 0.30);
+    const installmentFeb = Math.round(baseTuition * 0.30);
+    const currentYear = new Date().getFullYear();
+
+    addInvoice({
+      studentId: student.id,
+      studentName: student.name,
+      stage: student.stage,
+      title: "قسط التسجيل والقبول (40%)",
+      amount: registration,
+      dueDate: `${currentYear}-09-01`,
+      issueDate: `${currentYear}-08-15`,
+      category: "tuition" as any
+    });
+
+    addInvoice({
+      studentId: student.id,
+      studentName: student.name,
+      stage: student.stage,
+      title: "القسط الدراسي الثاني - استحقاق نوفمبر (30%)",
+      amount: installmentNov,
+      dueDate: `${currentYear}-11-15`,
+      issueDate: `${currentYear}-08-15`,
+      category: "tuition" as any
+    });
+
+    addInvoice({
+      studentId: student.id,
+      studentName: student.name,
+      stage: student.stage,
+      title: "القسط الدراسي الثالث - استحقاق فبراير (30%)",
+      amount: installmentFeb,
+      dueDate: `${currentYear + 1}-02-15`,
+      issueDate: `${currentYear}-08-15`,
+      category: "tuition" as any
+    });
+
+    addInvoice({
+      studentId: student.id,
+      studentName: student.name,
+      stage: student.stage,
+      title: "رسوم الكتب المدرسية والزي الموحد",
+      amount: 25000,
+      dueDate: `${currentYear}-09-10`,
+      issueDate: `${currentYear}-08-15`,
+      category: "activities" as any
+    });
+
+    toast.success("تم توليد خطة الأقساط النموذجية للمدارس الخاصة بنجاح!");
+  };
+
   const studentTextbooks = useMemo(() => {
-    return student ? allTextbooks.filter(tb => tb.gradeId === student.grade) : [];
+    return student ? allTextbooks.filter(tb => tb.gradeId === student.grade || tb.grade === student.grade) : [];
   }, [allTextbooks, student]);
   
   const groupedTextbooks = useMemo(() => {
@@ -422,7 +525,7 @@ function StudentProfile() {
       type: "expense" as const, // For student, an invoice is a charge (negative impact on their balance)
       currency
     }));
-    const payments = allPayments.filter(p => studentIds.has(p.studentId)).map(p => ({
+    const payments = allPayments.filter(p => !!p.studentId && studentIds.has(p.studentId)).map(p => ({
       id: `pay-${p.id}`,
       date: p.date,
       title: `سداد دفعة`,
@@ -820,23 +923,52 @@ function StudentProfile() {
             <div id="financial-section" className="space-y-6">
               
               {/* Manual Payment Action */}
-              <div className="flex gap-3 items-center justify-between bg-primary/5 p-4 rounded-3xl border border-primary/20 shadow-sm glass">
+              <div className="flex flex-wrap gap-3 items-center justify-between bg-primary/5 p-4 rounded-3xl border border-primary/20 shadow-sm glass">
                 <div>
-                  <h3 className="font-bold text-primary flex items-center gap-2"><CreditCard className="h-5 w-5" /> تخصيص الدفعات اليدوي</h3>
-                  <p className="text-sm text-muted-foreground mt-1">يمكنك اختيار قسط أو رسم محدد لسداده.</p>
+                  <h3 className="font-bold text-primary flex items-center gap-2"><CreditCard className="h-5 w-5" /> تخصيص الدفعات والمطالبات</h3>
+                  <p className="text-sm text-muted-foreground mt-1">إصدار فواتير الرسوم، تخصيص الأقساط، ومتابعة المطالبات عبر واتساب.</p>
                 </div>
-                <button 
-                  onClick={() => setIsNewInvoiceOpen(true)}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-background border border-primary/30 px-4 text-sm font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-sm"
-                >
-                  <Plus className="h-4 w-4" /> إصدار فاتورة / غرامة
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {totalDue > 0 && (
+                    <a
+                      href={`https://wa.me/${(student.guardianPhone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                        `السلام عليكم ورحمة الله وبركاته،\n` +
+                        `السيد ولي أمر الطالب/ة: ${student.name} المحترم،\n` +
+                        `تحية طيبة وبعد، نود تذكيركم بأن إجمالي الرصيد المالي المتبقي للرسوم المدرسية هو: ${totalDue.toLocaleString()} ${currency}.\n` +
+                        `الأقساط والرسوم المستحقة حالياً:\n` +
+                        studentInvoices.filter(i => (i.amount - (i.paid || 0)) > 0).map(i => `• ${i.title}: ${(i.amount - (i.paid || 0)).toLocaleString()} ${currency}`).join("\n") +
+                        `\n\nنرجو التكرم بسداد المبلغ نقداً في إدارة المدرسة أو بالتحويل عبر تطبيق بنكك إلى حساب المدرسة رقم (1234567 - بنك الخرطوم) مع تزويدنا برقم الإشعار.\nشاكرين تعاونكم الكريم.\nإدارة المدرسة`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-9 items-center gap-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 px-4 text-xs font-black transition-all shadow-sm active:scale-95"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span>مطالبة واتساب لولي الأمر</span>
+                    </a>
+                  )}
+                  <button 
+                    onClick={() => setIsNewInvoiceOpen(true)}
+                    className="inline-flex h-9 items-center gap-2 rounded-xl bg-background border border-primary/30 px-4 text-xs font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" /> إصدار فاتورة / غرامة
+                  </button>
+                </div>
               </div>
 
               {/* Installments & Invoices */}
               <PageCard title="الخطة المالية والأقساط" className="shadow-sm">
               {studentInvoices.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد رسوم أو فواتير مسجلة للطالب.</div>
+                <div className="text-center py-10 border border-dashed border-border/60 rounded-3xl p-6 space-y-3 bg-muted/10">
+                  <div className="text-muted-foreground font-bold text-sm">لا توجد رسوم أو فواتير مسجلة للطالب حتى الآن.</div>
+                  <button
+                    onClick={handleGenerateStandardInstallments}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md transition-all active:scale-95"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span>إنشاء خطة الأقساط المعتمدة (40% تسجيل، 30% نوفمبر، 30% فبراير + الكتب والزي)</span>
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {/* Group by academic year or category, here we just list them nicely */}
@@ -936,38 +1068,261 @@ function StudentProfile() {
               </PageCard>
             </div>
 
-            {/* Books Section */}
-            <PageCard title="المقررات الدراسية المستلمة" className="shadow-sm">
+            {/* Interactive Books & Curricula Handover Section */}
+            <PageCard className="shadow-sm border-border/80">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-foreground">المقررات والكتب الدراسية (العهدة المدرسية)</h3>
+                    <p className="text-xs text-muted-foreground">متابعة تسليم كتب صف الطالب والتكامل اللحظي مع المستودع</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileReceiptOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 py-1.5 text-xs font-black text-foreground hover:bg-accent transition-all shadow-sm active:scale-[0.98]"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-primary" />
+                    <span>طباعة سند العهدة</span>
+                  </button>
+                </div>
+              </div>
+
               {studentTextbooks.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl">لا توجد مقررات دراسية مسجلة لصف الطالب.</div>
+                <div className="text-center py-8 text-muted-foreground font-bold border border-dashed border-border/50 rounded-2xl my-4">
+                  لا توجد مقررات دراسية مسجلة لصف الطالب.
+                </div>
               ) : (
-                <div className="space-y-6">
-                  {Object.entries(groupedTextbooks).sort(([a], [b]) => a.localeCompare(b)).map(([term, books]) => (
-                    <div key={term} className="space-y-3">
-                      <h4 className="font-bold text-primary border-b border-border/50 pb-2">{term}</h4>
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        {books.map(tb => {
-                          const isReceived = allTextbookDistributions.some(d => d.studentId === student.id && d.textbookId === tb.id);
-                          return (
-                            <div key={tb.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isReceived ? 'border-success/30 bg-success/5' : 'border-border/50 bg-background'} transition-colors`}>
-                              <div className={`p-2 rounded-lg ${isReceived ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
-                                {isReceived ? <ShieldCheck className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
-                              </div>
-                              <div>
-                                <p className="font-bold text-sm leading-tight">{tb.title}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">{tb.subject}</p>
-                              </div>
-                              {isReceived ? (
-                                <span className="mr-auto text-xs font-bold text-success bg-success/10 px-2 py-1 rounded-full">مستلم</span>
-                              ) : (
-                                <span className="mr-auto text-xs font-bold text-muted-foreground bg-muted px-2 py-1 rounded-full">غير مستلم</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-5 pt-4">
+                  {/* Progress & Stats Banner */}
+                  {(() => {
+                    const studentDistributions = allTextbookDistributions.filter(d => d.studentId === student.id);
+                    const receivedCount = studentDistributions.filter(d => studentTextbooks.some(b => b.id === d.textbookId)).length;
+                    const totalCount = studentTextbooks.length;
+                    const remainingCount = Math.max(0, totalCount - receivedCount);
+                    const percent = totalCount > 0 ? Math.round((receivedCount / totalCount) * 100) : 0;
+                    const isComplete = remainingCount === 0;
+
+                    const handleGiveBook = (tb: any) => {
+                      distributeTextbook({
+                        studentId: student.id,
+                        textbookId: tb.id,
+                        stage: student.stage,
+                        term: tb.term || profileActiveTerm,
+                        academicYearId: student.academicYearId,
+                        condition: "جديد",
+                        issuedBy: "أمين المستودع المدرسي",
+                        receivedByGuardian: true,
+                      });
+                      toast.success(`تم تسليم كتاب "${tb.title}" للطالب وتحديث رصيد المستودع.`);
+                    };
+
+                    const handleReturnBook = (tb: any, distId: string) => {
+                      removeDistribution(distId);
+                      toast.success(`تم استرجاع كتاب "${tb.title}" وإعادته للمستودع.`);
+                    };
+
+                    const handleDeliverAll = () => {
+                      const missing = studentTextbooks.filter(tb => !studentDistributions.some(d => d.textbookId === tb.id));
+                      if (missing.length === 0) {
+                        toast.info("جميع المقررات مستلمة بالفعل لهذا الطالب!");
+                        return;
+                      }
+                      missing.forEach(tb => {
+                        distributeTextbook({
+                          studentId: student.id,
+                          textbookId: tb.id,
+                          stage: student.stage,
+                          term: tb.term || "الفصل الأول",
+                          academicYearId: student.academicYearId,
+                          condition: "جديد",
+                          issuedBy: "أمين المستودع المدرسي",
+                          receivedByGuardian: true,
+                        });
+                      });
+                      toast.success(`تم صرف وتسليم ${missing.length} كتب دراسية وتحديث المستودع!`);
+                    };
+
+                    const handleReturnAll = () => {
+                      if (studentDistributions.length === 0) {
+                        toast.info("لا توجد كتب مستلمة لإرجاعها.");
+                        return;
+                      }
+                      if (confirm(`هل أنت متأكد من استرجاع كامل عهدة الكتب (${studentDistributions.length} كتب) للمستودع؟`)) {
+                        studentDistributions.forEach(d => removeDistribution(d.id));
+                        toast.success(`تم استرجاع ${studentDistributions.length} كتب وإعادتها للمستودع.`);
+                      }
+                    };
+
+                    return (
+                      <>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="rounded-2xl border border-border/70 bg-card/60 p-3 text-center">
+                            <span className="text-xs font-bold text-muted-foreground">الكتب المقررة</span>
+                            <p className="text-xl font-black mt-0.5">{totalCount}</p>
+                          </div>
+                          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">المستلم</span>
+                            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{receivedCount}</p>
+                          </div>
+                          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-3 text-center">
+                            <span className="text-xs font-bold text-rose-600 dark:text-rose-400">المتبقي</span>
+                            <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5">{remainingCount}</p>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar & Buttons */}
+                        <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/60">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-extrabold text-foreground">نسبة استلام العهدة المدرسية</span>
+                            <span className={`font-black ${isComplete ? 'text-emerald-600' : 'text-primary'}`}>{percent}%</span>
+                          </div>
+                          <div className="h-2.5 w-full rounded-full bg-muted/60 overflow-hidden border border-border/40">
+                            <div
+                              className={`h-full transition-all duration-300 ${isComplete ? 'bg-emerald-500' : 'bg-primary'}`}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 pt-2">
+                            {!isComplete && (
+                              <button
+                                type="button"
+                                onClick={handleDeliverAll}
+                                className="rounded-xl bg-primary px-3.5 py-1.5 text-xs font-black text-primary-foreground hover:opacity-95 shadow-sm active:scale-[0.98]"
+                              >
+                                تسليم كافة المتبقي فوراً
+                              </button>
+                            )}
+                            {receivedCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleReturnAll}
+                                className="rounded-xl border border-rose-500/30 px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-500/10 transition-colors active:scale-[0.98]"
+                              >
+                                إرجاع الكل إلى المستودع
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Term Switcher */}
+                        <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
+                          {["الفصل الأول", "الفصل الثاني", "الفصل الثالث", "all"].map((term) => (
+                            <button
+                              key={term}
+                              type="button"
+                              onClick={() => setProfileActiveTerm(term)}
+                              className={`rounded-xl px-3.5 py-1 text-xs font-black transition-all ${
+                                profileActiveTerm === term
+                                  ? "bg-primary text-primary-foreground shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              }`}
+                            >
+                              {term === "all" ? "جميع الفصول" : term}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Books Grid */}
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          {studentTextbooks
+                            .filter(tb => profileActiveTerm === "all" ? true : (!tb.term || tb.term === profileActiveTerm || tb.term === "all"))
+                            .map((tb) => {
+                              const distribution = studentDistributions.find(d => d.textbookId === tb.id);
+                              const isReceived = !!distribution;
+
+                              const invItem = allInventoryItems.find(
+                                i => (tb.inventoryItemId && i.id === tb.inventoryItemId) || i.name.includes(tb.title)
+                              );
+                              const availableStock = invItem ? invItem.quantity : tb.copies;
+
+                              return (
+                                <div
+                                  key={tb.id}
+                                  className={`flex flex-col justify-between p-3.5 rounded-2xl border transition-all ${
+                                    isReceived
+                                      ? "border-emerald-500/30 bg-emerald-500/5"
+                                      : "border-border/60 bg-background/60 hover:border-primary/40"
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div
+                                      className={`p-2.5 rounded-xl shrink-0 ${
+                                        isReceived
+                                          ? "bg-emerald-500/15 text-emerald-600 border border-emerald-500/20"
+                                          : "bg-muted text-muted-foreground"
+                                      }`}
+                                    >
+                                      {isReceived ? <ShieldCheck className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <p className="font-black text-sm text-foreground">{tb.title}</p>
+                                        <span
+                                          className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                                            isReceived
+                                              ? "bg-emerald-500/15 text-emerald-600"
+                                              : "bg-muted text-muted-foreground"
+                                          }`}
+                                        >
+                                          {isReceived ? "مستلم" : "غير مستلم"}
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {tb.subject} • {tb.term || "الفصل الأول"} {tb.edition ? `• طبعة ${tb.edition}` : ""}
+                                      </p>
+                                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground pt-0.5">
+                                        <span>رصيد المستودع:</span>
+                                        <strong className={availableStock > 10 ? "text-emerald-600" : "text-amber-600"}>
+                                          {availableStock} نسخة
+                                        </strong>
+                                        {isReceived && (
+                                          <>
+                                            <span>•</span>
+                                            <span className="text-emerald-600 font-bold">بتاريخ {distribution.date}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 pt-2.5 border-t border-border/40 flex justify-end gap-2">
+                                    {isReceived ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReturnBook(tb, distribution.id)}
+                                        className="rounded-xl border border-rose-500/30 px-3 py-1 text-xs font-bold text-rose-600 hover:bg-rose-500/10 transition-colors active:scale-[0.98]"
+                                      >
+                                        إرجاع للمستودع
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleGiveBook(tb)}
+                                        disabled={availableStock <= 0}
+                                        className={`rounded-xl px-3.5 py-1 text-xs font-black transition-all ${
+                                          availableStock > 0
+                                            ? "bg-primary text-primary-foreground hover:opacity-95 shadow-sm active:scale-[0.98]"
+                                            : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                                        }`}
+                                      >
+                                        {availableStock > 0 ? "تسليم الطالب" : "غير متوفر بالمستودع"}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </PageCard>
@@ -1050,7 +1405,17 @@ function StudentProfile() {
             </div>
             <form onSubmit={(e) => {
               e.preventDefault();
-              addPayment({ invoiceId: paymentData.invoiceId, amount: paymentData.amount, method: paymentData.method as any, date: new Date().toISOString() });
+              if (paymentData.method === "bankak" && !paymentData.bankakRef) {
+                toast.error("الرجاء إدخال رقم إشعار بنكك");
+                return;
+              }
+              addPayment({ 
+                invoiceId: paymentData.invoiceId, 
+                amount: paymentData.amount, 
+                method: (paymentData.method === "bankak" ? "bank_transfer" : paymentData.method) as any, 
+                date: new Date().toISOString(),
+                ...(paymentData.bankakRef ? { referenceNo: paymentData.bankakRef, notes: `تحويل بنكك - رقم الإشعار: ${paymentData.bankakRef}` } : {})
+              } as any);
               toast.success("تم تسجيل الدفعة بنجاح");
               setIsPaymentOpen(false);
             }} className="p-6 space-y-4">
@@ -1060,13 +1425,66 @@ function StudentProfile() {
               </div>
               <div>
                 <label className="mb-2 block text-xs font-extrabold text-foreground">طريقة الدفع</label>
-                <select required value={paymentData.method} onChange={e => setPaymentData({...paymentData, method: e.target.value as any})} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15 transition-all">
-                  <option value="cash">نقدي (كاش)</option>
-                  <option value="card">شبكة (مدى/بطاقة ائتمانية)</option>
-                  <option value="bank_transfer">حوالة بنكية</option>
-                  <option value="cheque">شيك</option>
-                </select>
+                <div className="grid grid-cols-5 gap-2">
+                  {([
+                    { id: "cash", label: "نقدي", icon: "💵" },
+                    { id: "bankak", label: "بنكك", icon: "📱" },
+                    { id: "card", label: "مدى/بطاقة", icon: "💳" },
+                    { id: "bank_transfer", label: "حوالة بنكية", icon: "🏦" },
+                    { id: "cheque", label: "شيك", icon: "📄" },
+                  ] as const).map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setPaymentData({...paymentData, method: m.id as any})}
+                      className={`p-2 rounded-xl border text-center font-black transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                        paymentData.method === m.id
+                          ? "border-success bg-success/10 text-success shadow-xs"
+                          : "border-border/70 bg-card hover:bg-muted text-foreground"
+                      }`}
+                    >
+                      <span className="text-base">{m.icon}</span>
+                      <span className="text-[9px]">{m.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
+              {/* Bankak Reference - shown only for Bankak method */}
+              {paymentData.method === "bankak" && (
+                <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/20">
+                  <label className="block text-xs font-extrabold text-emerald-700 dark:text-emerald-400 mb-1">رقم إشعار بنكك (Bankak Ref) *</label>
+                  <input
+                    type="text"
+                    value={paymentData.bankakRef}
+                    onChange={e => setPaymentData({...paymentData, bankakRef: e.target.value})}
+                    placeholder="مثال: BNK-2024-XXXXX"
+                    className="h-11 w-full rounded-xl border border-emerald-500/30 bg-background/80 px-4 text-sm font-black focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 transition-all tabular-nums"
+                    dir="ltr"
+                    required
+                  />
+                </div>
+              )}
+              {/* WhatsApp Reminder to Guardian */}
+              {student && (
+                <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/15">
+                  <a
+                    href={`https://wa.me/${(student.guardianPhone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                      `السلام عليكم ورحمة الله وبركاته\n` +
+                      `ولي أمر الطالب/ة: ${student.name}\n` +
+                      `نفيدكم بتأكيد استلام دفعة مالية بمبلغ: ${paymentData.amount.toLocaleString()} ${currency}\n` +
+                      `طريقة الدفع: ${paymentData.method === "bankak" ? "تحويل بنكك" : paymentData.method === "cash" ? "نقدي" : "تحويل بنكي"}\n` +
+                      `${paymentData.bankakRef ? `رقم الإشعار: ${paymentData.bankakRef}\n` : ""}` +
+                      `جزاكم الله خيراً - إدارة المدرسة`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 text-xs font-black text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    <span className="text-base">💬</span>
+                    إرسال إيصال الدفعة عبر واتساب لولي الأمر ({student.guardianName})
+                  </a>
+                </div>
+              )}
               <div className="pt-3 flex gap-3 justify-end items-center border-t border-border/50">
                 <button type="button" onClick={() => setIsPaymentOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold hover:bg-accent transition-colors border border-border/80 active:scale-[0.98]">إلغاء</button>
                 <button type="submit" className="rounded-xl bg-success px-7 py-2.5 text-sm font-extrabold text-white hover:bg-success/90 transition-all shadow-md active:scale-[0.98]">حفظ الدفعة</button>
@@ -1075,6 +1493,7 @@ function StudentProfile() {
           </div>
         </div>
       )}
+
 
       {/* Transport Subscription Modal */}
       {isTransportModalOpen && (
@@ -1194,6 +1613,140 @@ function StudentProfile() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Printable Textbook Handover Voucher Modal */}
+      {isProfileReceiptOpen && student && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 flex flex-col max-h-[92vh]">
+            <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
+              <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+                <Printer className="h-4 w-4 text-primary" />
+                معاينة وطباعة سند استلام عهدة المقررات المدرسية
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsProfileReceiptOpen(false)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-8 overflow-y-auto space-y-6 bg-white text-slate-900 dark:bg-card dark:text-foreground">
+              <div className="border-b-2 border-slate-800 dark:border-border pb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-black tracking-tight">مدارس المنهاج الأهلية النموذجية</h2>
+                  <p className="text-xs text-slate-500 dark:text-muted-foreground font-bold">
+                    قسم المستودع والوسائل التعليمية • العام الدراسي 2026/2027
+                  </p>
+                </div>
+                <div className="text-left text-xs font-bold text-slate-600 dark:text-muted-foreground">
+                  <div>التاريخ: {new Date().toLocaleDateString("ar-SA")}</div>
+                  <div>الرقم المرجعي: BK-{student.id}-{Date.now().toString().slice(-4)}</div>
+                </div>
+              </div>
+
+              <div className="text-center py-2">
+                <h3 className="text-base font-black underline underline-offset-8">
+                  سند تسليم عهدة الكتب والمقررات المدرسية
+                </h3>
+              </div>
+
+              <div className="rounded-xl border border-slate-300 dark:border-border p-4 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">اسم الطالب: </span>
+                  <span className="font-black">{student.name}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">رقم الهوية: </span>
+                  <span className="font-black tabular-nums">{student.nationalId || student.id}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">الصف الدراسي: </span>
+                  <span className="font-black">{student.grade}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">ولي الأمر: </span>
+                  <span className="font-black">{student.guardianName || "-"}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-xs font-black">المقررات والكتب المسلمة في هذه العهدة:</h4>
+                <table className="w-full text-xs border border-slate-300 dark:border-border text-center">
+                  <thead>
+                    <tr className="bg-slate-100 dark:bg-muted font-black border-b border-slate-300 dark:border-border">
+                      <th className="p-2 border-r border-slate-300 dark:border-border">م</th>
+                      <th className="p-2 border-r border-slate-300 dark:border-border text-right">عنوان المقرر الدراسي</th>
+                      <th className="p-2 border-r border-slate-300 dark:border-border">الفصل</th>
+                      <th className="p-2 border-r border-slate-300 dark:border-border">الحالة</th>
+                      <th className="p-2">تاريخ الصرف</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allTextbookDistributions
+                      .filter(d => d.studentId === student.id)
+                      .map((dist, idx) => {
+                        const tb = allTextbooks.find(t => t.id === dist.textbookId);
+                        return (
+                          <tr key={dist.id} className="border-b border-slate-200 dark:border-border/50">
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50 font-bold">{idx + 1}</td>
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50 text-right font-black">
+                              {tb?.title || "كتاب دراسي"} {tb?.edition ? `(${tb.edition})` : ""}
+                            </td>
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50">{dist.term || tb?.term || "الفصل 1"}</td>
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50 font-bold text-emerald-600">جديد</td>
+                            <td className="p-2 font-bold tabular-nums">{dist.date}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 dark:bg-muted/30 p-3 text-[11px] text-slate-600 dark:text-muted-foreground leading-relaxed border border-slate-200 dark:border-border/60">
+                <p className="font-bold">إقرار واستلام العهدة:</p>
+                <p>
+                  أقر أنا ولي أمر الطالب الموضح أعلاه بأنني استلمت كامل الكتب المدرسية المبينة بالجدول في حالة سليمة وجديدة، وأتعهد بالمحافظة عليها ومتابعة الطالب دراسياً وفق التعليمات المعتمدة.
+                </p>
+              </div>
+
+              <div className="pt-6 grid grid-cols-3 gap-6 text-center text-xs font-black">
+                <div>
+                  <p className="mb-8">توقيع ولي الأمر</p>
+                  <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">.......................</p>
+                </div>
+                <div>
+                  <p className="mb-8">أمين المستودع المدرسي</p>
+                  <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">أ. أمين المستودع</p>
+                </div>
+                <div>
+                  <p className="mb-8">ختم إدارة المدرسة</p>
+                  <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">.......................</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border/50 flex justify-end gap-2.5 bg-muted/10 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsProfileReceiptOpen(false)}
+                className="rounded-xl border border-border/80 px-4 py-2 text-xs font-bold hover:bg-muted"
+              >
+                إغلاق
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-black text-primary-foreground shadow-md shadow-primary/20 hover:opacity-95 flex items-center gap-1.5"
+              >
+                <Printer className="h-4 w-4" />
+                <span>طباعة السند</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

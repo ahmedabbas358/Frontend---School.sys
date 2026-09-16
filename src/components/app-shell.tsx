@@ -101,18 +101,18 @@ const NAV: Item[] = [
         { to: "/academic/years", label: "السنوات الدراسية", icon: CalendarDays, badge: "التقويم" },
         { to: "/academic/classes", label: "الصفوف والشعب", icon: Layers3, badge: "الفصول" },
         { to: "/academic/subjects", label: "المواد التعليمية", icon: BookOpen, badge: "المناهج" },
-        { to: "/academic/assignments", label: "الإسناد التدريسي", icon: UserCog, badge: "الكادر" },
-        { to: "/schedule", label: "الجدول الأسبوعي", icon: CalendarRange, badge: "الحصص" },
       ],
     },
   },
   {
     kind: "group",
     group: {
-      label: "المعلمون والكادر",
+      label: "الهيئة التعليمية (المعلمون)",
       icon: UserCog,
       items: [
-        { to: "/teachers", label: "قائمة المعلمين", icon: UserCog, badge: "الكادر" },
+        { to: "/teachers", label: "قائمة المعلمين والأساتذة", icon: Users, badge: "الكادر" },
+        { to: "/academic/assignments", label: "الإسناد التدريسي للكوادر", icon: UserCog, badge: "إسناد" },
+        { to: "/schedule", label: "الجدول الأسبوعي للحصص", icon: CalendarRange, badge: "مباشر" },
       ],
     },
   },
@@ -120,12 +120,10 @@ const NAV: Item[] = [
     kind: "group",
     group: {
       label: "الحضور والانضباط",
-      icon: ShieldAlert,
+      icon: UserCheck,
       items: [
-        { to: "/supervisor", label: "بوابة المشرفين الرئيسية", icon: ShieldCheck, badge: "جديد" },
-        { to: "/supervisor/classes", label: "تطبيق المشرفين (رصد الفصول)", icon: Smartphone, badge: "هاتف" },
-        { to: "/supervisor/gate", label: "بوابة تحضير العمال والكادر", icon: UserCheck, badge: "استقبال" },
-        { to: "/attendance/take", label: "رصد الحضور (بالحصص)", icon: Clock, badge: "مباشر" },
+        { to: "/attendance", label: "مركز وسجل الحضور الموحد", icon: UserCheck, badge: "شامل" },
+        { to: "/attendance/take", label: "رصد الحضور بالحصص", icon: Clock, badge: "مباشر" },
         { to: "/attendance/reports", label: "السجل الأسبوعي والشهري", icon: BarChart3, badge: "تقارير" },
         { to: "/discipline/incidents", label: "المخالفات السلوكية", icon: ShieldAlert, badge: "سجل" },
         { to: "/discipline/merits", label: "النقاط والمكافآت", icon: Sparkles, badge: "تحفيز" },
@@ -190,10 +188,10 @@ const NAV: Item[] = [
       icon: HeartHandshake,
       items: [
         { to: "/hr/dashboard", label: "لوحة الموارد البشرية", icon: BarChart3, badge: "مؤشرات" },
-        { to: "/hr/staff", label: "قائمة الموظفين", icon: Users, badge: "كادر" },
+        { to: "/hr/staff", label: "سجل كافة العاملين والموظفين", icon: Users, badge: "كادر" },
         { to: "/hr/attendance", label: "الحضور والانصراف", icon: Clock, badge: "بصمة" },
+        { to: "/hr/payroll", label: "مسير الرواتب والأجور", icon: DollarSign, badge: "أجور" },
         { to: "/hr/leaves", label: "طلبات الإجازات", icon: CalendarDays, badge: "إجازات" },
-        { to: "/hr/payroll", label: "مسير الرواتب", icon: DollarSign, badge: "شهري" },
         { to: "/hr/org-chart", label: "الهيكل التنظيمي", icon: Layers3, badge: "شجرة" },
         { to: "/hr/evaluations", label: "تقييم الأداء", icon: Sparkles, badge: "KPIs" },
         { to: "/hr/contracts", label: "العقود والوثائق", icon: FileText, badge: "عقود" },
@@ -308,6 +306,7 @@ export function AppShell({
   const [notifOpen, setNotifOpen] = useState(false);
   const [stageOpen, setStageOpen] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const [subGroupMenuOpen, setSubGroupMenuOpen] = useState(false);
   
   const [role] = useState<(typeof ROLES)[number]>(ROLES[0]);
   const { stage, setStage, getStageLabel } = useStage();
@@ -477,8 +476,8 @@ export function AppShell({
       {/* ============ Main Workspace Column ============ */}
       <div className={`${mainMarginClass} transition-all duration-300 min-h-dvh flex flex-col`}>
         
-        {/* Top Navbar */}
-        <header className="sticky top-0 z-30 glass-header shadow-xs">
+        {/* Top Navbar — Clean relative flow without annoying stickiness */}
+        <header className="relative z-20 glass-header border-b border-border/40 shadow-xs">
           <div className="flex h-16 items-center justify-between gap-2 px-3 sm:px-6">
             
             {/* Right: Mobile Toggle & Sidebar Mode Trigger & Search */}
@@ -776,11 +775,11 @@ export function AppShell({
             </div>
           </div>
 
-          {/* Sub Header: Breadcrumbs + Action Bar */}
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-border/40 px-4 py-2.5 sm:px-6 bg-card/30">
-            <div className="min-w-0">
+          {/* Sub Header: Streamlined Breadcrumbs + Sibling Tabs Popover + Action Bar (Natural scrolling) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 px-4 py-2.5 sm:px-6 bg-card/30">
+            <div className="flex items-center flex-wrap gap-2.5 min-w-0">
               {breadcrumb && breadcrumb.length > 0 && (
-                <nav className="mb-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                <nav className="flex items-center gap-1 text-xs text-muted-foreground">
                   {breadcrumb.map((b, i) => (
                     <div key={i} className="flex items-center gap-1.5">
                       {i > 0 && <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground/60" />}
@@ -799,49 +798,87 @@ export function AppShell({
                   ))}
                 </nav>
               )}
-              <h1 className="truncate text-base sm:text-lg font-extrabold tracking-tight text-foreground">{currentLabel}</h1>
+
+              <div className="flex items-center gap-2.5">
+                <h1 className="truncate text-base sm:text-lg font-extrabold tracking-tight text-foreground">{currentLabel}</h1>
+
+                {/* Sleek Category Sub-Section Popover Button — replaces bulky 3rd horizontal bar */}
+                {currentActiveGroup && currentActiveGroup.items.length > 1 && (
+                  <div className="relative inline-flex items-center">
+                    <button
+                      onClick={() => setSubGroupMenuOpen((v) => !v)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-black border border-primary/25 transition-all shadow-xs"
+                      title="استعراض أقسام هذه المجموعة"
+                    >
+                      <currentActiveGroup.icon className="w-3.5 h-3.5" />
+                      <span>{currentActiveGroup.label}</span>
+                      <ChevronDown className={`w-3 h-3 opacity-70 transition-transform duration-200 ${subGroupMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {subGroupMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-border glass-popover p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="px-3 py-1.5 text-[11px] font-bold text-muted-foreground border-b border-border/50 mb-1 flex items-center justify-between">
+                          <span>أقسام: {currentActiveGroup.label}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-extrabold">{currentActiveGroup.items.length} خيارات</span>
+                        </div>
+                        <div className="space-y-1 max-h-64 overflow-y-auto custom-scrollbar p-0.5">
+                          {currentActiveGroup.items.map((leaf) => {
+                            const isCurrent = pathname === leaf.to || (leaf.to !== "/" && pathname.startsWith(leaf.to + "/"));
+                            const SubIcon = leaf.icon || currentActiveGroup.icon;
+                            return (
+                              <Link
+                                key={leaf.to}
+                                to={leaf.to}
+                                onClick={() => setSubGroupMenuOpen(false)}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                                  isCurrent
+                                    ? "bg-primary text-primary-foreground font-black shadow-xs"
+                                    : "hover:bg-accent text-foreground hover:translate-x-[-2px]"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">{leaf.label}</span>
+                                </div>
+                                {leaf.badge && (
+                                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                                    isCurrent ? "bg-white/20 text-white" : "bg-primary/10 text-primary font-bold"
+                                  }`}>
+                                    {leaf.badge}
+                                  </span>
+                                )}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sibling Micro-Pills (Visible on desktop in the same line without taking extra height) */}
+                    <div className="hidden xl:flex items-center gap-1 mr-2 pr-2 border-r border-border/60">
+                      {currentActiveGroup.items.map((leaf) => {
+                        const isCurrent = pathname === leaf.to || (leaf.to !== "/" && pathname.startsWith(leaf.to + "/"));
+                        return (
+                          <Link
+                            key={leaf.to}
+                            to={leaf.to}
+                            className={`px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold transition-all whitespace-nowrap ${
+                              isCurrent
+                                ? "bg-primary text-primary-foreground shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                            }`}
+                          >
+                            {leaf.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
           </div>
-
-          {/* =========================================================
-              Horizontal Sub-Section Tabs Bar for Active Category
-              ========================================================= */}
-          {currentActiveGroup && currentActiveGroup.items.length > 1 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto px-4 py-2 sm:px-6 bg-card/70 border-t border-border/40 backdrop-blur-md custom-scrollbar animate-in fade-in duration-200">
-              <div className="flex items-center gap-1.5 shrink-0 pl-2 text-xs font-black text-muted-foreground border-l border-border/60 ml-1">
-                <currentActiveGroup.icon className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="hidden sm:inline">{currentActiveGroup.label}:</span>
-              </div>
-              <div className="flex items-center gap-1.5 min-w-0">
-                {currentActiveGroup.items.map((leaf) => {
-                  const isCurrent = pathname === leaf.to || (leaf.to !== "/" && pathname.startsWith(leaf.to + "/"));
-                  const SubIcon = leaf.icon || currentActiveGroup.icon;
-                  return (
-                    <Link
-                      key={leaf.to}
-                      to={leaf.to}
-                      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all duration-200 ${
-                        isCurrent
-                          ? "bg-primary text-primary-foreground shadow-sm glow-primary scale-[1.02]"
-                          : "bg-muted/40 text-muted-foreground hover:bg-accent hover:text-foreground border border-border/40"
-                      }`}
-                    >
-                      <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? "text-white" : "text-primary opacity-80"}`} />
-                      <span>{leaf.label}</span>
-                      {leaf.badge && (
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                          isCurrent ? "bg-white/25 text-white" : "bg-primary/10 text-primary"
-                        }`}>
-                          {leaf.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </header>
 
         {/* Dynamic Page Content */}
@@ -877,7 +914,8 @@ export function AppShell({
 }
 
 /* =========================================================
-   Sidebar Component — Expanded, Rail, and Mobile Responsive
+   Sidebar Component — High-End Luxury UI & UX, Ultra-Fluid Controls
+   Expanded, Rail, and Mobile Responsive with Live Search Filter
    ========================================================= */
 
 function Sidebar({
@@ -896,6 +934,38 @@ function Sidebar({
   onClose: () => void;
 }) {
   const { stage, getStageLabel } = useStage();
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [expandAll, setExpandAll] = useState<boolean | null>(null);
+
+  // Live real-time menu search filter
+  const filteredNav = useMemo(() => {
+    const q = sidebarSearch.trim().toLowerCase();
+    if (!q) return NAV;
+
+    return NAV.map((item) => {
+      if (item.kind === "leaf") {
+        return item.label.toLowerCase().includes(q) ? item : null;
+      }
+      const groupMatches = item.group.label.toLowerCase().includes(q);
+      const matchedItems = item.group.items.filter(
+        (sub) =>
+          sub.label.toLowerCase().includes(q) ||
+          (sub.badge && sub.badge.toLowerCase().includes(q))
+      );
+      if (groupMatches || matchedItems.length > 0) {
+        return {
+          kind: "group" as const,
+          group: {
+            ...item.group,
+            items: groupMatches ? item.group.items : matchedItems,
+          },
+        };
+      }
+      return null;
+    }).filter(Boolean) as Item[];
+  }, [sidebarSearch]);
+
+  const { currentAcademicYear, activeAcademicTerm } = useGlobalStore();
 
   // Determine width based on mode
   const sidebarWidthClass =
@@ -908,37 +978,40 @@ function Sidebar({
   return (
     <aside
       className={[
-        "fixed inset-y-0 right-0 z-40 bg-[#0f172a] text-slate-100 border-l border-slate-800/80 shadow-2xl",
-        "transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "fixed inset-y-0 right-0 z-40 bg-gradient-to-b from-[#080c16] via-[#0d1527] to-[#060913] text-slate-100 border-l border-slate-800/80 shadow-[0_0_50px_rgba(0,0,0,0.65)]",
+        "transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] flex flex-col",
         sidebarWidthClass,
         mobileOpen ? "!w-72 !translate-x-0" : "",
       ].join(" ")}
       style={{ overflow: mode === "fullscreen" && !mobileOpen ? "hidden" : "visible" }}
     >
       {/* Brand & Mode Switcher Header */}
-      <div className="flex h-16 items-center justify-between border-b border-slate-800/80 px-3.5">
+      <div className="flex h-16 items-center justify-between border-b border-slate-800/80 px-3.5 shrink-0 bg-slate-950/50 backdrop-blur-md">
         {mode === "rail" && !mobileOpen ? (
           <div className="w-full flex flex-col items-center justify-center gap-1">
             <button
               onClick={() => onModeChange("expanded")}
               title="توسيع الشريط الجانبي (كامل)"
-              className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md hover:scale-105 transition-all glow-primary"
+              className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-white/20 hover:scale-105 active:scale-95 transition-all glow-primary"
             >
               <School className="h-5 w-5" />
             </button>
           </div>
         ) : (
           <>
-            <Link to="/" onClick={onNavigate} className="flex items-center gap-3 min-w-0">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md glow-primary shrink-0">
+            <Link to="/" onClick={onNavigate} className="flex items-center gap-3 min-w-0 group">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-white/20 group-hover:scale-105 transition-all shrink-0">
                 <School className="h-5 w-5" />
               </div>
               <div className="leading-tight min-w-0">
-                <div className="text-sm font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                <div className="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
                   <span className="truncate">منصة مدارس</span>
-                  <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold">Pro</span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-400/30 text-[10px] font-black tracking-wide shadow-xs">Pro</span>
                 </div>
-                <div className="text-[11px] font-bold text-blue-400/90 truncate">{getStageLabel(stage)}</div>
+                <div className="text-[11px] font-extrabold text-blue-400/90 truncate flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-xs animate-pulse" />
+                  <span>{getStageLabel(stage)}</span>
+                </div>
               </div>
             </Link>
 
@@ -946,15 +1019,15 @@ function Sidebar({
               {/* Desktop quick collapse to rail button */}
               <button
                 onClick={() => onModeChange("rail")}
-                className="hidden lg:grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                title="تصغير لوضع الأيقونات"
+                className="hidden lg:grid h-8 w-8 place-items-center rounded-xl bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 hover:text-white border border-slate-700/50 transition-all hover:scale-105 shadow-xs"
+                title="تصغير لوضع الأيقونات (Ctrl+B)"
               >
                 <Minimize2 className="h-4 w-4" />
               </button>
               
               {/* Mobile close button */}
               <button
-                className="lg:hidden grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="lg:hidden grid h-8 w-8 place-items-center rounded-xl bg-slate-800/60 hover:bg-slate-700/80 text-slate-400 hover:text-white border border-slate-700/50 transition-all shadow-xs"
                 onClick={onClose}
                 aria-label="إغلاق"
               >
@@ -965,86 +1038,206 @@ function Sidebar({
         )}
       </div>
 
-      {/* Navigation List */}
-      <nav className="h-[calc(100dvh-4rem)] space-y-1.5 overflow-y-auto px-2.5 py-3.5 custom-scrollbar">
-        {NAV.map((item, idx) => {
-          if (item.kind === "leaf") {
-            const active = pathname === item.to;
-            const Icon = item.icon;
+      {/* Live Search & Quick Filter Controls (When Expanded or on Mobile) */}
+      {(mode === "expanded" || mobileOpen) && (
+        <div className="px-3 pt-2.5 pb-1 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={sidebarSearch}
+                onChange={(e) => setSidebarSearch(e.target.value)}
+                placeholder="تصفية الأقسام والقوائم..."
+                className="w-full h-8.5 pr-8 pl-6 bg-slate-900/90 hover:bg-slate-900 text-xs font-semibold text-slate-200 placeholder-slate-500 rounded-xl border border-slate-800 focus:border-blue-500/60 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+              />
+              {sidebarSearch && (
+                <button
+                  onClick={() => setSidebarSearch("")}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+                  title="مسح التصفية"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setExpandAll((prev) => (prev ? false : true))}
+              className="h-8.5 px-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-[11px] font-bold transition-all shrink-0 flex items-center gap-1"
+              title={expandAll ? "طي جميع الأقسام" : "فتح جميع الأقسام"}
+            >
+              <Layers3 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{expandAll ? "طي" : "توسيع"}</span>
+            </button>
+          </div>
+          {sidebarSearch && (
+            <div className="mt-1.5 flex items-center justify-between text-[10px] font-bold text-blue-400 px-1">
+              <span>تصفية: "{sidebarSearch}"</span>
+              <span>{filteredNav.length} مجموعات</span>
+            </div>
+          )}
+        </div>
+      )}
 
-            if (mode === "rail" && !mobileOpen) {
-              return (
-                <div key={item.to} className="relative group/rail-leaf flex justify-center py-1">
-                  <Link
-                    to={item.to}
-                    onClick={onNavigate}
-                    className={[
-                      "grid h-11 w-11 place-items-center rounded-xl transition-all duration-200",
-                      active
-                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-105 glow-primary"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-white hover:scale-105",
-                    ].join(" ")}
-                    title={item.label}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </Link>
-                  {/* Floating tooltip on hover */}
-                  <div className="absolute right-16 top-1/2 -translate-y-1/2 hidden group-hover/rail-leaf:flex items-center z-50 pointer-events-none">
-                    <div className="glass-rail-popover text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 shadow-2xl whitespace-nowrap animate-in fade-in zoom-in-95 duration-150 flex items-center gap-2">
-                      <Icon className="w-3.5 h-3.5 text-blue-400" />
-                      <span>{item.label}</span>
+      {/* Navigation List */}
+      <nav className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-1 custom-scrollbar">
+        {filteredNav.length === 0 ? (
+          <div className="py-8 text-center px-4">
+            <Search className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+            <p className="text-xs font-bold text-slate-400">لا توجد أقسام مطابقة</p>
+            <button
+              onClick={() => setSidebarSearch("")}
+              className="mt-2 text-xs font-bold text-blue-400 hover:underline"
+            >
+              إلغاء التصفية
+            </button>
+          </div>
+        ) : (
+          filteredNav.map((item, idx) => {
+            if (item.kind === "leaf") {
+              const active = pathname === item.to;
+              const Icon = item.icon;
+
+              if (mode === "rail" && !mobileOpen) {
+                return (
+                  <div key={item.to} className="relative group/rail-leaf flex justify-center py-1">
+                    <Link
+                      to={item.to}
+                      onClick={onNavigate}
+                      className={[
+                        "grid h-11 w-11 place-items-center rounded-2xl transition-all duration-200",
+                        active
+                          ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 scale-105 ring-1 ring-white/20"
+                          : "text-slate-400 hover:bg-slate-800/70 hover:text-white hover:scale-105",
+                      ].join(" ")}
+                      title={item.label}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </Link>
+                    {/* Floating tooltip on hover */}
+                    <div className="absolute right-16 top-1/2 -translate-y-1/2 hidden group-hover/rail-leaf:flex items-center z-50 pointer-events-none">
+                      <div className="glass-rail-popover text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 shadow-2xl whitespace-nowrap animate-in fade-in zoom-in-95 duration-150 flex items-center gap-2">
+                        <Icon className="w-3.5 h-3.5 text-blue-400" />
+                        <span>{item.label}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={onNavigate}
+                  className={[
+                    "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-xs font-bold transition-all duration-200",
+                    active
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 border border-blue-400/40 scale-[0.99]"
+                      : "text-slate-300 hover:bg-slate-800/60 hover:text-white hover:translate-x-[-2px]",
+                  ].join(" ")}
+                >
+                  <div className={`p-1.5 rounded-xl shrink-0 transition-colors ${active ? "bg-white/20 text-white" : "bg-slate-800/80 text-slate-400 border border-slate-700/40"}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {item.badge && (
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold shadow-xs ${
+                      active ? "bg-white/25 text-white" : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
               );
             }
 
             return (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={onNavigate}
-                className={[
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200 hover-lift",
-                  active
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold scale-[0.99]"
-                    : "text-slate-300 hover:bg-slate-800/80 hover:text-white",
-                ].join(" ")}
-              >
-                <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
-                <span className="flex-1 truncate">{item.label}</span>
-                {item.badge && (
-                  <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-300">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
+              <SidebarGroupBlock
+                key={`g-${idx}`}
+                group={item.group}
+                pathname={pathname}
+                mode={mode}
+                mobileOpen={mobileOpen}
+                onNavigate={onNavigate}
+                forceOpen={sidebarSearch ? true : expandAll !== null ? expandAll : undefined}
+                searchQuery={sidebarSearch}
+              />
             );
-          }
-
-          return (
-            <SidebarGroupBlock
-              key={`g-${idx}`}
-              group={item.group}
-              pathname={pathname}
-              mode={mode}
-              mobileOpen={mobileOpen}
-              onNavigate={onNavigate}
-            />
-          );
-        })}
-
-        {/* Footer Info (Expanded & Mobile only) */}
-        {(mode === "expanded" || mobileOpen) && (
-          <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-xs">
-            <div className="flex items-center justify-between text-slate-400 font-medium">
-              <span>العام الدراسي الحالي</span>
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-            <div className="mt-1 font-bold text-xs text-slate-200">1446 هـ — الفصل الأول</div>
-          </div>
+          })
         )}
       </nav>
+
+      {/* Bottom Control & Active Year Dock (Ultra-Smooth Luxury Controls) */}
+      <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 backdrop-blur-md shrink-0 space-y-2.5">
+        {(mode === "expanded" || mobileOpen) ? (
+          <>
+            {/* Active Year & Status Badge */}
+            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/70 p-2.5 text-xs">
+              <div className="flex items-center justify-between text-slate-400 font-bold text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-xs" />
+                  <span className="text-emerald-400">النظام نشط ومحدث</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400 border border-slate-700/50">
+                  {currentAcademicYear?.name?.includes("144") ? (currentAcademicYear.name.match(/14\d\d(?:\s*-\s*14\d\d)?/)?.[0] || "1446") + " هـ" : (currentAcademicYear?.name || "1446 هـ")}
+                </span>
+              </div>
+              <div className="mt-1 font-black text-xs text-slate-200 truncate">
+                {currentAcademicYear?.name || "العام الأكاديمي 1446 - 1447 هـ"} — {activeAcademicTerm?.name || "الفصل الثاني"}
+              </div>
+            </div>
+
+            {/* Quick Segmented Mode Switcher */}
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-900/80 border border-slate-800/90 text-[10px] font-bold">
+              <button
+                onClick={() => onModeChange("expanded")}
+                className={`py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all ${
+                  mode === "expanded"
+                    ? "bg-blue-600 text-white font-extrabold shadow-xs"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+                title="الشريط بكامل التفاصيل"
+              >
+                <PanelRightOpen className="w-3 h-3" />
+                <span>كامل</span>
+              </button>
+
+              <button
+                onClick={() => onModeChange("rail")}
+                className={`py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all ${
+                  mode === "rail"
+                    ? "bg-blue-600 text-white font-extrabold shadow-xs"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+                title="وضع الأيقونات المدمج"
+              >
+                <Minimize2 className="w-3 h-3" />
+                <span>أيقونات</span>
+              </button>
+
+              <button
+                onClick={() => onModeChange("fullscreen")}
+                className="py-1.5 rounded-lg flex items-center justify-center gap-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                title="ملء الشاشة بدون شريط جانبي (Ctrl+B)"
+              >
+                <Maximize2 className="w-3 h-3" />
+                <span>شاشة</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 py-1">
+            <button
+              onClick={() => onModeChange("expanded")}
+              className="grid h-9 w-9 place-items-center rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all shadow-xs"
+              title="توسيع الشريط الجانبي (كامل)"
+            >
+              <PanelRightOpen className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }
@@ -1059,21 +1252,40 @@ function SidebarGroupBlock({
   mode,
   mobileOpen,
   onNavigate,
+  forceOpen,
+  searchQuery,
 }: {
   group: Group;
   pathname: string;
   mode: SidebarMode;
   mobileOpen: boolean;
   onNavigate: () => void;
+  forceOpen?: boolean;
+  searchQuery?: string;
 }) {
-  const isActiveBranch = group.items.some((i) => pathname === i.to || (i.to !== "/" && pathname.startsWith(i.to + "/")) || (i.to !== "/" && pathname === i.to));
+  const isActiveBranch = group.items.some(
+    (i) =>
+      pathname === i.to ||
+      (i.to !== "/" && pathname.startsWith(i.to + "/")) ||
+      (i.to !== "/" && pathname === i.to)
+  );
+
   const [open, setOpen] = useState<boolean>(isActiveBranch);
   const [flyoutOpen, setFlyoutOpen] = useState(false);
   const flyoutTimerRef = useRef<NodeJS.Timeout | null>(null);
   const Icon = group.icon;
   const primaryRoute = group.items[0]?.to || "/";
 
-  // Rail Mode: Render Direct Click Link + Floating Dual-Grid Hub Popover on Hover
+  // Sync external expansion toggles (e.g. from search or "expand all" button)
+  useEffect(() => {
+    if (forceOpen !== undefined) {
+      setOpen(forceOpen);
+    } else if (isActiveBranch) {
+      setOpen(true);
+    }
+  }, [forceOpen, isActiveBranch]);
+
+  // Rail Mode: Direct Link + Floating Dual-Grid Hub Popover on Hover
   if (mode === "rail" && !mobileOpen) {
     const handleMouseEnter = () => {
       if (flyoutTimerRef.current) clearTimeout(flyoutTimerRef.current);
@@ -1097,34 +1309,34 @@ function SidebarGroupBlock({
           to={primaryRoute}
           onClick={onNavigate}
           className={[
-            "relative grid h-11 w-11 place-items-center rounded-xl transition-all duration-200",
+            "relative grid h-11 w-11 place-items-center rounded-2xl transition-all duration-200",
             isActiveBranch
-              ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 glow-primary scale-105"
-              : "text-slate-400 hover:bg-slate-800 hover:text-white hover:scale-105",
+              ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 scale-105 ring-1 ring-white/20"
+              : "text-slate-400 hover:bg-slate-800/70 hover:text-white hover:scale-105",
           ].join(" ")}
           title={group.label}
         >
           <Icon className="h-5 w-5" />
           {isActiveBranch && (
-            <span className="absolute -left-1 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-blue-400 shadow-sm" />
+            <span className="absolute -left-1 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
           )}
         </Link>
 
         {/* Dynamic Dual-Grid Quick Launch Hub with Cursor Bridge */}
         {flyoutOpen && (
           <div 
-            className="absolute right-16 top-0 z-50 w-80 sm:w-96 rounded-2xl glass-rail-popover border border-slate-700/80 shadow-2xl p-3.5 animate-in fade-in zoom-in-95 duration-150 before:content-[''] before:absolute before:-right-6 before:top-0 before:bottom-0 before:w-10"
+            className="absolute right-16 top-0 z-50 w-80 sm:w-96 rounded-3xl glass-rail-popover border border-slate-700/80 shadow-2xl p-3.5 animate-in fade-in zoom-in-95 duration-150 before:content-[''] before:absolute before:-right-6 before:top-0 before:bottom-0 before:w-10"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
             {/* Popover Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 px-1 text-xs font-black text-slate-200">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-500/15 text-blue-400 shadow-xs">
+                <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 shadow-xs">
                   <Icon className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="font-extrabold text-sm text-white truncate">{group.label}</div>
+                  <div className="font-black text-sm text-white truncate">{group.label}</div>
                   <div className="text-[10px] text-slate-400 font-bold mt-0.5">اختر القسم الفرعي للولوج السريع</div>
                 </div>
               </div>
@@ -1149,7 +1361,7 @@ function SidebarGroupBlock({
                     className={[
                       "flex items-center gap-2 rounded-xl p-2 text-xs font-bold transition-all duration-150 relative group/flycard border",
                       active
-                        ? "bg-blue-600 text-white shadow-md border-blue-500 font-black scale-[1.02] glow-primary"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md border-blue-500 font-black scale-[1.02]"
                         : "bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-700 hover:translate-y-[-1px]",
                     ].join(" ")}
                   >
@@ -1176,28 +1388,39 @@ function SidebarGroupBlock({
     );
   }
 
-  // Expanded Mode: Render Collapsible Accordion Group
+  // Expanded Mode: Render Collapsible Accordion Group with Neon Glow on Active
   return (
     <div className="mb-1">
       <button
         onClick={() => setOpen((v) => !v)}
         className={[
-          "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-150",
+          "relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-xs font-bold transition-all duration-150 group",
           isActiveBranch
-            ? "text-white font-extrabold bg-slate-800/60 shadow-xs"
-            : "text-slate-300 hover:bg-slate-800/40 hover:text-white",
+            ? "text-white font-extrabold bg-gradient-to-r from-blue-600/20 via-blue-500/10 to-transparent border border-blue-500/30 shadow-xs"
+            : "text-slate-300 hover:bg-slate-800/50 hover:text-white",
         ].join(" ")}
       >
-        <Icon className={`h-4 w-4 shrink-0 ${isActiveBranch ? "text-blue-400" : "text-slate-400"}`} />
-        <span className="flex-1 text-right truncate">{group.label}</span>
-        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-800/90 text-slate-400 border border-slate-700/50">
+        {/* Active branch glowing indicator on the right edge */}
+        {isActiveBranch && (
+          <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-l-full bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-500 shadow-[0_0_12px_rgba(59,130,246,0.9)]" />
+        )}
+
+        <div className={`p-1.5 rounded-xl shrink-0 transition-colors ${
+          isActiveBranch 
+            ? "bg-blue-500/20 text-blue-400 border border-blue-400/30 shadow-xs" 
+            : "bg-slate-800/80 text-slate-400 group-hover:text-white border border-slate-700/40"
+        }`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="flex-1 text-right truncate font-bold">{group.label}</span>
+        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-800/90 text-slate-400 border border-slate-700/60 shadow-xs">
           {group.items.length}
         </span>
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${open ? "rotate-180 text-blue-400" : "opacity-60"}`} />
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ease-out ${open ? "rotate-180 text-blue-400" : "opacity-60 group-hover:opacity-100"}`} />
       </button>
       
       {open && (
-        <div className="mr-3.5 mt-1 space-y-1 border-r border-slate-800 pr-2.5 animate-in slide-in-from-top-1 duration-200">
+        <div className="mr-4 mt-1.5 space-y-1 border-r-2 border-slate-800/90 pr-2.5 animate-in slide-in-from-top-1 duration-200">
           {group.items.map((leaf) => {
             const active = pathname === leaf.to || (leaf.to !== "/" && pathname.startsWith(leaf.to + "/"));
             const SubIcon = leaf.icon || group.icon;
@@ -1207,19 +1430,20 @@ function SidebarGroupBlock({
                 to={leaf.to}
                 onClick={onNavigate}
                 className={[
-                  "flex items-center justify-between rounded-xl px-2.5 py-2 text-xs font-bold transition-all duration-150",
+                  "flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150",
                   active
-                    ? "bg-blue-600 text-white shadow-md font-black"
-                    : "text-slate-400 hover:bg-slate-800/70 hover:text-white",
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 font-black border border-blue-400/40 scale-[0.99]"
+                    : "text-slate-400 hover:bg-slate-800/60 hover:text-white hover:translate-x-[-2px]",
                 ].join(" ")}
               >
                 <div className="flex items-center gap-2 truncate">
+                  {active && <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs shrink-0" />}
                   <SubIcon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-white" : "text-slate-500"}`} />
                   <span className="truncate">{leaf.label}</span>
                 </div>
                 {leaf.badge && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                    active ? "bg-white/25 text-white" : "bg-slate-800 text-slate-400"
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                    active ? "bg-white/25 text-white" : "bg-slate-800/90 text-blue-400 border border-slate-700/50"
                   }`}>
                     {leaf.badge}
                   </span>
