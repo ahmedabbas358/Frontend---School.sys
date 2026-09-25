@@ -313,16 +313,48 @@ export function AdvancedPrintEngine({
   const [previewLimit, setPreviewLimit] = useState(50);
   const [showAllForPrint, setShowAllForPrint] = useState(false);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
-  const [printScope, setPrintScope] = useState<"page" | "50" | "100" | "all">("page");
+  const [printScope, setPrintScope] = useState<"page" | "50" | "100" | "all">("all");
+
+  // A4 Multi-Page Chunking & Density Engine
+  const [a4PaginationEnabled, setA4PaginationEnabled] = useState(true);
+  const [a4RowsPerPage, setA4RowsPerPage] = useState(25);
+  const [a4CurrentSheet, setA4CurrentSheet] = useState(1);
+  const [a4ViewMode, setA4ViewMode] = useState<"all" | "single">("all");
+  const [signaturesPlacement, setSignaturesPlacement] = useState<"last_page" | "all_pages">("last_page");
+
+  // Adjust rows per page default when orientation changes
+  useEffect(() => {
+    if (paperOrientation === "landscape") {
+      setA4RowsPerPage(prev => (prev === 25 ? 20 : prev));
+    } else {
+      setA4RowsPerPage(prev => (prev === 20 ? 25 : prev));
+    }
+  }, [paperOrientation]);
 
   const printableData = useMemo(() => {
-    if (printScope === "page") return filteredData.slice(0, 30);
+    if (printScope === "page") return filteredData.slice(0, a4RowsPerPage);
     if (printScope === "50") return filteredData.slice(0, 50);
     if (printScope === "100") return filteredData.slice(0, 100);
     return filteredData;
-  }, [filteredData, printScope]);
+  }, [filteredData, printScope, a4RowsPerPage]);
 
   const currentTemplateObj = templates.find(t => t.id === selectedTemplate) || templates[0];
+
+  const tableChunks = useMemo(() => {
+    const dataset = showAllForPrint ? printableData : printableData;
+    if (!a4PaginationEnabled || currentTemplateObj?.type !== "table") {
+      return [dataset];
+    }
+    const rpp = Math.max(5, a4RowsPerPage || 25);
+    const chunks: any[][] = [];
+    for (let i = 0; i < dataset.length; i += rpp) {
+      chunks.push(dataset.slice(i, i + rpp));
+    }
+    return chunks.length > 0 ? chunks : [[]];
+  }, [showAllForPrint, printableData, a4PaginationEnabled, currentTemplateObj?.type, a4RowsPerPage]);
+
+  const totalSheets = tableChunks.length;
+  const safeCurrentSheet = Math.min(Math.max(1, a4CurrentSheet), totalSheets || 1);
 
   // Apply Theme Presets
   useEffect(() => {
@@ -500,6 +532,12 @@ export function AdvancedPrintEngine({
             transform: none !important;
             background: #ffffff !important;
             color: #000000 !important;
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+          .print-paper-canvas:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
           .print-paper-canvas * {
             box-sizing: border-box !important;
@@ -564,7 +602,12 @@ export function AdvancedPrintEngine({
         </style>
       </head>
       <body class="bg-white text-slate-900 font-sans" dir="rtl">
-        ${canvasEl.outerHTML}
+        ${(() => {
+          const canvasElements = canvasEl.classList.contains("print-paper-canvas-stack") || canvasEl.id === "print-paper-stack"
+            ? Array.from(canvasEl.querySelectorAll(".print-paper-canvas"))
+            : [canvasEl];
+          return canvasElements.map(el => (el as HTMLElement).outerHTML).join("\n");
+        })()}
       </body>
       </html>
     `);
@@ -588,14 +631,19 @@ export function AdvancedPrintEngine({
     
     requestAnimationFrame(() => {
       setTimeout(() => {
-        const canvasEl = document.querySelector(".print-paper-canvas") as HTMLElement;
-        if (canvasEl) {
-          printCanvasViaIframe(canvasEl);
+        const stackEl = document.getElementById("print-paper-stack");
+        if (stackEl) {
+          printCanvasViaIframe(stackEl);
         } else {
-          window.print();
-          setIsPreparingPrint(false);
+          const canvasEl = document.querySelector(".print-paper-canvas") as HTMLElement;
+          if (canvasEl) {
+            printCanvasViaIframe(canvasEl);
+          } else {
+            window.print();
+            setIsPreparingPrint(false);
+          }
         }
-      }, 200);
+      }, 250);
     });
   };
 
@@ -787,6 +835,10 @@ export function AdvancedPrintEngine({
         background: #ffffff !important;
         color: #000000 !important;
         transform: none !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .print-paper-canvas:last-child {
         page-break-after: auto !important;
         break-after: auto !important;
       }
@@ -1011,9 +1063,9 @@ export function AdvancedPrintEngine({
                   ? "bg-primary text-primary-foreground shadow-xs font-black"
                   : "text-muted-foreground hover:text-foreground"
               }`}
-              title="طباعة أول 30 سجل فقط"
+              title={`طباعة أول ${a4RowsPerPage} سجل (ورقة واحدة)`}
             >
-              الصفحة الأولى (30)
+              ورقة 1 ({a4RowsPerPage})
             </button>
             <button
               type="button"
@@ -1040,6 +1092,97 @@ export function AdvancedPrintEngine({
               الكل ({filteredData.length})
             </button>
           </div>
+
+          {/* Density Selector & Multi-Sheet Stepper for Tables */}
+          {currentTemplateObj?.type === "table" && a4PaginationEnabled && (
+            <>
+              <div className="w-px h-4 bg-border/60 mx-0.5 hidden md:block" />
+
+              {/* Rows Per Sheet Presets */}
+              <div className="hidden lg:flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/60 text-xs">
+                <span className="text-[10px] font-bold text-muted-foreground px-1.5">كثافة الورقة:</span>
+                {[15, 20, 25, 30, 40].map(cnt => (
+                  <button
+                    key={cnt}
+                    type="button"
+                    onClick={() => {
+                      setA4RowsPerPage(cnt);
+                      setA4CurrentSheet(1);
+                    }}
+                    className={`px-2 py-0.5 rounded-lg text-xs font-black transition-all ${
+                      a4RowsPerPage === cnt
+                        ? "bg-primary text-primary-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card"
+                    }`}
+                    title={`${cnt} سجل لكل ورقة A4`}
+                  >
+                    {cnt}
+                  </button>
+                ))}
+              </div>
+
+              {totalSheets > 1 && (
+                <>
+                  <div className="w-px h-4 bg-border/60 mx-0.5 hidden sm:block" />
+
+                  {/* View Mode Toggle: All vs Single Sheet */}
+                  <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl border border-border/60 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setA4ViewMode("all")}
+                      className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                        a4ViewMode === "all"
+                          ? "bg-primary text-primary-foreground shadow-xs font-black"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      title="عرض جميع الأوراق متتالية"
+                    >
+                      كل الأوراق ({totalSheets})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setA4ViewMode("single")}
+                      className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                        a4ViewMode === "single"
+                          ? "bg-primary text-primary-foreground shadow-xs font-black"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      title="تصفح ورقة بورقة"
+                    >
+                      ورقة منفردة
+                    </button>
+                  </div>
+
+                  {/* Sheet Stepper when in Single Mode */}
+                  {a4ViewMode === "single" && (
+                    <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary px-1.5 py-0.5 rounded-xl text-xs font-black">
+                      <button
+                        type="button"
+                        disabled={safeCurrentSheet <= 1}
+                        onClick={() => setA4CurrentSheet(p => Math.max(1, p - 1))}
+                        className="px-1.5 py-0.5 hover:bg-primary/20 rounded disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        title="الورقة السابقة"
+                      >
+                        ◀
+                      </button>
+                      <span className="tabular-nums px-1">
+                        ورقة {safeCurrentSheet} من {totalSheets}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={safeCurrentSheet >= totalSheets}
+                        onClick={() => setA4CurrentSheet(p => Math.min(totalSheets, p + 1))}
+                        className="px-1.5 py-0.5 hover:bg-primary/20 rounded disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        title="الورقة التالية"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/* Left: Actions, Toggle Sidebar & Close */}
@@ -1143,408 +1286,501 @@ export function AdvancedPrintEngine({
             }}
             className="transition-all print-engine-scale"
           >
-            <div 
-              className={`bg-white text-slate-900 shadow-2xl print:shadow-none transition-all relative print-paper-canvas rounded-sm ${
-                paperOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'
-              } ${marginMap[marginSize]} ${pageFrame ? 'ring-4 ring-offset-4 ring-offset-white' : ''}`}
-              style={{
-                fontFamily: fontFamily === 'sans' ? 'sans-serif' : fontFamily === 'serif' ? 'serif' : fontFamily === 'mono' ? 'monospace' : 'Cairo, sans-serif',
-                color: textColor,
-                ...(pageFrame && { outlineStyle: pageFrameStyle, outlineColor: tableBorderColor, outlineWidth: '4px' })
-              }}
-            >
-              {/* =========================================================
-                  OFFICIAL ROYAL DOCUMENT HEADER
-                  ========================================================= */}
-              {showHeader && (
+            <div id="print-paper-stack" className="print-paper-canvas-stack space-y-8 print:space-y-0">
+              {currentTemplateObj?.type === "table" ? (
+                // TABLE TEMPLATES: A4 MULTI-PAGE CHUNKING ENGINE
+                (showAllForPrint 
+                  ? tableChunks 
+                  : (a4ViewMode === "single" ? [tableChunks[safeCurrentSheet - 1] || []] : tableChunks)
+                ).map((chunk, cIdx) => {
+                  const actualSheetIndex = (!showAllForPrint && a4ViewMode === "single") ? safeCurrentSheet - 1 : cIdx;
+                  const isLastChunk = actualSheetIndex === totalSheets - 1;
+                  const startRowIndex = actualSheetIndex * a4RowsPerPage;
+
+                  return (
+                    <div key={actualSheetIndex} className="relative group">
+                      {/* Visual Sheet Banner in Preview Mode */}
+                      {!showAllForPrint && !isPreparingPrint && totalSheets > 1 && a4ViewMode === "all" && (
+                        <div className="w-full flex items-center justify-between px-5 py-2 bg-slate-800 text-white rounded-t-xl text-xs font-black shadow-sm print:hidden">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5 text-primary" />
+                            <span>ورقة رقم {actualSheetIndex + 1} من {totalSheets}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-300 font-bold">
+                            السجلات ({startRowIndex + 1} إلى {startRowIndex + chunk.length})
+                          </div>
+                        </div>
+                      )}
+
+                      <div 
+                        className={`bg-white text-slate-900 shadow-2xl print:shadow-none transition-all relative print-paper-canvas ${
+                          !showAllForPrint && !isPreparingPrint && totalSheets > 1 && a4ViewMode === "all" ? 'rounded-b-sm' : 'rounded-sm'
+                        } ${
+                          paperOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'
+                        } ${marginMap[marginSize]} ${pageFrame ? 'ring-4 ring-offset-4 ring-offset-white' : ''}`}
+                        style={{
+                          fontFamily: fontFamily === 'sans' ? 'sans-serif' : fontFamily === 'serif' ? 'serif' : fontFamily === 'mono' ? 'monospace' : 'Cairo, sans-serif',
+                          color: textColor,
+                          ...(pageFrame && { outlineStyle: pageFrameStyle, outlineColor: tableBorderColor, outlineWidth: '4px' })
+                        }}
+                      >
+                        {/* OFFICIAL ROYAL DOCUMENT HEADER */}
+                        {showHeader && (
+                          <div 
+                            className="mb-6 flex items-center justify-between border-b-2 pb-4 print-header-grid" 
+                            style={{ borderColor: tableBorderColor }}
+                          >
+                            {/* Right Header */}
+                            <div className="flex items-center gap-3.5 text-right print-header-col-right shrink-0">
+                              <div 
+                                className="w-16 h-16 rounded-2xl border-2 flex items-center justify-center overflow-hidden bg-slate-50 text-muted-foreground shadow-xs shrink-0" 
+                                style={{ borderColor: tableBorderColor }}
+                              >
+                                <ImageIcon className="w-7 h-7 text-slate-400" />
+                              </div>
+                              <div className="space-y-0.5">
+                                <EditableText tagName="h1" value="المملكة العربية السعودية" className="text-xs font-bold whitespace-nowrap" />
+                                <EditableText tagName="h2" value="وزارة التعليم" className="text-xs font-bold text-slate-700 whitespace-nowrap" />
+                                <EditableText tagName="h3" value="إدارة التعليم بالمنطقة" className="text-[11px] font-semibold text-slate-600 whitespace-nowrap" />
+                                <EditableText tagName="h4" value="مدرسة التقدم الأهلية" className="text-xs font-black text-primary whitespace-nowrap" />
+                              </div>
+                            </div>
+
+                            {/* Center Header */}
+                            <div className="text-center px-4 flex-1 print-header-col-center">
+                              <EditableText 
+                                tagName="h2" 
+                                value={customTitle} 
+                                onChange={setCustomTitle} 
+                                className="text-2xl font-black mb-1 hover:bg-slate-100/80 rounded-xl p-1 inline-block" 
+                                style={{ color: titleColor }} 
+                              />
+                              <EditableText 
+                                tagName="p" 
+                                value={customSubtitle || "تقرير رسمي معتمد ومحدث من قاعدة البيانات"} 
+                                onChange={setCustomSubtitle} 
+                                className="text-xs font-bold text-slate-600 hover:bg-slate-100/80 rounded-lg p-0.5 block" 
+                              />
+                              {totalSheets > 1 && (
+                                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-black border border-slate-300 mt-1.5">
+                                  <span>ورقة {actualSheetIndex + 1} من {totalSheets}</span>
+                                  <span className="opacity-40">•</span>
+                                  <span>سجلات {startRowIndex + 1} - {startRowIndex + chunk.length}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Left Header */}
+                            <div className="text-left space-y-1 text-xs print-header-col-left shrink-0">
+                              <div className="flex gap-2 justify-end">
+                                <span className="font-bold text-slate-700">التاريخ:</span>
+                                <EditableText tagName="span" value={new Date().toISOString().slice(0, 10)} className="font-bold tabular-nums" isNumeric />
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <span className="font-bold text-slate-700">رقم السجل:</span>
+                                <EditableText tagName="span" value={`DOC-${new Date().getFullYear()}-0${filteredData.length}`} className="font-mono font-bold tabular-nums" isNumeric />
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <span className="font-bold text-slate-700">عدد السجلات:</span>
+                                <span className="font-bold tabular-nums text-primary">{filteredData.length}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Table */}
+                        <div className="w-full">
+                          <table className="w-full text-right border-collapse" style={{ ...tableBorderStyleObj }}>
+                            <thead style={{ display: 'table-header-group' }}>
+                              <tr>
+                                {showPageNumbers && (
+                                  <th 
+                                    className="p-2 border font-bold w-12 text-center text-xs" 
+                                    style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj }}
+                                  >
+                                    #
+                                  </th>
+                                )}
+                                {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => {
+                                  const isPhoneOrCode = isCodeOrPhone(col.key, col.label);
+                                  return (
+                                    <th 
+                                      key={col.key} 
+                                      className={`p-2.5 border font-extrabold text-xs transition-colors ${
+                                        isPhoneOrCode ? "text-center whitespace-nowrap" : "text-right whitespace-nowrap"
+                                      }`} 
+                                      style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj }}
+                                    >
+                                      <EditableText 
+                                        tagName="div" 
+                                        value={customHeaders[col.key] || col.label} 
+                                        onChange={(val: string) => setCustomHeaders(prev => ({ ...prev, [col.key]: val }))}
+                                        className={`w-full font-black ${isPhoneOrCode ? "text-center" : "text-right"}`}
+                                      />
+                                    </th>
+                                  );
+                                })}
+                              </tr>
+                            </thead>
+                            <tbody className={fontMap[dataFontSize]}>
+                              {chunk.map((row: any, rIdx: number) => {
+                                const continuousNumber = startRowIndex + rIdx + 1;
+                                return (
+                                  <tr 
+                                    key={rIdx} 
+                                    style={{ 
+                                      backgroundColor: rIdx % 2 === 0 ? 'transparent' : stripeColor, 
+                                      pageBreakInside: 'avoid' 
+                                    }}
+                                  >
+                                    {showPageNumbers && (
+                                      <td 
+                                        className="p-2 border text-center font-bold text-xs tabular-nums text-slate-600" 
+                                        style={{ ...tableBorderStyleObj }}
+                                      >
+                                        {continuousNumber}
+                                      </td>
+                                    )}
+                                    {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => {
+                                      const rawValue = col.render ? col.render(row) : row[col.key] ?? "-";
+                                      const isCodePhone = isCodeOrPhone(col.key, col.label);
+
+                                      return (
+                                        <td 
+                                          key={col.key} 
+                                          className={`p-2.5 border ${
+                                            isCodePhone ? "text-center whitespace-nowrap" : "text-right"
+                                          }`} 
+                                          style={{ ...tableBorderStyleObj }}
+                                        >
+                                          {editMode && !showAllForPrint ? (
+                                            <EditableText 
+                                              tagName="div" 
+                                              value={rawValue} 
+                                              isNumeric={isCodePhone}
+                                              className={`w-full font-bold ${isCodePhone ? "text-center font-mono tabular-nums" : "text-right"}`} 
+                                            />
+                                          ) : (
+                                            <div 
+                                              className={`w-full font-bold ${
+                                                isCodePhone ? "text-center font-mono tabular-nums" : "text-right"
+                                              }`}
+                                              dir={isCodePhone ? "ltr" : "rtl"}
+                                            >
+                                              {React.isValidElement(rawValue) ? rawValue : (rawValue !== undefined && rawValue !== null ? String(rawValue) : "-")}
+                                            </div>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                );
+                              })}
+
+                              {/* Extra empty rows on final sheet if requested */}
+                              {isLastChunk && Array.from({ length: extraEmptyRows }).map((_, idx) => (
+                                <tr key={`empty-${idx}`}>
+                                  {showPageNumbers && (
+                                    <td className="p-2 border text-center text-xs text-slate-400" style={tableBorderStyleObj}>
+                                      {startRowIndex + chunk.length + idx + 1}
+                                    </td>
+                                  )}
+                                  {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => (
+                                    <td key={col.key} className="p-2 border h-9" style={tableBorderStyleObj}>
+                                      &nbsp;
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Signatures */}
+                        {showSignatures && (signaturesPlacement === "all_pages" || isLastChunk) && (
+                          <div className="mt-12 flex justify-between px-6 pb-6">
+                            <div className="text-center">
+                              <EditableText tagName="p" className="font-bold text-xs mb-7 text-slate-700" value={sig1Label} onChange={setSig1Label} />
+                              <div className="w-40 border-b-2" style={{ borderColor: tableBorderColor }} />
+                            </div>
+                            <div className="text-center">
+                              <EditableText tagName="p" className="font-bold text-xs mb-7 text-slate-700" value={sig2Label} onChange={setSig2Label} />
+                              <div className="w-40 border-b-2" style={{ borderColor: tableBorderColor }} />
+                            </div>
+                            <div className="text-center">
+                              <EditableText tagName="p" className="font-bold text-xs mb-7 text-slate-700" value={sig3Label} onChange={setSig3Label} />
+                              <div className="w-40 border-b-2" style={{ borderColor: tableBorderColor }} />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* QR Footer on last sheet */}
+                        {showQrCode && isLastChunk && (
+                          <div className="mt-6 flex justify-center pb-6 print:fixed print:bottom-6 print:left-1/2 print:-translate-x-1/2">
+                             <QRCode value={qrCodeData} size={70} level="L" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                // NON-TABLE TEMPLATES: CARDS, CERTIFICATES, RECEIPTS, DOCUMENTS
                 <div 
-                  className="mb-6 flex items-center justify-between border-b-2 pb-4 print-header-grid" 
-                  style={{ borderColor: tableBorderColor }}
+                  className={`bg-white text-slate-900 shadow-2xl print:shadow-none transition-all relative print-paper-canvas rounded-sm ${
+                    paperOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'
+                  } ${marginMap[marginSize]} ${pageFrame ? 'ring-4 ring-offset-4 ring-offset-white' : ''}`}
+                  style={{
+                    fontFamily: fontFamily === 'sans' ? 'sans-serif' : fontFamily === 'serif' ? 'serif' : fontFamily === 'mono' ? 'monospace' : 'Cairo, sans-serif',
+                    color: textColor,
+                    ...(pageFrame && { outlineStyle: pageFrameStyle, outlineColor: tableBorderColor, outlineWidth: '4px' })
+                  }}
                 >
-                  {/* Right Header: Kingdom / Ministry info */}
-                  <div className="flex items-center gap-3.5 text-right print-header-col-right shrink-0">
+                  {/* OFFICIAL ROYAL DOCUMENT HEADER */}
+                  {showHeader && (
                     <div 
-                      className="w-16 h-16 rounded-2xl border-2 flex items-center justify-center overflow-hidden bg-slate-50 text-muted-foreground shadow-xs shrink-0" 
+                      className="mb-6 flex items-center justify-between border-b-2 pb-4 print-header-grid" 
                       style={{ borderColor: tableBorderColor }}
                     >
-                      <ImageIcon className="w-7 h-7 text-slate-400" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <EditableText tagName="h1" value="المملكة العربية السعودية" className="text-xs font-bold whitespace-nowrap" />
-                      <EditableText tagName="h2" value="وزارة التعليم" className="text-xs font-bold text-slate-700 whitespace-nowrap" />
-                      <EditableText tagName="h3" value="إدارة التعليم بالمنطقة" className="text-[11px] font-semibold text-slate-600 whitespace-nowrap" />
-                      <EditableText tagName="h4" value="مدرسة التقدم الأهلية" className="text-xs font-black text-primary whitespace-nowrap" />
-                    </div>
-                  </div>
-
-                  {/* Center Header: Document Title & Subtitle */}
-                  <div className="text-center px-4 flex-1 print-header-col-center">
-                    <EditableText 
-                      tagName="h2" 
-                      value={customTitle} 
-                      onChange={setCustomTitle} 
-                      className="text-2xl font-black mb-1 hover:bg-slate-100/80 rounded-xl p-1 inline-block" 
-                      style={{ color: titleColor }} 
-                    />
-                    <EditableText 
-                      tagName="p" 
-                      value={customSubtitle || "تقرير رسمي معتمد ومحدث من قاعدة البيانات"} 
-                      onChange={setCustomSubtitle} 
-                      className="text-xs font-bold text-slate-600 hover:bg-slate-100/80 rounded-lg p-0.5 block" 
-                    />
-                  </div>
-
-                  {/* Left Header: Date & Official Serial */}
-                  <div className="text-left space-y-1 text-xs print-header-col-left shrink-0">
-                    <div className="flex gap-2 justify-end">
-                      <span className="font-bold text-slate-700">التاريخ:</span>
-                      <EditableText tagName="span" value={new Date().toISOString().slice(0, 10)} className="font-bold tabular-nums" isNumeric />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <span className="font-bold text-slate-700">رقم السجل:</span>
-                      <EditableText tagName="span" value={`DOC-${new Date().getFullYear()}-0${filteredData.length}`} className="font-mono font-bold tabular-nums" isNumeric />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <span className="font-bold text-slate-700">عدد السجلات:</span>
-                      <span className="font-bold tabular-nums text-primary">{filteredData.length}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* =========================================================
-                  TEMPLATE TYPE 1: ROSTER / DATA TABLE
-                  ========================================================= */}
-              {currentTemplateObj?.type === "table" && (
-                <div className="w-full">
-                  <table className="w-full text-right border-collapse" style={{ ...tableBorderStyleObj }}>
-                    <thead style={{ display: 'table-header-group' }}>
-                      <tr>
-                        {showPageNumbers && (
-                          <th 
-                            className="p-2 border font-bold w-12 text-center text-xs" 
-                            style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj }}
-                          >
-                            #
-                          </th>
-                        )}
-                        {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => {
-                          const isPhoneOrCode = isCodeOrPhone(col.key, col.label);
-                          return (
-                            <th 
-                              key={col.key} 
-                              className={`p-2.5 border font-extrabold text-xs transition-colors ${
-                                isPhoneOrCode ? "text-center whitespace-nowrap" : "text-right whitespace-nowrap"
-                              }`} 
-                              style={{ backgroundColor: headerBackgroundColor, color: headerTextColor, ...tableBorderStyleObj }}
-                            >
-                              <EditableText 
-                                tagName="div" 
-                                value={customHeaders[col.key] || col.label} 
-                                onChange={(val: string) => setCustomHeaders(prev => ({ ...prev, [col.key]: val }))}
-                                className={`w-full font-black ${isPhoneOrCode ? "text-center" : "text-right"}`}
-                              />
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody className={fontMap[dataFontSize]}>
-                      {previewData.map((row, idx) => (
-                        <tr 
-                          key={idx} 
-                          style={{ 
-                            backgroundColor: idx % 2 === 0 ? 'transparent' : stripeColor, 
-                            pageBreakInside: 'avoid' 
-                          }}
+                      {/* Right Header: Kingdom / Ministry info */}
+                      <div className="flex items-center gap-3.5 text-right print-header-col-right shrink-0">
+                        <div 
+                          className="w-16 h-16 rounded-2xl border-2 flex items-center justify-center overflow-hidden bg-slate-50 text-muted-foreground shadow-xs shrink-0" 
+                          style={{ borderColor: tableBorderColor }}
                         >
-                          {showPageNumbers && (
-                            <td 
-                              className="p-2 border text-center font-bold text-xs tabular-nums text-slate-600" 
-                              style={{ ...tableBorderStyleObj }}
-                            >
-                              {idx + 1}
-                            </td>
-                          )}
-                          {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => {
-                            const rawValue = col.render ? col.render(row) : row[col.key] ?? "-";
-                            const isCodePhone = isCodeOrPhone(col.key, col.label);
-
-                            return (
-                              <td 
-                                key={col.key} 
-                                className={`p-2.5 border ${
-                                  isCodePhone ? "text-center whitespace-nowrap" : "text-right"
-                                }`} 
-                                style={{ ...tableBorderStyleObj }}
-                              >
-                                {editMode && !showAllForPrint ? (
-                                  <EditableText 
-                                    tagName="div" 
-                                    value={rawValue} 
-                                    isNumeric={isCodePhone}
-                                    className={`w-full font-bold ${isCodePhone ? "text-center font-mono tabular-nums" : "text-right"}`} 
-                                  />
-                                ) : (
-                                  <div 
-                                    className={`w-full font-bold ${
-                                      isCodePhone ? "text-center font-mono tabular-nums" : "text-right"
-                                    }`}
-                                    dir={isCodePhone ? "ltr" : "rtl"}
-                                  >
-                                    {React.isValidElement(rawValue) ? rawValue : (rawValue !== undefined && rawValue !== null ? String(rawValue) : "-")}
-                                  </div>
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-
-                      {/* Extra empty rows if requested */}
-                      {Array.from({ length: extraEmptyRows }).map((_, idx) => (
-                        <tr key={`empty-${idx}`}>
-                          {showPageNumbers && (
-                            <td className="p-2 border text-center text-xs text-slate-400" style={tableBorderStyleObj}>
-                              {previewData.length + idx + 1}
-                            </td>
-                          )}
-                          {currentTemplateObj.columns?.filter(c => !hiddenColumns[c.key]).map(col => (
-                            <td key={col.key} className="p-2 border h-9" style={tableBorderStyleObj}>
-                              &nbsp;
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* =========================================================
-                  TEMPLATE TYPE 2: HIGH-END STUDENT ID CARDS
-                  ========================================================= */}
-              {currentTemplateObj?.type === "cards" && (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 p-2">
-                  {previewData.map((row, idx) => (
-                    <div 
-                      key={idx} 
-                      className="rounded-3xl border-2 shadow-md flex flex-col bg-white overflow-hidden break-inside-avoid relative" 
-                      style={{ borderColor: tableBorderColor, ...tableBorderStyleObj }}
-                    >
-                      {/* Card Header */}
-                      <div 
-                        className="p-3.5 text-center border-b flex items-center justify-between" 
-                        style={{ backgroundColor: headerBackgroundColor, borderColor: tableBorderColor }}
-                      >
-                        <div className="text-right">
-                          <div className="text-[10px] font-black" style={{ color: headerTextColor }}>مدرسة التقدم الأهلية</div>
-                          <div className="text-[9px] font-bold opacity-75" style={{ color: headerTextColor }}>بطاقة تعريفية للطالب</div>
+                          <ImageIcon className="w-7 h-7 text-slate-400" />
                         </div>
-                        <div className="w-7 h-7 rounded-xl bg-primary text-white flex items-center justify-center font-black text-xs">
-                          {row.name ? row.name.substring(0, 1) : "ط"}
+                        <div className="space-y-0.5">
+                          <EditableText tagName="h1" value="المملكة العربية السعودية" className="text-xs font-bold whitespace-nowrap" />
+                          <EditableText tagName="h2" value="وزارة التعليم" className="text-xs font-bold text-slate-700 whitespace-nowrap" />
+                          <EditableText tagName="h3" value="إدارة التعليم بالمنطقة" className="text-[11px] font-semibold text-slate-600 whitespace-nowrap" />
+                          <EditableText tagName="h4" value="مدرسة التقدم الأهلية" className="text-xs font-black text-primary whitespace-nowrap" />
                         </div>
                       </div>
 
-                      {/* Card Body */}
-                      <div className="p-5 flex-1 flex flex-col items-center text-center gap-3">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/20 text-primary border-2 border-primary/30 flex items-center justify-center font-black text-xl shadow-xs">
-                          {row.name ? row.name.split(" ").slice(0, 2).map((n: string) => n[0]).join("") : "طالب"}
-                        </div>
-
-                        <div>
-                          <div className="font-extrabold text-sm text-foreground">
-                            {row.name || row.studentName || row.id}
-                          </div>
-                          <div className="text-xs font-bold text-primary mt-0.5">
-                            {row.grade || "المرحلة الدراسية"} {row.sectionId && `• شعبة ${globalStore.activeStageSections.find(x => x.id === row.sectionId)?.name || row.sectionId}`}
-                          </div>
-                        </div>
-
-                        <div className="w-full border-t border-border/60 pt-2.5 space-y-1.5 text-xs text-right">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground font-semibold">رقم القيد:</span>
-                            <span className="font-mono font-bold tabular-nums text-foreground">{row.id || "-"}</span>
-                          </div>
-                          {row.nationalId && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground font-semibold">الهوية:</span>
-                              <span className="font-mono font-bold tabular-nums text-foreground">{row.nationalId}</span>
-                            </div>
-                          )}
-                          {row.guardianPhone && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground font-semibold">رقم الطوارئ:</span>
-                              <span className="font-mono font-bold tabular-nums text-foreground" dir="ltr">{row.guardianPhone}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Card QR */}
-                        <div className="mt-2 pt-2 border-t border-border/40 w-full flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-muted-foreground">العام الدراسي الحالي</span>
-                          <QRCode value={getQrValue(row)} size={48} level="L" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* =========================================================
-                  TEMPLATE TYPE 3: ROYAL CERTIFICATE OF HONOR
-                  ========================================================= */}
-              {currentTemplateObj?.type === "certificate" && (
-                <div className="space-y-8 flex flex-col items-center justify-center">
-                  {previewData.map((row, idx) => (
-                    <div 
-                      key={idx} 
-                      className="relative w-full p-16 text-center border-[12px] bg-white shadow-xl break-inside-avoid mb-8 rounded-2xl" 
-                      style={{ 
-                        borderColor: headerBackgroundColor, 
-                        borderStyle: tableBorderStyle === 'none' ? 'solid' : tableBorderStyle 
-                      }}
-                    >
-                      <div 
-                        className="absolute inset-2 border-4 border-dashed pointer-events-none rounded-xl" 
-                        style={{ borderColor: tableBorderColor, opacity: 0.4 }} 
-                      />
-                      <div className="relative z-10 flex flex-col items-center gap-8">
-                        <div className="flex items-center justify-center gap-4 text-amber-500">
-                          <Award className="w-20 h-20" />
-                        </div>
-                        <div className="space-y-3">
-                          <EditableText tagName="h1" className="text-5xl font-black tracking-tight" style={{ color: titleColor }} value="شهادة شكر وتقدير وتفوق" />
-                          <EditableText tagName="p" className="text-lg font-bold text-slate-600" value="تتشرف إدارة مدرسة التقدم الأهلية بمنح هذه الشهادة المعتمدة للطالب/ة:" />
-                        </div>
+                      {/* Center Header: Document Title & Subtitle */}
+                      <div className="text-center px-4 flex-1 print-header-col-center">
                         <EditableText 
                           tagName="h2" 
-                          className="text-4xl font-black border-b-4 pb-3 px-12 rounded-xl text-primary" 
-                          style={{ borderColor: tableBorderColor }} 
-                          value={row.name || row[currentTemplateObj.columns?.[0]?.key || "id"]} 
+                          value={customTitle} 
+                          onChange={setCustomTitle} 
+                          className="text-2xl font-black mb-1 hover:bg-slate-100/80 rounded-xl p-1 inline-block" 
+                          style={{ color: titleColor }} 
                         />
                         <EditableText 
                           tagName="p" 
-                          className="text-lg font-medium max-w-2xl leading-relaxed text-slate-700" 
-                          value="تقديراً لجهوده المتميزة وتفوقه الأكاديمي وانضباطه السلوكي المشرف خلال العام الدراسي، متمنين له دوام العطاء والازدهار." 
+                          value={customSubtitle || "تقرير رسمي معتمد ومحدث من قاعدة البيانات"} 
+                          onChange={setCustomSubtitle} 
+                          className="text-xs font-bold text-slate-600 hover:bg-slate-100/80 rounded-lg p-0.5 block" 
                         />
-                        
-                        <div className="grid grid-cols-2 gap-24 mt-12 w-full px-12">
-                          <div className="flex flex-col items-center gap-3">
-                            <EditableText tagName="span" className="font-bold text-base" value={sig1Label} onChange={setSig1Label} />
-                            <div className="w-48 border-b-2" style={{ borderColor: tableBorderColor }} />
-                          </div>
-                          <div className="flex flex-col items-center gap-3">
-                            <EditableText tagName="span" className="font-bold text-base" value={sig3Label} onChange={setSig3Label} />
-                            <div className="w-48 border-b-2" style={{ borderColor: tableBorderColor }} />
-                          </div>
+                      </div>
+
+                      {/* Left Header: Date & Official Serial */}
+                      <div className="text-left space-y-1 text-xs print-header-col-left shrink-0">
+                        <div className="flex gap-2 justify-end">
+                          <span className="font-bold text-slate-700">التاريخ:</span>
+                          <EditableText tagName="span" value={new Date().toISOString().slice(0, 10)} className="font-bold tabular-nums" isNumeric />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <span className="font-bold text-slate-700">رقم السجل:</span>
+                          <EditableText tagName="span" value={`DOC-${new Date().getFullYear()}-0${filteredData.length}`} className="font-mono font-bold tabular-nums" isNumeric />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <span className="font-bold text-slate-700">عدد السجلات:</span>
+                          <span className="font-bold tabular-nums text-primary">{filteredData.length}</span>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
 
-              {/* =========================================================
-                  TEMPLATE TYPE 4: OFFICIAL PAYMENT RECEIPT VOUCHER
-                  ========================================================= */}
-              {currentTemplateObj?.type === "receipt" && (
-                <div className="grid grid-cols-1 gap-8 max-w-2xl mx-auto">
-                  {previewData.map((row, idx) => (
-                    <div 
-                      key={idx} 
-                      className="border-2 p-8 bg-white break-inside-avoid relative shadow-md rounded-3xl" 
-                      style={{ borderColor: tableBorderColor, borderStyle: tableBorderStyle === 'none' ? 'solid' : tableBorderStyle }}
-                    >
-                      <div className="flex justify-between items-start mb-6 border-b-2 pb-4" style={{ borderColor: tableBorderColor }}>
-                        <div>
-                          <EditableText tagName="h2" className="text-2xl font-black mb-1 text-primary" value="سند قبض مالي رسمي" />
-                          <div className="flex gap-2 text-xs text-muted-foreground mt-1">
-                            <span className="font-bold">رقم السند:</span> 
-                            <EditableText tagName="span" className="font-mono font-bold tabular-nums text-foreground" value={row.id || `REC-${1000+idx}`} isNumeric />
+                  {/* CARDS TEMPLATE */}
+                  {currentTemplateObj?.type === "cards" && (
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 p-2">
+                      {previewData.map((row, idx) => (
+                        <div 
+                          key={idx} 
+                          className="rounded-3xl border-2 shadow-md flex flex-col bg-white overflow-hidden break-inside-avoid relative" 
+                          style={{ borderColor: tableBorderColor, ...tableBorderStyleObj }}
+                        >
+                          <div 
+                            className="p-3.5 text-center border-b flex items-center justify-between" 
+                            style={{ backgroundColor: headerBackgroundColor, borderColor: tableBorderColor }}
+                          >
+                            <div className="text-right">
+                              <div className="text-[10px] font-black" style={{ color: headerTextColor }}>مدرسة التقدم الأهلية</div>
+                              <div className="text-[9px] font-bold opacity-75" style={{ color: headerTextColor }}>بطاقة تعريفية للطالب</div>
+                            </div>
+                            <div className="w-7 h-7 rounded-xl bg-primary text-white flex items-center justify-center font-black text-xs">
+                              {row.name ? row.name.substring(0, 1) : "ط"}
+                            </div>
+                          </div>
+
+                          <div className="p-5 flex-1 flex flex-col items-center text-center gap-3">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/20 text-primary border-2 border-primary/30 flex items-center justify-center font-black text-xl shadow-xs">
+                              {row.name ? row.name.split(" ").slice(0, 2).map((n: string) => n[0]).join("") : "طالب"}
+                            </div>
+
+                            <div>
+                              <div className="font-extrabold text-sm text-foreground">
+                                {row.name || row.studentName || row.id}
+                              </div>
+                              <div className="text-xs font-bold text-primary mt-0.5">
+                                {row.grade || "المرحلة الدراسية"} {row.sectionId && `• شعبة ${globalStore.activeStageSections.find(x => x.id === row.sectionId)?.name || row.sectionId}`}
+                              </div>
+                            </div>
+
+                            <div className="w-full border-t border-border/60 pt-2.5 space-y-1.5 text-xs text-right">
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground font-semibold">رقم القيد:</span>
+                                <span className="font-mono font-bold tabular-nums text-foreground">{row.id || "-"}</span>
+                              </div>
+                              {row.nationalId && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground font-semibold">الهوية:</span>
+                                  <span className="font-mono font-bold tabular-nums text-foreground">{row.nationalId}</span>
+                                </div>
+                              )}
+                              {row.guardianPhone && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground font-semibold">رقم الطوارئ:</span>
+                                  <span className="font-mono font-bold tabular-nums text-foreground" dir="ltr">{row.guardianPhone}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mt-2 pt-2 border-t border-border/40 w-full flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-muted-foreground">العام الدراسي الحالي</span>
+                              <QRCode value={getQrValue(row)} size={48} level="L" />
+                            </div>
                           </div>
                         </div>
-                        {showQrCode && <QRCode value={getQrValue(row)} size={64} level="L" />}
-                      </div>
-                      
-                      <div className="space-y-5">
-                        <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
-                          <span className="font-extrabold text-sm text-emerald-800">المبلغ المستلم نقداً/إلكترونياً:</span>
-                          <EditableText tagName="span" className="text-3xl font-black text-emerald-600 tabular-nums" value={`${row.amount || row.net || "0.00"} ر.س`} isNumeric />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* CERTIFICATE TEMPLATE */}
+                  {currentTemplateObj?.type === "certificate" && (
+                    <div className="space-y-8 flex flex-col items-center justify-center">
+                      {previewData.map((row, idx) => (
+                        <div 
+                          key={idx} 
+                          className="relative w-full p-16 text-center border-[12px] bg-white shadow-xl break-inside-avoid mb-8 rounded-2xl" 
+                          style={{ 
+                            borderColor: headerBackgroundColor, 
+                            borderStyle: tableBorderStyle === 'none' ? 'solid' : tableBorderStyle 
+                          }}
+                        >
+                          <div 
+                            className="absolute inset-2 border-4 border-dashed pointer-events-none rounded-xl" 
+                            style={{ borderColor: tableBorderColor, opacity: 0.4 }} 
+                          />
+                          <div className="relative z-10 flex flex-col items-center gap-8">
+                            <div className="flex items-center justify-center gap-4 text-amber-500">
+                              <Award className="w-20 h-20" />
+                            </div>
+                            <div className="space-y-3">
+                              <EditableText tagName="h1" className="text-5xl font-black tracking-tight" style={{ color: titleColor }} value="شهادة شكر وتقدير وتفوق" />
+                              <EditableText tagName="p" className="text-lg font-bold text-slate-600" value="تتشرف إدارة مدرسة التقدم الأهلية بمنح هذه الشهادة المعتمدة للطالب/ة:" />
+                            </div>
+                            <EditableText 
+                              tagName="h2" 
+                              className="text-4xl font-black border-b-4 pb-3 px-12 rounded-xl text-primary" 
+                              style={{ borderColor: tableBorderColor }} 
+                              value={row.name || row[currentTemplateObj.columns?.[0]?.key || "id"]} 
+                            />
+                            <EditableText 
+                              tagName="p" 
+                              className="text-lg font-medium max-w-2xl leading-relaxed text-slate-700" 
+                              value="تقديراً لجهوده المتميزة وتفوقه الأكاديمي وانضباطه السلوكي المشرف خلال العام الدراسي، متمنين له دوام العطاء والازدهار." 
+                            />
+                            
+                            <div className="grid grid-cols-2 gap-24 mt-12 w-full px-12">
+                              <div className="flex flex-col items-center gap-3">
+                                <EditableText tagName="span" className="font-bold text-base" value={sig1Label} onChange={setSig1Label} />
+                                <div className="w-48 border-b-2" style={{ borderColor: tableBorderColor }} />
+                              </div>
+                              <div className="flex flex-col items-center gap-3">
+                                <EditableText tagName="span" className="font-bold text-base" value={sig3Label} onChange={setSig3Label} />
+                                <div className="w-48 border-b-2" style={{ borderColor: tableBorderColor }} />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        
-                        <div className="grid grid-cols-[130px_1fr] gap-4 items-center text-sm">
-                          <span className="font-bold text-muted-foreground">استلمنا من السيد/ة:</span>
-                          <EditableText tagName="div" className="border-b border-dashed pb-1 font-bold text-foreground" style={{ borderColor: tableBorderColor }} value={row.name || row.studentName || row.guardianName || ""} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* RECEIPT TEMPLATE */}
+                  {currentTemplateObj?.type === "receipt" && (
+                    <div className="grid grid-cols-1 gap-8 max-w-2xl mx-auto">
+                      {previewData.map((row, idx) => (
+                        <div 
+                          key={idx} 
+                          className="border-2 p-8 bg-white break-inside-avoid relative shadow-md rounded-3xl" 
+                          style={{ borderColor: tableBorderColor, borderStyle: tableBorderStyle === 'none' ? 'solid' : tableBorderStyle }}
+                        >
+                          <div className="flex justify-between items-start mb-6 border-b-2 pb-4" style={{ borderColor: tableBorderColor }}>
+                            <div>
+                              <EditableText tagName="h2" className="text-2xl font-black mb-1 text-primary" value="سند قبض مالي رسمي" />
+                              <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                                <span className="font-bold">رقم السند:</span> 
+                                <EditableText tagName="span" className="font-mono font-bold tabular-nums text-foreground" value={row.id || `REC-${1000+idx}`} isNumeric />
+                              </div>
+                            </div>
+                            {showQrCode && <QRCode value={getQrValue(row)} size={64} level="L" />}
+                          </div>
                           
-                          <span className="font-bold text-muted-foreground">وذلك لقاء:</span>
-                          <EditableText tagName="div" className="border-b border-dashed pb-1 font-bold text-foreground" style={{ borderColor: tableBorderColor }} value={row.description || customOptions['receiptReason'] || "رسوم دراسية وفواتير معتمدة"} />
-                          
-                          <span className="font-bold text-muted-foreground">تاريخ الاستحقاق:</span>
-                          <EditableText tagName="div" className="border-b border-dashed pb-1 font-bold tabular-nums text-foreground" style={{ borderColor: tableBorderColor }} value={row.date || new Date().toLocaleDateString('ar-EG')} isNumeric />
-                        </div>
-                      </div>
+                          <div className="space-y-5">
+                            <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
+                              <span className="font-extrabold text-sm text-emerald-800">المبلغ المستلم نقداً/إلكترونياً:</span>
+                              <EditableText tagName="span" className="text-3xl font-black text-emerald-600 tabular-nums" value={`${row.amount || row.net || "0.00"} ر.س`} isNumeric />
+                            </div>
+                            
+                            <div className="grid grid-cols-[130px_1fr] gap-4 items-center text-sm">
+                              <span className="font-bold text-muted-foreground">استلمنا من السيد/ة:</span>
+                              <EditableText tagName="div" className="border-b border-dashed pb-1 font-bold text-foreground" style={{ borderColor: tableBorderColor }} value={row.name || row.studentName || row.guardianName || ""} />
+                              
+                              <span className="font-bold text-muted-foreground">وذلك لقاء:</span>
+                              <EditableText tagName="div" className="border-b border-dashed pb-1 font-bold text-foreground" style={{ borderColor: tableBorderColor }} value={row.description || customOptions['receiptReason'] || "رسوم دراسية وفواتير معتمدة"} />
+                              
+                              <span className="font-bold text-muted-foreground">تاريخ الاستحقاق:</span>
+                              <EditableText tagName="div" className="border-b border-dashed pb-1 font-bold tabular-nums text-foreground" style={{ borderColor: tableBorderColor }} value={row.date || new Date().toLocaleDateString('ar-EG')} isNumeric />
+                            </div>
+                          </div>
 
-                      <div className="flex justify-between mt-10 pt-6 border-t-2 border-dashed" style={{ borderColor: tableBorderColor }}>
-                        <div className="text-center">
-                          <EditableText tagName="p" className="font-bold text-xs mb-8" value="توقيع أمين الصندوق / المحاسب" />
-                          <div className="w-36 border-b-2 mx-auto" style={{ borderColor: tableBorderColor }} />
-                        </div>
-                        <div className="text-center">
-                          <EditableText tagName="p" className="font-bold text-xs mb-8" value="الختم الرسمي للمدرسة" />
-                          <div className="w-24 h-12 border-2 border-dashed rounded-full mx-auto opacity-30 flex items-center justify-center text-[10px] font-bold" style={{ borderColor: tableBorderColor }}>
-                            معتمد
+                          <div className="flex justify-between mt-10 pt-6 border-t-2 border-dashed" style={{ borderColor: tableBorderColor }}>
+                            <div className="text-center">
+                              <EditableText tagName="p" className="font-bold text-xs mb-8" value="توقيع أمين الصندوق / المحاسب" />
+                              <div className="w-36 border-b-2 mx-auto" style={{ borderColor: tableBorderColor }} />
+                            </div>
+                            <div className="text-center">
+                              <EditableText tagName="p" className="font-bold text-xs mb-8" value="الختم الرسمي للمدرسة" />
+                              <div className="w-24 h-12 border-2 border-dashed rounded-full mx-auto opacity-30 flex items-center justify-center text-[10px] font-bold" style={{ borderColor: tableBorderColor }}>
+                                معتمد
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
 
-              {/* =========================================================
-                  CUSTOM DOCUMENT TEMPLATE
-                  ========================================================= */}
-              {currentTemplateObj?.type === "document" && currentTemplateObj.renderDocument && (
-                <div className="w-full flex flex-col">
-                  {previewData.map((row, idx) => (
-                    <div key={idx} className="w-full print:break-after-page border-b-4 print:border-b-0 border-dashed border-primary/20 pb-12 mb-12 print:mb-0 print:pb-0 last:border-b-0 last:mb-0 last:pb-0 relative">
-                      {currentTemplateObj.renderDocument?.({ ...{ hiddenColumns, fontSize: dataFontSize, stripeRows: true, extraEmptyRows, showHeader, showSignatures, customNote, customOptions, themePreset } }, [row])}
-                      
-                      {showQrCode && (
-                        <div className="absolute bottom-4 left-4 print:fixed print:bottom-8 print:left-8">
-                           <QRCode value={getQrValue(row)} size={60} level="L" />
+                  {/* DOCUMENT TEMPLATE */}
+                  {currentTemplateObj?.type === "document" && currentTemplateObj.renderDocument && (
+                    <div className="w-full flex flex-col">
+                      {previewData.map((row, idx) => (
+                        <div key={idx} className="w-full print:break-after-page border-b-4 print:border-b-0 border-dashed border-primary/20 pb-12 mb-12 print:mb-0 print:pb-0 last:border-b-0 last:mb-0 last:pb-0 relative">
+                          {currentTemplateObj.renderDocument?.({ ...{ hiddenColumns, fontSize: dataFontSize, stripeRows: true, extraEmptyRows, showHeader, showSignatures, customNote, customOptions, themePreset } }, [row])}
+                          
+                          {showQrCode && (
+                            <div className="absolute bottom-4 left-4 print:fixed print:bottom-8 print:left-8">
+                               <QRCode value={getQrValue(row)} size={60} level="L" />
+                            </div>
+                          )}
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* =========================================================
-                  OFFICIAL FOOTER SIGNATURES
-                  ========================================================= */}
-              {showSignatures && currentTemplateObj?.type === "table" && (
-                <div className="mt-12 flex justify-between px-6 pb-6">
-                  <div className="text-center">
-                    <EditableText tagName="p" className="font-bold text-xs mb-7 text-slate-700" value={sig1Label} onChange={setSig1Label} />
-                    <div className="w-40 border-b-2" style={{ borderColor: tableBorderColor }} />
-                  </div>
-                  <div className="text-center">
-                    <EditableText tagName="p" className="font-bold text-xs mb-7 text-slate-700" value={sig2Label} onChange={setSig2Label} />
-                    <div className="w-40 border-b-2" style={{ borderColor: tableBorderColor }} />
-                  </div>
-                  <div className="text-center">
-                    <EditableText tagName="p" className="font-bold text-xs mb-7 text-slate-700" value={sig3Label} onChange={setSig3Label} />
-                    <div className="w-40 border-b-2" style={{ borderColor: tableBorderColor }} />
-                  </div>
-                </div>
-              )}
-
-              {/* QR Footer */}
-              {showQrCode && currentTemplateObj?.type === "table" && (
-                <div className="mt-6 flex justify-center pb-6 print:fixed print:bottom-6 print:left-1/2 print:-translate-x-1/2">
-                   <QRCode value={qrCodeData} size={70} level="L" />
+                  )}
                 </div>
               )}
             </div>
@@ -1797,6 +2033,40 @@ export function AdvancedPrintEngine({
                       className="w-16 border border-input rounded-xl px-2 py-1 text-xs font-bold outline-none bg-background text-center tabular-nums" 
                     />
                   </div>
+
+                  {currentTemplateObj?.type === "table" && (
+                    <>
+                      <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                        <span className="font-bold text-foreground">تقسيم A4 لصفحات (Pagination):</span>
+                        <input 
+                          type="checkbox" 
+                          checked={a4PaginationEnabled} 
+                          onChange={e => setA4PaginationEnabled(e.target.checked)} 
+                          className="accent-primary w-4 h-4 rounded cursor-pointer" 
+                        />
+                      </div>
+
+                      {a4PaginationEnabled && (
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-foreground">سجلات في كل ورقة:</span>
+                          <select 
+                            value={a4RowsPerPage} 
+                            onChange={e => {
+                              setA4RowsPerPage(Number(e.target.value));
+                              setA4CurrentSheet(1);
+                            }} 
+                            className="border border-input rounded-xl px-2.5 py-1 text-xs font-bold outline-none bg-background text-foreground"
+                          >
+                            <option value={15}>15 سجل (متباعد ومريح)</option>
+                            <option value={20}>20 سجل (مثالي للعرضي)</option>
+                            <option value={25}>25 سجل (افتراضي للطولي)</option>
+                            <option value={30}>30 سجل (مكثف)</option>
+                            <option value={40}>40 سجل (شديد الكثافة)</option>
+                          </select>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </Accordion>
 
@@ -1815,6 +2085,18 @@ export function AdvancedPrintEngine({
 
                   {showSignatures && (
                     <div className="space-y-2 pt-2 border-t border-border/50">
+                      <div className="flex justify-between items-center pb-1">
+                        <span className="font-bold text-foreground">موضع التوقيعات:</span>
+                        <select 
+                          value={signaturesPlacement} 
+                          onChange={e => setSignaturesPlacement(e.target.value as any)} 
+                          className="border border-input rounded-xl px-2.5 py-1 text-xs font-bold outline-none bg-background text-foreground"
+                        >
+                          <option value="last_page">في الصفحة الأخيرة فقط (رسمي)</option>
+                          <option value="all_pages">في أسفل كل صفحة</option>
+                        </select>
+                      </div>
+
                       <div>
                         <label className="block text-[11px] font-bold text-muted-foreground mb-1">الموقع الأول:</label>
                         <input 

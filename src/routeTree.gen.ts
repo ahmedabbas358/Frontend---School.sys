@@ -73,6 +73,7 @@ import { Route as FacilitiesMaintenanceRouteImport } from './routes/facilities.m
 import { Route as FacilitiesDashboardRouteImport } from './routes/facilities.dashboard'
 import { Route as ExamsReportsRouteImport } from './routes/exams.reports'
 import { Route as ExamsGradesRouteImport } from './routes/exams.grades'
+import { Route as ExamsArchiveRouteImport } from './routes/exams.archive'
 import { Route as DisciplineMeritsRouteImport } from './routes/discipline.merits'
 import { Route as DisciplineIncidentsRouteImport } from './routes/discipline.incidents'
 import { Route as ClinicVisitsRouteImport } from './routes/clinic.visits'
@@ -413,6 +414,11 @@ const ExamsGradesRoute = ExamsGradesRouteImport.update({
   path: '/grades',
   getParentRoute: () => ExamsRoute,
 } as any)
+const ExamsArchiveRoute = ExamsArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => ExamsRoute,
+} as any)
 const DisciplineMeritsRoute = DisciplineMeritsRouteImport.update({
   id: '/merits',
   path: '/merits',
@@ -546,6 +552,7 @@ export interface FileRoutesByFullPath {
   '/clinic/visits': typeof ClinicVisitsRoute
   '/discipline/incidents': typeof DisciplineIncidentsRoute
   '/discipline/merits': typeof DisciplineMeritsRoute
+  '/exams/archive': typeof ExamsArchiveRoute
   '/exams/grades': typeof ExamsGradesRoute
   '/exams/reports': typeof ExamsReportsRoute
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
@@ -625,6 +632,7 @@ export interface FileRoutesByTo {
   '/clinic/visits': typeof ClinicVisitsRoute
   '/discipline/incidents': typeof DisciplineIncidentsRoute
   '/discipline/merits': typeof DisciplineMeritsRoute
+  '/exams/archive': typeof ExamsArchiveRoute
   '/exams/grades': typeof ExamsGradesRoute
   '/exams/reports': typeof ExamsReportsRoute
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
@@ -711,6 +719,7 @@ export interface FileRoutesById {
   '/clinic/visits': typeof ClinicVisitsRoute
   '/discipline/incidents': typeof DisciplineIncidentsRoute
   '/discipline/merits': typeof DisciplineMeritsRoute
+  '/exams/archive': typeof ExamsArchiveRoute
   '/exams/grades': typeof ExamsGradesRoute
   '/exams/reports': typeof ExamsReportsRoute
   '/facilities/dashboard': typeof FacilitiesDashboardRoute
@@ -798,6 +807,7 @@ export interface FileRouteTypes {
     | '/clinic/visits'
     | '/discipline/incidents'
     | '/discipline/merits'
+    | '/exams/archive'
     | '/exams/grades'
     | '/exams/reports'
     | '/facilities/dashboard'
@@ -877,6 +887,7 @@ export interface FileRouteTypes {
     | '/clinic/visits'
     | '/discipline/incidents'
     | '/discipline/merits'
+    | '/exams/archive'
     | '/exams/grades'
     | '/exams/reports'
     | '/facilities/dashboard'
@@ -962,6 +973,7 @@ export interface FileRouteTypes {
     | '/clinic/visits'
     | '/discipline/incidents'
     | '/discipline/merits'
+    | '/exams/archive'
     | '/exams/grades'
     | '/exams/reports'
     | '/facilities/dashboard'
@@ -1487,6 +1499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamsGradesRouteImport
       parentRoute: typeof ExamsRoute
     }
+    '/exams/archive': {
+      id: '/exams/archive'
+      path: '/archive'
+      fullPath: '/exams/archive'
+      preLoaderRoute: typeof ExamsArchiveRouteImport
+      parentRoute: typeof ExamsRoute
+    }
     '/discipline/merits': {
       id: '/discipline/merits'
       path: '/merits'
@@ -1705,12 +1724,14 @@ const DisciplineRouteWithChildren = DisciplineRoute._addFileChildren(
 )
 
 interface ExamsRouteChildren {
+  ExamsArchiveRoute: typeof ExamsArchiveRoute
   ExamsGradesRoute: typeof ExamsGradesRoute
   ExamsReportsRoute: typeof ExamsReportsRoute
   ExamsIndexRoute: typeof ExamsIndexRoute
 }
 
 const ExamsRouteChildren: ExamsRouteChildren = {
+  ExamsArchiveRoute: ExamsArchiveRoute,
   ExamsGradesRoute: ExamsGradesRoute,
   ExamsReportsRoute: ExamsReportsRoute,
   ExamsIndexRoute: ExamsIndexRoute,

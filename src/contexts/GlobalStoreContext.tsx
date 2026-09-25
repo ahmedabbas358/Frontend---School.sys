@@ -537,11 +537,14 @@ export interface Exam {
   id: string;
   academicYearId: string;
   name: string; // e.g., "اختبار منتصف الفصل الدراسي الأول"
-  term: string; // "الفصل الأول"
-  type: "midterm" | "final" | "quiz" | "monthly";
+  term: string; // "الفصل الأول" | "الفصل الثاني" | "الفصل الثالث" | "سنوي"
+  type: "midterm" | "final" | "quiz" | "monthly" | "integrated";
   startDate: string;
   endDate: string;
   status: "draft" | "upcoming" | "ongoing" | "grading" | "completed";
+  gradingSystem?: "marks" | "percentage" | "descriptive";
+  weight?: number; // relative weight e.g. 20, 30, 50
+  stage?: EducationalStage | "all";
 }
 
 export interface ExamSubject {
@@ -549,11 +552,16 @@ export interface ExamSubject {
   examId: string;
   subjectId: string;
   date: string; // specific date for this subject's exam
+  startTime?: string; // e.g. "08:00"
+  duration?: number; // duration in minutes e.g. 60, 90, 120
+  room?: string; // Hall/Room name e.g. "قاعة 101"
   maxScore: number;
   passScore: number;
   weight: number; // e.g., 20% of the term
   stage: EducationalStage | "all";
   grade: string; // e.g. "الصف الأول"
+  sectionId?: string; // optional section restriction
+  invigilator?: string; // Hall invigilator / supervisor name e.g. "أ. محمد عبد الله"
 }
 
 export interface ExamResult {
@@ -561,8 +569,36 @@ export interface ExamResult {
   examSubjectId: string;
   studentEnrollmentId: string;
   mark: number;
+  descriptiveRating?: "ممتاز" | "جيد جداً" | "جيد" | "مقبول" | "ضعيف";
   notes?: string;
   status: "draft" | "submitted" | "approved" | "published";
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+export interface ExamGradePolicy {
+  id: string;
+  examId: string; // specific exam ID or "all"
+  grade: string;  // specific grade or "all"
+  calculationMode: "raw" | "weighted" | "average" | "custom_scale";
+  targetScale?: number; // default 100
+  minPassPct: number; // default 50
+  aggregationStrategy: "cumulative_sum" | "best_attempt" | "final_plus_coursework" | "drop_lowest";
+  roundingMode: "1_decimal" | "round" | "ceil";
+  ratingBoundaries: {
+    excellent: number;
+    veryGood: number;
+    good: number;
+    pass: number;
+  };
+  weightPercent?: number;
+  courseworkRatio?: number;
+  finalExamRatio?: number;
+  customExamWeights?: Record<string, number>;
+  customExamRoles?: Record<string, "coursework" | "final" | "periodic">;
+  dropLowestCount?: number;
+  excludedSubjectIds?: string[];
+  notes?: string;
 }
 
 export interface Subject {
@@ -1132,7 +1168,10 @@ function generateFullEnterpriseSchoolData() {
       const guardianId = `GRD-15K-${String(overallIndex).padStart(5, '0')}`;
       const grade = grades[i % grades.length];
       const isMale = (i % 2 === 0);
-      const matchedSec = stageSections[i % stageSections.length];
+      const gradeSections = stageSections.filter(sec => sec.grade === grade);
+      const matchedSec = gradeSections.length > 0 
+        ? gradeSections[Math.floor(i / grades.length) % gradeSections.length] 
+        : stageSections[i % stageSections.length];
 
       generatedStudents.push({
         id: studentId,
@@ -1528,11 +1567,173 @@ const initialInventoryItems: InventoryItem[] = [
   ...enterpriseData.generatedInventoryItems,
   ...textbookEnterpriseData.textbookInventoryItems
 ];
-const initialExpenses: Expense[] = enterpriseData.generatedExpenses;
+function generateEnterpriseExamData(
+  enrollments: StudentEnrollment[],
+  subjects: Subject[],
+  sections: Section[],
+  academicYearId: string = "Y-1002"
+): {
+  exams: Exam[];
+  examSubjects: ExamSubject[];
+  examResults: ExamResult[];
+} {
+  const exams: Exam[] = [
+    {
+      id: "EXAM-101",
+      academicYearId,
+      name: "اختبارات منتصف الفصل الأول 1446",
+      term: "الفصل الأول",
+      type: "midterm",
+      startDate: "2024-10-20",
+      endDate: "2024-10-31",
+      status: "completed",
+      gradingSystem: "marks",
+      weight: 30,
+      stage: "all"
+    },
+    {
+      id: "EXAM-102",
+      academicYearId,
+      name: "الاختبارات الشهرية (نوفمبر) 1446",
+      term: "الفصل الأول",
+      type: "monthly",
+      startDate: "2024-11-17",
+      endDate: "2024-11-28",
+      status: "completed",
+      gradingSystem: "marks",
+      weight: 20,
+      stage: "all"
+    },
+    {
+      id: "EXAM-103",
+      academicYearId,
+      name: "اختبارات نهاية الفصل الدراسي الأول 1446",
+      term: "الفصل الأول",
+      type: "final",
+      startDate: "2024-12-22",
+      endDate: "2025-01-05",
+      status: "grading",
+      gradingSystem: "marks",
+      weight: 50,
+      stage: "all"
+    },
+    {
+      id: "EXAM-104",
+      academicYearId,
+      name: "التقييم الشامل والمهارات لرياض الأطفال",
+      term: "الفصل الأول",
+      type: "midterm",
+      startDate: "2024-11-01",
+      endDate: "2024-11-15",
+      status: "completed",
+      gradingSystem: "descriptive",
+      weight: 100,
+      stage: "kindergarten"
+    }
+  ];
 
-const initialExams: Exam[] = [];
-const initialExamSubjects: ExamSubject[] = [];
-const initialExamResults: ExamResult[] = [];
+  const examSubjects: ExamSubject[] = [];
+  const examResults: ExamResult[] = [];
+
+  const examTimes = ["08:00", "09:45", "11:15"];
+  const rooms = ["قاعة 101", "قاعة 102", "مدرج الفاروق", "قاعة 201", "قاعة الاختبارات الكبرى"];
+
+  let esCounter = 1;
+  const stagesList: EducationalStage[] = ["primary", "middle", "high", "kindergarten"];
+
+  for (const stg of stagesList) {
+    const stageSubjects = subjects.filter(s => s.stage === stg || s.stage === "all");
+    const stageSections = sections.filter(sec => sec.stage === stg);
+    const uniqueGrades = Array.from(new Set(stageSections.map(sec => sec.grade)));
+
+    const relevantExams = exams.filter(e => e.stage === "all" || e.stage === stg);
+
+    for (const ex of relevantExams) {
+      for (const gr of uniqueGrades) {
+        const relevantSubjects = stageSubjects.filter(s => !s.grades || s.grades.includes(gr) || s.grades.length === 0).slice(0, 6);
+
+        relevantSubjects.forEach((sub, subIdx) => {
+          const esId = `ES-${ex.id}-${stg.substring(0, 2).toUpperCase()}-${sub.id}-${gr.replace(/\s+/g, '')}`;
+          const dateOffset = (subIdx * 2);
+          const baseDate = new Date(ex.startDate);
+          baseDate.setDate(baseDate.getDate() + dateOffset);
+          const examDate = baseDate.toISOString().split("T")[0];
+
+          const isFinal = ex.type === "final";
+          const maxScore = isFinal ? 50 : ex.type === "midterm" ? 30 : 20;
+          const passScore = Math.round(maxScore * 0.5);
+
+          const newEs: ExamSubject = {
+            id: esId,
+            examId: ex.id,
+            subjectId: sub.id,
+            date: examDate,
+            startTime: examTimes[subIdx % examTimes.length],
+            duration: isFinal ? 90 : 60,
+            room: rooms[subIdx % rooms.length],
+            maxScore,
+            passScore,
+            weight: ex.weight || (isFinal ? 50 : 25),
+            stage: stg,
+            grade: gr
+          };
+          examSubjects.push(newEs);
+
+          const gradeEnrollments = enrollments.filter(e => e.stage === stg && e.grade === gr && e.status === "نشط");
+          
+          gradeEnrollments.forEach((enr, enrIdx) => {
+            const seed = (enrIdx * 17 + subIdx * 23 + ex.name.length * 7) % 100;
+            let mark = 0;
+            if (seed < 8) {
+              mark = Math.floor(passScore * 0.6 + (seed / 8) * (passScore * 0.35));
+            } else if (seed < 25) {
+              mark = Math.floor(passScore + ((seed - 8) / 17) * (maxScore * 0.25));
+            } else if (seed < 70) {
+              mark = Math.floor(maxScore * 0.75 + ((seed - 25) / 45) * (maxScore * 0.15));
+            } else {
+              mark = Math.floor(maxScore * 0.90 + ((seed - 70) / 30) * (maxScore * 0.10));
+            }
+            if (mark > maxScore) mark = maxScore;
+            if (mark < 0) mark = 0;
+
+            const percentage = (mark / maxScore) * 100;
+            const rating: "ممتاز" | "جيد جداً" | "جيد" | "مقبول" | "ضعيف" =
+              percentage >= 90 ? "ممتاز" :
+              percentage >= 80 ? "جيد جداً" :
+              percentage >= 70 ? "جيد" :
+              percentage >= 50 ? "مقبول" : "ضعيف";
+
+            const isApproved = (ex.status === "completed" || enrIdx % 4 !== 0);
+
+            examResults.push({
+              id: `ER-${esCounter++}`,
+              examSubjectId: esId,
+              studentEnrollmentId: enr.id,
+              mark,
+              descriptiveRating: rating,
+              status: isApproved ? "approved" : "submitted",
+              approvedBy: isApproved ? "لجنة الكنترول والاختبارات" : undefined,
+              approvedAt: isApproved ? ex.endDate : undefined,
+              notes: mark >= maxScore * 0.95 ? "أداء استثنائي متميز" : mark < passScore ? "يحتاج تكثيف ومتابعة" : undefined
+            });
+          });
+        });
+      }
+    }
+  }
+
+  return { exams, examSubjects, examResults };
+}
+
+const enterpriseExamData = generateEnterpriseExamData(
+  enterpriseData.generatedEnrollments,
+  enterpriseData.generatedSubjects,
+  enterpriseData.generatedSections
+);
+
+const initialExams: Exam[] = enterpriseExamData.exams;
+const initialExamSubjects: ExamSubject[] = enterpriseExamData.examSubjects;
+const initialExamResults: ExamResult[] = enterpriseExamData.examResults;
 
 const initialFeeStructures: FeeStructure[] = [
   { id: "FEE-001", name: "الرسوم الدراسية - ابتدائي", amount: 15000, type: "tuition", stage: "primary", isMandatory: true, installments: [{ name: "القسط الأول", percentage: 50, dueDate: "2023-09-01" }, { name: "القسط الثاني", percentage: 50, dueDate: "2024-02-01" }] },
@@ -1558,6 +1759,39 @@ const initialExpenseCategories: ExpenseCategory[] = [
   { id: "EXPCAT-3", name: "فواتير الكهرباء والمياه" },
   { id: "EXPCAT-4", name: "صيانة وتطوير" },
   { id: "EXPCAT-5", name: "أدوات وقرطاسية" },
+];
+
+const initialExpenses: Expense[] = [
+  {
+    id: "EXP-001",
+    title: "فاتورة استهلاك الكهرباء والمياه - شهر أكتوبر",
+    amount: 4500,
+    date: "2023-10-15",
+    categoryId: "EXPCAT-3",
+    beneficiary: "هيئة الكهرباء والمياه",
+    method: "bank_transfer",
+    status: "posted"
+  },
+  {
+    id: "EXP-002",
+    title: "شراء قرطاسية وأوراق امتحانات وطباعة",
+    amount: 1850,
+    date: "2023-10-18",
+    categoryId: "EXPCAT-5",
+    beneficiary: "مكتبة الشرق للطباعة",
+    method: "cash",
+    status: "paid"
+  },
+  {
+    id: "EXP-003",
+    title: "صيانة أجهزة الحاسوب ومعمل العلوم",
+    amount: 3200,
+    date: "2023-10-25",
+    categoryId: "EXPCAT-4",
+    beneficiary: "مؤسسة الدعم التقني",
+    method: "bank_transfer",
+    status: "posted"
+  }
 ];
 
 const initialVendors: Vendor[] = [
@@ -1914,6 +2148,7 @@ interface GlobalStoreContextType {
   allExams: Exam[];
   allExamSubjects: ExamSubject[];
   allExamResults: ExamResult[];
+  allExamGradePolicies: ExamGradePolicy[];
   allSubjects: Subject[];
   allScheduleSlots: ScheduleSlot[];
   allAcademicYears: AcademicYear[];
@@ -2057,6 +2292,25 @@ interface GlobalStoreContextType {
   deleteExamSubject: (id: string) => void;
   
   saveExamResults: (results: Omit<ExamResult, "id">[]) => void;
+  approveExamResults: (params: {
+    examSubjectId?: string;
+    examId?: string;
+    sectionId?: string;
+    grade?: string;
+    studentEnrollmentId?: string;
+    status: "draft" | "submitted" | "approved" | "published";
+    approvedBy?: string;
+  }) => void;
+  updateSingleExamResult: (
+    enrollmentId: string,
+    examSubjectId: string,
+    markOrData: number | { mark?: number; status?: "draft" | "submitted" | "approved" | "published"; approvedBy?: string; notes?: string; descriptiveRating?: "ممتاز" | "جيد جداً" | "جيد" | "مقبول" | "ضعيف" },
+    notes?: string,
+    descriptiveRating?: "ممتاز" | "جيد جداً" | "جيد" | "مقبول" | "ضعيف"
+  ) => void;
+  resetExamDataToDefaults: () => void;
+  getExamGradePolicy: (examId: string, grade: string) => ExamGradePolicy;
+  saveExamGradePolicy: (policy: Partial<ExamGradePolicy> & { examId: string; grade: string }) => void;
 
   addSubject: (subject: Omit<Subject, "id">) => void;
   deleteSubject: (id: string) => void;
@@ -2239,9 +2493,46 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   ]);
   const [disciplineActions, setDisciplineActions] = useState<DisciplineAction[]>([]);
   const [sections, setSections] = useState<Section[]>(initialSections);
-  const [exams, setExams] = useState<Exam[]>(initialExams);
-  const [examSubjects, setExamSubjects] = useState<ExamSubject[]>(initialExamSubjects);
-  const [examResults, setExamResults] = useState<ExamResult[]>(initialExamResults);
+  const [exams, setExams] = useState<Exam[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_exams") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialExams;
+  });
+  const [examSubjects, setExamSubjects] = useState<ExamSubject[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_exam_subjects") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialExamSubjects;
+  });
+  const [examResults, setExamResults] = useState<ExamResult[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_exam_results") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialExamResults;
+  });
+  const [examGradePolicies, setExamGradePolicies] = useState<ExamGradePolicy[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_exam_grade_policies") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(initialJournalEntries);
   const [journalLines, setJournalLines] = useState<JournalLine[]>(initialJournalLines);
@@ -2321,6 +2612,38 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       } catch {}
     }
   }, [savedTimetables]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_exams", JSON.stringify(exams));
+      } catch {}
+    }
+  }, [exams]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_exam_subjects", JSON.stringify(examSubjects));
+      } catch {}
+    }
+  }, [examSubjects]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_exam_results", JSON.stringify(examResults));
+      } catch {}
+    }
+  }, [examResults]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_exam_grade_policies", JSON.stringify(examGradePolicies));
+      } catch {}
+    }
+  }, [examGradePolicies]);
 
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>(initialMaintenanceRequests);
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
@@ -2493,10 +2816,19 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   // Derived state filtered by the global active stage and active year
   const activeStageStudents = useMemo(() => {
     return studentEnrollments
-      .filter(e => e.academicYearId === currentAcademicYearId && e.stage === activeStage)
+      .filter(e => (!currentAcademicYearId || e.academicYearId === currentAcademicYearId) && e.stage === activeStage)
       .map(e => {
         const studentIdentity = students.find(s => s.id === e.studentId);
-        return { ...studentIdentity, ...e } as Student;
+        return { 
+          ...e, 
+          ...studentIdentity, 
+          id: studentIdentity?.id || e.studentId, 
+          studentId: studentIdentity?.id || e.studentId,
+          enrollmentId: e.id,
+          sectionId: e.sectionId,
+          grade: e.grade,
+          stage: e.stage
+        } as Student;
       });
   }, [studentEnrollments, students, currentAcademicYearId, activeStage]);
   
@@ -2532,8 +2864,31 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
         return a.name.localeCompare(b.name);
       });
   }, [sections, activeStage]);
-  const activeStageExams = useMemo(() => exams.filter(ex => ex.academicYearId === currentAcademicYearId), [exams, currentAcademicYearId]);
-  const activeStageExamSubjects = useMemo(() => examSubjects.filter(sub => sub.stage === activeStage || sub.stage === "all"), [examSubjects, activeStage]);
+  const activeStageExams = useMemo(() => {
+    if (!exams || exams.length === 0) return [];
+    const stageMatched = exams.filter(ex => {
+      // Kindergarten isolation
+      const isKgExam = (ex.stage as string) === "kindergarten" || ex.id === "EXAM-104" || ex.name.includes("رياض الأطفال");
+      if (isKgExam) {
+        return (activeStage as string) === "kindergarten";
+      }
+      if ((activeStage as string) === "kindergarten") {
+        return false;
+      }
+      if (ex.stage && ex.stage !== "all" && ex.stage !== activeStage) {
+        return false;
+      }
+      return true;
+    });
+    const yearMatched = stageMatched.filter(ex => !ex.academicYearId || !currentAcademicYearId || ex.academicYearId === currentAcademicYearId);
+    return yearMatched.length > 0 ? yearMatched : stageMatched;
+  }, [exams, activeStage, currentAcademicYearId]);
+
+  const activeStageExamSubjects = useMemo(() => {
+    if (!examSubjects || examSubjects.length === 0) return initialExamSubjects;
+    const stageMatched = examSubjects.filter(sub => !sub.stage || sub.stage === activeStage || sub.stage === "all");
+    return stageMatched.length > 0 ? stageMatched : examSubjects;
+  }, [examSubjects, activeStage]);
   const activeStageSubjects = useMemo(() => subjects.filter(sub => sub.stage === activeStage || sub.stage === "all"), [subjects, activeStage]);
   const activeStageScheduleSlots = useMemo(() => scheduleSlots.filter(s => s.stage === activeStage), [scheduleSlots, activeStage]);
   const activeStageTeachingAssignments = useMemo(() => teachingAssignments.filter(ta => ta.stage === activeStage), [teachingAssignments, activeStage]);
@@ -3520,12 +3875,200 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       for (const r of newResults) {
         const existingIdx = updated.findIndex(exr => exr.examSubjectId === r.examSubjectId && exr.studentEnrollmentId === r.studentEnrollmentId);
         if (existingIdx >= 0) {
-          updated[existingIdx] = { ...updated[existingIdx], mark: r.mark, notes: r.notes, status: r.status };
+          updated[existingIdx] = { ...updated[existingIdx], mark: r.mark, notes: r.notes, status: r.status, descriptiveRating: r.descriptiveRating || updated[existingIdx].descriptiveRating };
         } else {
           updated.push({ ...r, id: `ER-${Math.floor(1000 + Math.random() * 9000)}` });
         }
       }
       return updated;
+    });
+  };
+
+  const approveExamResults = ({
+    examSubjectId,
+    examId,
+    sectionId,
+    grade,
+    studentEnrollmentId,
+    status,
+    approvedBy = "لجنة الاختبارات والكنترول"
+  }: {
+    examSubjectId?: string;
+    examId?: string;
+    sectionId?: string;
+    grade?: string;
+    studentEnrollmentId?: string;
+    status: "draft" | "submitted" | "approved" | "published";
+    approvedBy?: string;
+  }) => {
+    const approvedAt = new Date().toISOString().split("T")[0];
+    setExamResults(prev => {
+      let targetEnrollmentIds: Set<string> | null = null;
+      if (sectionId || grade) {
+        targetEnrollmentIds = new Set(
+          studentEnrollments
+            .filter(e => (!sectionId || e.sectionId === sectionId) && (!grade || e.grade === grade))
+            .map(e => e.id)
+        );
+      }
+
+      let targetExamSubjectIds: Set<string> | null = null;
+      if (examId) {
+        targetExamSubjectIds = new Set(
+          examSubjects.filter(es => es.examId === examId).map(es => es.id)
+        );
+      }
+
+      return prev.map(r => {
+        if (examSubjectId && r.examSubjectId !== examSubjectId) return r;
+        if (studentEnrollmentId && r.studentEnrollmentId !== studentEnrollmentId) return r;
+        if (targetExamSubjectIds && !targetExamSubjectIds.has(r.examSubjectId)) return r;
+        if (targetEnrollmentIds && !targetEnrollmentIds.has(r.studentEnrollmentId)) return r;
+
+        return {
+          ...r,
+          status,
+          approvedBy: status === "approved" || status === "published" ? approvedBy : undefined,
+          approvedAt: status === "approved" || status === "published" ? approvedAt : undefined,
+        };
+      });
+    });
+  };
+
+  const updateSingleExamResult = (
+    enrollmentId: string,
+    examSubjectId: string,
+    markOrData: number | { mark?: number; status?: "draft" | "submitted" | "approved" | "published"; approvedBy?: string; notes?: string; descriptiveRating?: "ممتاز" | "جيد جداً" | "جيد" | "مقبول" | "ضعيف" },
+    notes?: string,
+    descriptiveRating?: "ممتاز" | "جيد جداً" | "جيد" | "مقبول" | "ضعيف"
+  ) => {
+    setExamResults(prev => {
+      const idx = prev.findIndex(r => 
+        (r.studentEnrollmentId === enrollmentId && r.examSubjectId === examSubjectId) ||
+        (r.studentEnrollmentId === examSubjectId && r.examSubjectId === enrollmentId)
+      );
+
+      const markVal = typeof markOrData === "number" ? markOrData : (markOrData?.mark ?? 0);
+      const statusVal = typeof markOrData === "object" && markOrData.status ? markOrData.status : undefined;
+      const approvedByVal = typeof markOrData === "object" && markOrData.approvedBy ? markOrData.approvedBy : undefined;
+      const notesVal = typeof markOrData === "object" && markOrData.notes !== undefined ? markOrData.notes : notes;
+      const descVal = typeof markOrData === "object" && markOrData.descriptiveRating ? markOrData.descriptiveRating : descriptiveRating;
+
+      if (idx >= 0) {
+        const updated = [...prev];
+        const current = updated[idx];
+        updated[idx] = {
+          ...current,
+          mark: typeof markOrData === "number" ? markOrData : (markOrData?.mark !== undefined ? markOrData.mark : current.mark),
+          status: statusVal || current.status,
+          approvedBy: approvedByVal !== undefined ? approvedByVal : current.approvedBy,
+          notes: notesVal !== undefined ? notesVal : current.notes,
+          descriptiveRating: descVal || current.descriptiveRating,
+        };
+        return updated;
+      } else {
+        const actualEnrollmentId = prev.some(r => r.studentEnrollmentId === enrollmentId) ? enrollmentId :
+          prev.some(r => r.studentEnrollmentId === examSubjectId) ? examSubjectId : enrollmentId;
+        const actualSubjectId = actualEnrollmentId === enrollmentId ? examSubjectId : enrollmentId;
+
+        return [
+          ...prev,
+          {
+            id: `ER-${Math.floor(1000 + Math.random() * 9000)}`,
+            examSubjectId: actualSubjectId,
+            studentEnrollmentId: actualEnrollmentId,
+            mark: markVal,
+            notes: notesVal,
+            descriptiveRating: descVal,
+            status: statusVal || "submitted",
+            approvedBy: approvedByVal,
+          }
+        ];
+      }
+    });
+  };
+
+  const resetExamDataToDefaults = () => {
+    const freshData = generateEnterpriseExamData(
+      studentEnrollments,
+      subjects,
+      sections
+    );
+    setExams(freshData.exams);
+    setExamSubjects(freshData.examSubjects);
+    setExamResults(freshData.examResults);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_exams", JSON.stringify(freshData.exams));
+        localStorage.setItem("darasi_exam_subjects", JSON.stringify(freshData.examSubjects));
+        localStorage.setItem("darasi_exam_results", JSON.stringify(freshData.examResults));
+      } catch {}
+    }
+  };
+
+  const normalizeGradeForPolicy = (g: string = "") => g.replace(/الابتدائي|المتوسط|الثانوي/g, "").replace(/\s+/g, " ").trim();
+
+  const getExamGradePolicy = (examId: string, grade: string): ExamGradePolicy => {
+    const normGrade = normalizeGradeForPolicy(grade);
+    const found = examGradePolicies.find(p => 
+      (p.examId === examId || p.examId === "all") && 
+      (normalizeGradeForPolicy(p.grade) === normGrade || p.grade === "all" || !p.grade)
+    ) || examGradePolicies.find(p => p.examId === examId) || examGradePolicies.find(p => p.examId === "all");
+
+    if (found) return found;
+
+    return {
+      id: `POL-${examId}-${normGrade || "default"}`,
+      examId,
+      grade,
+      calculationMode: "raw", // Raw normal marks by default
+      targetScale: 100,
+      minPassPct: 50,
+      aggregationStrategy: "cumulative_sum",
+      roundingMode: "round",
+      ratingBoundaries: {
+        excellent: 90,
+        veryGood: 80,
+        good: 65,
+        pass: 50,
+      },
+      weightPercent: 100,
+      courseworkRatio: 40,
+      finalExamRatio: 60,
+      excludedSubjectIds: [],
+    };
+  };
+
+  const saveExamGradePolicy = (policy: Partial<ExamGradePolicy> & { examId: string; grade: string }) => {
+    setExamGradePolicies(prev => {
+      const normGrade = normalizeGradeForPolicy(policy.grade);
+      const idx = prev.findIndex(p => p.examId === policy.examId && normalizeGradeForPolicy(p.grade) === normGrade);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], ...policy };
+        return updated;
+      } else {
+        const newPolicy: ExamGradePolicy = {
+          id: `POL-${policy.examId}-${normGrade || Date.now()}`,
+          examId: policy.examId,
+          grade: policy.grade,
+          calculationMode: policy.calculationMode || "raw",
+          targetScale: policy.targetScale ?? 100,
+          minPassPct: policy.minPassPct ?? 50,
+          aggregationStrategy: policy.aggregationStrategy || "cumulative_sum",
+          roundingMode: policy.roundingMode || "round",
+          ratingBoundaries: policy.ratingBoundaries || { excellent: 90, veryGood: 80, good: 65, pass: 50 },
+          weightPercent: policy.weightPercent ?? 100,
+          courseworkRatio: policy.courseworkRatio ?? 40,
+          finalExamRatio: policy.finalExamRatio ?? 60,
+          customExamWeights: policy.customExamWeights,
+          customExamRoles: policy.customExamRoles,
+          dropLowestCount: policy.dropLowestCount ?? 1,
+          excludedSubjectIds: policy.excludedSubjectIds || [],
+          notes: policy.notes,
+        };
+        return [...prev, newPolicy];
+      }
     });
   };
 
@@ -4351,7 +4894,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       allStaff: staff, allClinicVisits: clinicVisits, allDisciplineIncidents: disciplineIncidents,
       allSections: sections,
       assignSectionToRoom,
-      allExams: exams, allExamSubjects: examSubjects, allExamResults: examResults, allSubjects: subjects,
+      allExams: exams, allExamSubjects: examSubjects, allExamResults: examResults, allExamGradePolicies: examGradePolicies, allSubjects: subjects,
       allScheduleSlots: scheduleSlots, allAcademicYears: academicYears, allTeachingAssignments: teachingAssignments,
       allSavedTimetables: savedTimetables,
       activeStageSavedTimetables,
@@ -4414,7 +4957,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
       currency,
       setCurrency,
-      addExam, updateExam, deleteExam, addExamSubject, updateExamSubject, deleteExamSubject, saveExamResults, addSubject, deleteSubject,
+      addExam, updateExam, deleteExam, addExamSubject, updateExamSubject, deleteExamSubject, saveExamResults, approveExamResults, updateSingleExamResult, resetExamDataToDefaults, getExamGradePolicy, saveExamGradePolicy, addSubject, deleteSubject,
       updateScheduleSlot, clearScheduleSlot, addAcademicYear, updateAcademicYear, addTeachingAssignment, deleteTeachingAssignment,
       assignStudentToSection,
       promoteStudents,

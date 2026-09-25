@@ -138,6 +138,7 @@ const NAV: Item[] = [
       items: [
         { to: "/exams", label: "جدول الاختبارات", icon: CalendarDays, badge: "مواعيد" },
         { to: "/exams/grades", label: "النتائج ورصد الدرجات", icon: ClipboardCheck, badge: "رصد" },
+        { to: "/exams/archive", label: "سجل وحفظ النتائج والتحليلات", icon: BarChart3, badge: "قياس وتحليل" },
         { to: "/exams/reports", label: "التقارير والشهادات", icon: FileText, badge: "طباعة" },
       ],
     },
