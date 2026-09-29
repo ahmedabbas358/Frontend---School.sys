@@ -1641,8 +1641,8 @@ function SettingsPage() {
                 <span className={`h-2.5 w-2.5 rounded-full ${isSavedRecently ? "bg-emerald-500 animate-ping" : "bg-emerald-500 animate-pulse"}`} />
                 <span>
                   {isSavedRecently 
-                    ? "╪¬┘à ╪¬╪½╪¿┘è╪¬ ┘ê╪¡┘ü╪╕ ┘â╪º┘ü╪⌐ ╪º┘ä╪¬╪╣╪»┘è┘ä╪º╪¬ ╪¿┘å╪¼╪º╪¡ ┘ü┘è ┘é╪º╪╣╪»╪⌐ ╪º┘ä╪¿┘è╪º┘å╪º╪¬!" 
-                    : "┘è╪¬┘à ╪¡┘ü╪╕ ┘ê╪¬╪╖╪¿┘è┘é ╪º┘ä╪¬╪╣╪»┘è┘ä╪º╪¬ ┘ü┘ê╪▒┘è╪º┘ï ┘ü┘è ╪º┘ä╪░╪º┘â╪▒╪⌐ ╪º┘ä┘à╪¡┘ä┘è╪⌐ ╪º┘ä╪ó┘à┘å╪⌐."}
+                    ? "تم تثبيت وحفظ كافة التعديلات بنجاح في قاعدة البيانات!" 
+                    : "يتم حفظ وتطبيق التعديلات فورياً في الذاكرة المحلية الآمنة."}
                 </span>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1651,7 +1651,7 @@ function SettingsPage() {
                   className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-7 text-xs font-black text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Save className="h-4 w-4" />
-                  <span>╪¡┘ü╪╕ ┘ê╪¬╪½╪¿┘è╪¬ ┘â╪º┘ü╪⌐ ╪º┘ä╪¬╪║┘è┘è╪▒╪º╪¬</span>
+                  <span>حفظ وتثبيت كافة التغييرات</span>
                 </button>
               </div>
             </div>
