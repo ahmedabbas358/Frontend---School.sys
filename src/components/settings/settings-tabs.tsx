@@ -201,29 +201,29 @@ export function FeaturesTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä╪¬╪¡┘â┘à ╪¿┘à┘è╪▓╪º╪¬ ╪º┘ä┘å╪╕╪º┘à ┘ê╪º┘ä┘ê╪¡╪»╪º╪¬ ╪º┘ä╪¬╪┤╪║┘è┘ä┘è╪⌐"
-      description="╪¬┘ü╪╣┘è┘ä ╪ú┘ê ╪¬╪╣╪╖┘è┘ä ┘ê╪¡╪»╪º╪¬ ╪º┘ä┘à┘å╪╕┘ê┘à╪⌐ ┘ê╪º┘ä┘à┘è╪▓╪º╪¬ ╪º┘ä╪▒┘é┘à┘è╪⌐ ┘ê╪º┘ä╪¬╪╖╪¿┘è┘é╪º╪¬ ┘ê╪º┘ä╪▒╪¿╪╖ ╪º┘ä╪¿╪▒┘à╪¼┘è ┘à╪╣ ╪¬╪¡┘â┘à ┘ä╪¡╪╕┘è ┘è┘å╪╣┘â╪│ ┘à╪¿╪º╪┤╪▒╪⌐ ╪╣┘ä┘ë ╪º┘ä┘é╪º╪ª┘à╪⌐ ╪º┘ä╪¼╪º┘å╪¿┘è╪⌐ ┘ê╪º┘ä╪╡┘ä╪º╪¡┘è╪º╪¬"
+      title="التحكم بميزات النظام والوحدات التشغيلية"
+      description="تفعيل أو تعطيل وحدات المنظومة والميزات الرقمية والتطبيقات والربط البرمجي مع تحكم لحظي ينعكس مباشرة على القائمة الجانبية والصلاحيات"
     >
       <div className="space-y-6">
         {/* Features KPI Overview Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-1">
-            <span className="text-xs font-bold text-muted-foreground">╪Ñ╪¼┘à╪º┘ä┘è ╪º┘ä┘à┘è╪▓╪º╪¬ ╪º┘ä┘à╪¬╪º╪¡╪⌐</span>
+            <span className="text-xs font-bold text-muted-foreground">إجمالي الميزات المتاحة</span>
             <div className="text-2xl font-black text-foreground font-mono">{totalFeaturesCount}</div>
-            <div className="text-[11px] text-muted-foreground">┘à┘è╪▓╪º╪¬ ┘à╪¬┘â╪º┘à┘ä╪⌐ ╪¿╪º┘ä┘à┘å╪╕┘ê┘à╪⌐</div>
+            <div className="text-[11px] text-muted-foreground">ميزات متكاملة بالمنظومة</div>
           </div>
           <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 shadow-xs space-y-1">
-            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">╪º┘ä┘à┘è╪▓╪º╪¬ ╪º┘ä┘å╪┤╪╖╪⌐ ╪¡╪º┘ä┘è╪º┘ï</span>
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">الميزات النشطة حالياً</span>
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">{activeFeaturesCount}</div>
-            <div className="text-[11px] text-emerald-600/80">┘à┘ü╪╣┘ä╪⌐ ┘ê╪¬╪╣┘à┘ä ┘à╪¿╪º╪┤╪▒╪⌐</div>
+            <div className="text-[11px] text-emerald-600/80">مفعلة وتعمل مباشرة</div>
           </div>
           <div className="p-4 rounded-2xl border border-border bg-card shadow-xs space-y-1">
-            <span className="text-xs font-bold text-muted-foreground">╪º┘ä┘à┘è╪▓╪º╪¬ ╪º┘ä┘à╪╣╪╖┘ä╪⌐</span>
+            <span className="text-xs font-bold text-muted-foreground">الميزات المعطلة</span>
             <div className="text-2xl font-black text-muted-foreground font-mono">{totalFeaturesCount - activeFeaturesCount}</div>
-            <div className="text-[11px] text-muted-foreground">┘à╪¡╪¼┘ê╪¿╪⌐ ╪╣┘å ╪º┘ä┘ê╪º╪¼┘ç╪⌐</div>
+            <div className="text-[11px] text-muted-foreground">محجوبة عن الواجهة</div>
           </div>
           <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 shadow-xs space-y-1">
-            <span className="text-xs font-bold text-primary">┘å╪│╪¿╪⌐ ╪º┘ä╪¼╪º┘ç╪▓┘è╪⌐ ┘ê╪º┘ä╪¬╪┤╪║┘è┘ä</span>
+            <span className="text-xs font-bold text-primary">نسبة الجاهزية والتشغيل</span>
             <div className="text-2xl font-black text-primary font-mono">{activePercentage}%</div>
             <div className="w-full bg-primary/20 h-1.5 rounded-full overflow-hidden mt-1">
               <div className="bg-primary h-full transition-all duration-500" style={{ width: `${activePercentage}%` }} />
@@ -236,9 +236,9 @@ export function FeaturesTab(props: SettingsTabProps) {
           <div className="flex items-center justify-between">
             <span className="text-xs font-black text-foreground flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-primary" />
-              <span>┘é┘ê╪º┘ä╪¿ ╪º┘ä╪╢╪¿╪╖ ╪º┘ä╪│╪▒┘è╪╣ ┘ä┘ä┘à┘è╪▓╪º╪¬ (Presets)</span>
+              <span>قوالب الضبط السريع للميزات (Presets)</span>
             </span>
-            <span className="text-[11px] text-muted-foreground">╪¬╪╖╪¿┘è┘é ┘à╪│╪¿┘é ╪¡╪│╪¿ ┘å┘à┘ê╪░╪¼ ╪º┘ä┘à┘å╪┤╪ú╪⌐</span>
+            <span className="text-[11px] text-muted-foreground">تطبيق مسبق حسب نموذج المنشأة</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -247,7 +247,7 @@ export function FeaturesTab(props: SettingsTabProps) {
               className="px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
             >
               <Zap className="h-3.5 w-3.5 text-primary" />
-              <span>╪¬┘ü╪╣┘è┘ä ┘â╪º┘ü╪⌐ ╪º┘ä┘à┘è╪▓╪º╪¬ (Enterprise ╪º┘ä╪┤╪º┘à┘ä╪⌐)</span>
+              <span>تفعيل كافة الميزات (Enterprise الشاملة)</span>
             </button>
             <button
               type="button"
@@ -255,7 +255,7 @@ export function FeaturesTab(props: SettingsTabProps) {
               className="px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
             >
               <SchoolIcon className="h-3.5 w-3.5 text-blue-500" />
-              <span>╪º┘ä┘ê╪╢╪╣ ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è ┘ê╪º┘ä╪¬╪╣┘ä┘è┘à┘è (╪¿╪»┘ê┘å ┘å┘é┘ä ┘ê┘à╪│╪¬┘ê╪»╪╣╪º╪¬)</span>
+              <span>الوضع الأكاديمي والتعليمي (بدون نقل ومستودعات)</span>
             </button>
             <button
               type="button"
@@ -263,7 +263,7 @@ export function FeaturesTab(props: SettingsTabProps) {
               className="px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
             >
               <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
-              <span>╪º┘ä┘ê╪╢╪╣ ╪º┘ä┘à╪¿╪│╪╖ (╪º┘ä╪╡┘ü┘ê┘ü╪î ╪º┘ä╪╖┘ä╪º╪¿ ┘ê╪º┘ä╪»╪▒╪¼╪º╪¬)</span>
+              <span>الوضع المبسط (الصفوف، الطلاب والدرجات)</span>
             </button>
             <button
               type="button"
@@ -271,7 +271,7 @@ export function FeaturesTab(props: SettingsTabProps) {
               className="px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 text-muted-foreground"
             >
               <RefreshCcw className="h-3.5 w-3.5" />
-              <span>╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è</span>
+              <span>الافتراضي</span>
             </button>
           </div>
         </div>
@@ -279,11 +279,11 @@ export function FeaturesTab(props: SettingsTabProps) {
         {/* Category Filters */}
         <div className="flex flex-wrap gap-1.5 border-b border-border pb-3">
           {[
-            { id: "all", label: "┘â╪º┘ü╪⌐ ╪º┘ä┘à┘è╪▓╪º╪¬ (20)" },
-            { id: "core", label: "╪º┘ä┘ê╪¡╪»╪º╪¬ ╪º┘ä╪¬╪┤╪║┘è┘ä┘è╪⌐ ╪º┘ä╪ú╪│╪º╪│┘è╪⌐ (9)" },
-            { id: "portals", label: "╪º┘ä╪¿┘ê╪º╪¿╪º╪¬ ┘ê╪º┘ä╪¬╪╖╪¿┘è┘é╪º╪¬ ┘ê╪º┘ä╪º╪¬╪╡╪º┘ä (4)" },
-            { id: "tech", label: "╪º┘ä╪¬┘é┘å┘è╪⌐ ┘ê╪º┘ä╪¬┘â╪º┘à┘ä ╪º┘ä╪░┘â┘è (5)" },
-            { id: "security", label: "╪º┘ä╪ú┘à╪º┘å ┘ê╪¡┘à╪º┘è╪⌐ ╪º┘ä╪¿┘è╪º┘å╪º╪¬ (2)" },
+            { id: "all", label: "كافة الميزات (20)" },
+            { id: "core", label: "الوحدات التشغيلية الأساسية (9)" },
+            { id: "portals", label: "البوابات والتطبيقات والاتصال (4)" },
+            { id: "tech", label: "التقنية والتكامل الذكي (5)" },
+            { id: "security", label: "الأمان وحماية البيانات (2)" },
           ].map((cat) => (
             <button
               key={cat.id}
@@ -344,8 +344,8 @@ export function FeaturesTab(props: SettingsTabProps) {
                         toggleFeature(feat.key, checked);
                         toast.success(
                           checked
-                            ? `╪¬┘à ╪¬┘ü╪╣┘è┘ä: ${feat.name} ┘ê╪¬╪¡╪»┘è╪½ ╪º┘ä┘é╪º╪ª┘à╪⌐ ╪º┘ä╪¼╪º┘å╪¿┘è╪⌐ ┘ü┘ê╪▒╪º┘ï`
-                            : `╪¬┘à ╪¬╪╣╪╖┘è┘ä: ${feat.name} ┘ê╪Ñ╪«┘ü╪º╪ñ┘ç╪º ┘à┘å ╪º┘ä┘é╪º╪ª┘à╪⌐ ╪º┘ä╪¼╪º┘å╪¿┘è╪⌐`
+                            ? `تم تفعيل: ${feat.name} وتحديث القائمة الجانبية فوراً`
+                            : `تم تعطيل: ${feat.name} وإخفاؤها من القائمة الجانبية`
                         );
                       }}
                     />
@@ -366,10 +366,10 @@ export function FeaturesTab(props: SettingsTabProps) {
                         type="button"
                         onClick={() => setTab(feat.tabShortcut!)}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground text-[10px] font-black transition-all shadow-2xs"
-                        title={`╪º┘ä╪º┘å╪¬┘é╪º┘ä ╪Ñ┘ä┘ë ╪¬╪¿┘ê┘è╪¿ ${feat.tabLabel}`}
+                        title={`الانتقال إلى تبويب ${feat.tabLabel}`}
                       >
                         <Settings className="h-3 w-3 text-primary" />
-                        <span>{feat.tabLabel || "╪Ñ╪╣╪»╪º╪»╪º╪¬"}</span>
+                        <span>{feat.tabLabel || "إعدادات"}</span>
                       </button>
                     )}
 
@@ -392,7 +392,7 @@ export function FeaturesTab(props: SettingsTabProps) {
                         title={feat.modalLabel}
                       >
                         <Sparkles className="h-3 w-3" />
-                        <span>{feat.modalLabel || "╪º╪«╪¬╪¿╪º╪▒ / ┘å╪º┘ü╪░╪⌐"}</span>
+                        <span>{feat.modalLabel || "اختبار / نافذة"}</span>
                       </button>
                     )}
 
@@ -402,7 +402,7 @@ export function FeaturesTab(props: SettingsTabProps) {
                         to={feat.route}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[10px] font-black transition-all shadow-2xs"
                       >
-                        <span>{feat.routeLabel || "╪º┘ä╪º┘å╪¬┘é╪º┘ä ┘ä┘ä┘ê╪¡╪»╪⌐"}</span>
+                        <span>{feat.routeLabel || "الانتقال للوحدة"}</span>
                         <ExternalLink className="h-3 w-3" />
                       </Link>
                     )}
@@ -460,20 +460,20 @@ export function SchoolTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪¿┘è╪º┘å╪º╪¬ ┘ê┘ç┘ê┘è╪⌐ ╪º┘ä┘à╪»╪▒╪│╪⌐ ╪º┘ä╪▒╪│┘à┘è╪⌐"
-      description="╪º┘ä┘à╪╣┘ä┘ê┘à╪º╪¬ ╪º┘ä╪ú╪│╪º╪│┘è╪⌐ ╪º┘ä┘à╪╣╪¬┘à╪»╪⌐ ┘ä┘ä┘à╪ñ╪│╪│╪⌐ ╪º┘ä╪¬╪╣┘ä┘è┘à┘è╪⌐ ┘ê╪º┘ä╪¬┘è ╪¬╪╕┘ç╪▒ ╪╣┘ä┘ë ┘â╪º┘ü╪⌐ ╪º┘ä╪¬┘é╪º╪▒┘è╪▒ ┘ê╪º┘ä╪┤┘ç╪º╪»╪º╪¬ ┘ê╪º┘ä┘à╪▒╪º╪│┘ä╪º╪¬"
+      title="بيانات وهوية المدرسة الرسمية"
+      description="المعلومات الأساسية المعتمدة للمؤسسة التعليمية والتي تظهر على كافة التقارير والشهادات والمراسلات"
     >
       <div className="space-y-5">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪º┘ä╪º╪│┘à ╪º┘ä╪▒╪│┘à┘è ┘ä┘ä┘à╪»╪▒╪│╪⌐">
+          <Field label="الاسم الرسمي للمدرسة">
             <input
               value={systemSettings.schoolName}
               onChange={(e) => updateSettings({ schoolName: e.target.value })}
               className={inp}
-              placeholder="┘à╪»╪▒╪│╪⌐ ╪º┘ä┘å┘à┘ê╪░╪¼ ╪º┘ä╪ú┘ç┘ä┘è╪⌐"
+              placeholder="مدرسة النموذج الأهلية"
             />
           </Field>
-          <Field label="╪▒┘é┘à ╪º┘ä╪¬╪▒╪«┘è╪╡ ╪º┘ä┘ê╪▓╪º╪▒┘è">
+          <Field label="رقم الترخيص الوزاري">
             <input
               value={systemSettings.licenseNumber}
               onChange={(e) => updateSettings({ licenseNumber: e.target.value })}
@@ -481,28 +481,28 @@ export function SchoolTab(props: SettingsTabProps) {
               placeholder="LIC-2024-001"
             />
           </Field>
-          <Field label="╪º┘ä┘à╪»┘è╪▒ ╪º┘ä╪╣╪º┘à ╪º┘ä┘à╪╣╪¬┘à╪»">
+          <Field label="المدير العام المعتمد">
             <input
               value={systemSettings.principalName}
               onChange={(e) => updateSettings({ principalName: e.target.value })}
               className={inp}
-              placeholder="╪ú.╪». ╪«╪º┘ä╪» ╪º┘ä┘é╪¡╪╖╪º┘å┘è"
+              placeholder="أ.د. خالد القحطاني"
             />
           </Field>
-          <Field label="┘å┘ê╪╣ ╪º┘ä┘à┘å╪┤╪ú╪⌐ ┘ê╪º┘ä╪¬╪╣┘ä┘è┘à">
+          <Field label="نوع المنشأة والتعليم">
             <select
-              value={systemSettings.schoolType || "╪ú┘ç┘ä┘è (╪¿┘å┘è┘å ┘ê╪¿┘å╪º╪¬)"}
+              value={systemSettings.schoolType || "أهلي (بنين وبنات)"}
               onChange={(e) => updateSettings({ schoolType: e.target.value })}
               className={inp}
             >
-              <option>╪ú┘ç┘ä┘è (╪¿┘å┘è┘å ┘ê╪¿┘å╪º╪¬)</option>
-              <option>╪ú┘ç┘ä┘è (╪¿┘å┘è┘å ┘ü┘é╪╖)</option>
-              <option>╪ú┘ç┘ä┘è (╪¿┘å╪º╪¬ ┘ü┘é╪╖)</option>
-              <option>╪╣╪º┘ä┘à┘è ┘ê╪»┘ê┘ä┘è (International)</option>
-              <option>╪¡┘â┘ê┘à┘è ╪▒╪│┘à┘è</option>
+              <option>أهلي (بنين وبنات)</option>
+              <option>أهلي (بنين فقط)</option>
+              <option>أهلي (بنات فقط)</option>
+              <option>عالمي ودولي (International)</option>
+              <option>حكومي رسمي</option>
             </select>
           </Field>
-          <Field label="╪▒┘é┘à ╪º┘ä┘ç╪º╪¬┘ü ╪º┘ä╪½╪º╪¿╪¬ ╪º┘ä┘à╪╣╪¬┘à╪»">
+          <Field label="رقم الهاتف الثابت المعتمد">
             <input
               value={systemSettings.phone}
               onChange={(e) => updateSettings({ phone: e.target.value })}
@@ -510,7 +510,7 @@ export function SchoolTab(props: SettingsTabProps) {
               placeholder="0112345678"
             />
           </Field>
-          <Field label="╪º┘ä╪¿╪▒┘è╪» ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è ╪º┘ä╪▒╪│┘à┘è">
+          <Field label="البريد الإلكتروني الرسمي">
             <input
               type="email"
               value={systemSettings.email}
@@ -519,7 +519,7 @@ export function SchoolTab(props: SettingsTabProps) {
               placeholder="info@school.edu.sa"
             />
           </Field>
-          <Field label="╪º┘ä┘à┘ê┘é╪╣ ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è ╪º┘ä╪▒╪│┘à┘è">
+          <Field label="الموقع الإلكتروني الرسمي">
             <input
               type="url"
               dir="ltr"
@@ -529,24 +529,24 @@ export function SchoolTab(props: SettingsTabProps) {
               placeholder="https://myschool.edu.sa"
             />
           </Field>
-          <Field label="╪º┘ä╪╣┘å┘ê╪º┘å / ╪º┘ä┘à╪»┘è┘å╪⌐ ┘ê╪º┘ä╪¡┘è">
+          <Field label="العنوان / المدينة والحي">
             <input
               value={systemSettings.address}
               onChange={(e) => updateSettings({ address: e.target.value })}
               className={inp}
-              placeholder="╪º┘ä╪▒┘è╪º╪╢ - ╪¡┘è ╪º┘ä┘ê╪º╪¡╪⌐ - ╪╖╪▒┘è┘é ╪º┘ä┘à┘ä┘â ╪╣╪¿╪»╪º┘ä┘ä┘ç"
+              placeholder="الرياض - حي الواحة - طريق الملك عبدالله"
             />
           </Field>
         </div>
 
         <div className="pt-2">
-          <Field label="╪º┘ä╪▒╪ñ┘è╪⌐ ┘ê╪º┘ä╪▒╪│╪º┘ä╪⌐ ╪º┘ä┘à╪ñ╪│╪│┘è╪⌐ (╪¬┘Å╪╢┘à┘å ┘ü┘è ╪º┘ä╪¬┘é╪º╪▒┘è╪▒ ┘ê╪º┘ä╪«╪╖╪╖)">
+          <Field label="الرؤية والرسالة المؤسسية (تُضمن في التقارير والخطط)">
             <textarea
               rows={3}
               className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-bold leading-relaxed focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
               value={systemSettings.vision}
               onChange={(e) => updateSettings({ vision: e.target.value })}
-              placeholder="╪º┘ä╪▒┘è╪º╪»╪⌐ ┘ü┘è ╪¬┘é╪»┘è┘à ╪¬╪╣┘ä┘è┘à ┘å┘ê╪╣┘è ┘è┘å┘à┘è ┘à┘ç╪º╪▒╪º╪¬ ╪º┘ä┘à╪│╪¬┘é╪¿┘ä..."
+              placeholder="الريادة في تقديم تعليم نوعي ينمي مهارات المستقبل..."
             />
           </Field>
         </div>
@@ -598,21 +598,21 @@ export function BrandTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä┘ç┘ê┘è╪⌐ ╪º┘ä╪¿╪╡╪▒┘è╪⌐ ┘ê╪º┘ä┘à╪╖╪¿┘ê╪╣╪º╪¬ ╪º┘ä┘à╪╣╪¬┘à╪»╪⌐"
-      description="╪Ñ╪»╪º╪▒╪⌐ ╪┤╪╣╪º╪▒ ╪º┘ä┘à╪»╪▒╪│╪⌐╪î ╪º┘ä╪«╪¬┘à ╪º┘ä╪▒╪│┘à┘è ┘ä┘ä╪┤┘ç╪º╪»╪º╪¬ ┘ê╪º┘ä┘ü┘ê╪º╪¬┘è╪▒╪î ┘ê╪º┘ä╪¬╪▒┘ê┘è╪│╪⌐ ╪º┘ä╪▒┘é┘à┘è╪⌐"
+      title="الهوية البصرية والمطبوعات المعتمدة"
+      description="إدارة شعار المدرسة، الختم الرسمي للشهادات والفواتير، والترويسة الرقمية"
     >
       <div className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Official Logo Uploader with Live Preview */}
           <div className="rounded-2xl border border-border p-4 bg-card/60 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-foreground">╪º┘ä╪┤╪╣╪º╪▒ ╪º┘ä╪▒╪│┘à┘è ┘ä┘ä┘à╪»╪▒╪│╪⌐ (Logo)</span>
+              <span className="text-xs font-black text-foreground">الشعار الرسمي للمدرسة (Logo)</span>
               {systemSettings.logoUrl && (
                 <button
-                  onClick={() => { updateSettings({ logoUrl: "" }); toast.info("╪¬┘à╪¬ ╪Ñ╪▓╪º┘ä╪⌐ ╪º┘ä╪┤╪╣╪º╪▒"); }}
+                  onClick={() => { updateSettings({ logoUrl: "" }); toast.info("تمت إزالة الشعار"); }}
                   className="text-[11px] font-bold text-danger hover:underline"
                 >
-                  ╪Ñ╪▓╪º┘ä╪⌐ ╪º┘ä╪┤╪╣╪º╪▒
+                  إزالة الشعار
                 </button>
               )}
             </div>
@@ -628,11 +628,11 @@ export function BrandTab(props: SettingsTabProps) {
               <div className="space-y-2 flex-1">
                 <label className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs">
                   <Upload className="h-3.5 w-3.5" />
-                  <span>╪▒┘ü╪╣ ╪┤╪╣╪º╪▒ ╪¼╪»┘è╪»</span>
+                  <span>رفع شعار جديد</span>
                   <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                 </label>
                 <p className="text-[11px] text-muted-foreground leading-tight">
-                  ╪╡┘è╪║╪⌐ PNG ╪ú┘ê SVG ╪¿╪«┘ä┘ü┘è╪⌐ ╪┤┘ü╪º┘ü╪⌐ ┘ä╪╢┘à╪º┘å ╪¼┘ê╪»╪⌐ ╪º┘ä╪┤┘ç╪º╪»╪º╪¬ ┘ê╪º┘ä┘à╪╖╪¿┘ê╪╣╪º╪¬.
+                  صيغة PNG أو SVG بخلفية شفافة لضمان جودة الشهادات والمطبوعات.
                 </p>
               </div>
             </div>
@@ -641,13 +641,13 @@ export function BrandTab(props: SettingsTabProps) {
           {/* Official Digital Stamp Uploader with Live Preview */}
           <div className="rounded-2xl border border-border p-4 bg-card/60 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-foreground">╪º┘ä╪«╪¬┘à ╪º┘ä┘à╪╣╪¬┘à╪» (┘ä┘ä╪┤┘ç╪º╪»╪º╪¬ ┘ê╪º┘ä┘ü┘ê╪º╪¬┘è╪▒)</span>
+              <span className="text-xs font-black text-foreground">الختم المعتمد (للشهادات والفواتير)</span>
               {systemSettings.stampUrl && (
                 <button
-                  onClick={() => { updateSettings({ stampUrl: "" }); toast.info("╪¬┘à╪¬ ╪Ñ╪▓╪º┘ä╪⌐ ╪º┘ä╪«╪¬┘à"); }}
+                  onClick={() => { updateSettings({ stampUrl: "" }); toast.info("تمت إزالة الختم"); }}
                   className="text-[11px] font-bold text-danger hover:underline"
                 >
-                  ╪Ñ╪▓╪º┘ä╪⌐ ╪º┘ä╪«╪¬┘à
+                  إزالة الختم
                 </button>
               )}
             </div>
@@ -658,18 +658,18 @@ export function BrandTab(props: SettingsTabProps) {
                   <img src={systemSettings.stampUrl} alt="Stamp" className="h-full w-full object-contain p-1 rotate-[-6deg]" />
                 ) : (
                   <div className="h-16 w-16 rounded-full border border-dashed border-red-400 text-red-500/60 flex items-center justify-center text-[10px] font-black rotate-[-12deg]">
-                    ╪«╪¬┘à ╪▒╪│┘à┘è
+                    ختم رسمي
                   </div>
                 )}
               </div>
               <div className="space-y-2 flex-1">
                 <label className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-border bg-card hover:bg-accent px-4 text-xs font-bold text-foreground transition-all cursor-pointer shadow-xs">
                   <Upload className="h-3.5 w-3.5 text-primary" />
-                  <span>╪▒┘ü╪╣ ╪╡┘ê╪▒╪⌐ ╪º┘ä╪«╪¬┘à</span>
+                  <span>رفع صورة الختم</span>
                   <input type="file" accept="image/*" onChange={handleStampUpload} className="hidden" />
                 </label>
                 <p className="text-[11px] text-muted-foreground leading-tight">
-                  ╪╡┘ê╪▒╪⌐ ╪º┘ä╪«╪¬┘à ╪º┘ä╪»╪º╪ª╪▒┘è ╪ú┘ê ╪º┘ä╪¿┘è╪╢╪º┘ê┘è ╪¿╪»┘é╪⌐ ╪╣╪º┘ä┘è╪⌐ ┘ê╪«┘ä┘ü┘è╪⌐ ┘à┘ü╪▒╪║╪⌐.
+                  صورة الختم الدائري أو البيضاوي بدقة عالية وخلفية مفرغة.
                 </p>
               </div>
             </div>
@@ -677,12 +677,12 @@ export function BrandTab(props: SettingsTabProps) {
         </div>
 
         <div className="pt-2">
-          <Field label="╪¬╪░┘è┘è┘ä ╪º┘ä┘à╪╖╪¿┘ê╪╣╪º╪¬ ┘ê╪º┘ä┘ê╪½╪º╪ª┘é ╪º┘ä╪▒╪│┘à┘è ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è">
+          <Field label="تذييل المطبوعات والوثائق الرسمي الافتراضي">
             <input
               value={systemSettings.footerText}
               onChange={(e) => updateSettings({ footerText: e.target.value })}
               className={inp}
-              placeholder="┘ç╪░┘ç ╪º┘ä┘ê╪½┘è┘é╪⌐ ╪▒╪│┘à┘è╪⌐ ┘ê┘à╪│╪¬╪«╪▒╪¼╪⌐ ╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è╪º┘ï ┘à┘å ┘à┘å╪╡╪⌐ ┘à╪»╪º╪▒╪│"
+              placeholder="هذه الوثيقة رسمية ومستخرجة إلكترونياً من منصة مدارس"
             />
           </Field>
         </div>
@@ -692,17 +692,17 @@ export function BrandTab(props: SettingsTabProps) {
           <div>
             <div className="font-black text-sm text-foreground flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              <span>╪º┘ä┘à╪╣╪º┘è┘å╪⌐ ╪º┘ä┘à╪¿╪º╪┤╪▒╪⌐ ┘ä┘ä╪¬╪▒┘ê┘è╪│╪⌐ ┘ê╪º┘ä┘à╪╖╪¿┘ê╪╣╪º╪¬ ╪º┘ä╪▒╪│┘à┘è╪⌐ (A4)</span>
+              <span>المعاينة المباشرة للترويسة والمطبوعات الرسمية (A4)</span>
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              ╪¬╪ú┘â╪» ┘à┘å ╪┤┘â┘ä ╪º┘ä╪┤╪╣╪º╪▒╪î ╪º┘ä╪«╪¬┘à╪î ┘ê╪º┘ä╪¿╪º╪▒┘â┘ê╪» ╪º┘ä╪▒┘é┘à┘è ┘â┘à╪º ╪│┘è╪╕┘ç╪▒ ┘ä┘ä╪╖╪º┘ä╪¿ ┘ê┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒ ╪╣┘å╪» ╪º┘ä╪╖╪¿╪º╪╣╪⌐
+              تأكد من شكل الشعار، الختم، والباركود الرقمي كما سيظهر للطالب وولي الأمر عند الطباعة
             </div>
           </div>
           <button
             onClick={() => setIsPrintPreviewOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 shrink-0"
           >
-            <Eye className="h-4 w-4" /> ┘ü╪¬╪¡ ╪º┘ä┘à╪╣╪º┘è┘å╪⌐ ╪º┘ä╪¡┘è╪⌐ (A4)
+            <Eye className="h-4 w-4" /> فتح المعاينة الحية (A4)
           </button>
         </div>
       </div>
@@ -753,47 +753,47 @@ export function FacilitiesTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä┘à╪▒╪º┘ü┘é ┘ê╪º┘ä┘é╪º╪╣╪º╪¬ ┘ê╪º┘ä╪ú╪╡┘ê┘ä"
-      description="╪Ñ╪╣╪»╪º╪» ╪¬╪╡┘å┘è┘ü╪º╪¬ ╪º┘ä┘é╪º╪╣╪º╪¬ ┘ê╪º┘ä┘à╪│╪¬┘ê╪»╪╣╪î ╪¬┘å╪¿┘è┘ç╪º╪¬ ╪º┘ä╪╡┘è╪º┘å╪⌐ ╪º┘ä┘ê┘é╪º╪ª┘è╪⌐╪î ┘ê╪│┘è╪º╪│╪º╪¬ ╪¬╪▒┘é┘è┘à ╪º┘ä╪ú╪╡┘ê┘ä"
+      title="إدارة المرافق والقاعات والأصول"
+      description="إعداد تصنيفات القاعات والمستودع، تنبيهات الصيانة الوقائية، وسياسات ترقيم الأصول"
     >
       <div className="space-y-6">
         <div className="grid gap-5 md:grid-cols-2">
           <TagManagerField
-            label="╪¬╪╡┘å┘è┘ü╪º╪¬ ╪º┘ä┘é╪º╪╣╪º╪¬ ┘ê╪º┘ä┘à╪▒╪º┘ü┘é ╪º┘ä┘à╪╣╪¬┘à╪»╪⌐"
-            description="╪º┘ä╪¬╪╡┘å┘è┘ü╪º╪¬ ╪º┘ä┘à╪¬╪º╪¡╪⌐ ╪╣┘å╪» ╪Ñ╪╢╪º┘ü╪⌐ ╪║╪▒┘ü ╪ú┘ê ┘à╪╣╪º┘à┘ä ╪¼╪»┘è╪»╪⌐"
+            label="تصنيفات القاعات والمرافق المعتمدة"
+            description="التصنيفات المتاحة عند إضافة غرف أو معامل جديدة"
             tagsString={systemSettings.roomCategories}
             onUpdate={(newStr) => updateSettings({ roomCategories: newStr })}
           />
 
           <TagManagerField
-            label="╪¬╪╡┘å┘è┘ü╪º╪¬ ╪º┘ä╪ú╪╡┘ê┘ä ┘ê╪º┘ä┘à┘à╪¬┘ä┘â╪º╪¬"
-            description="╪¬╪¿┘ê┘è╪¿ ╪ú╪¼┘ç╪▓╪⌐ ┘ê╪ú╪½╪º╪½ ╪º┘ä┘à╪»╪▒╪│╪⌐ ┘ü┘è ╪│╪¼┘ä ╪º┘ä╪╣┘ç╪»"
+            label="تصنيفات الأصول والممتلكات"
+            description="تبويب أجهزة وأثاث المدرسة في سجل العهد"
             tagsString={systemSettings.assetCategories}
             onUpdate={(newStr) => updateSettings({ assetCategories: newStr })}
           />
 
-          <Field label="┘å╪╕╪º┘à ╪¬╪▒┘é┘è┘à ╪º┘ä┘é╪º╪╣╪º╪¬ ┘ê╪º┘ä╪║╪▒┘ü">
+          <Field label="نظام ترقيم القاعات والغرف">
             <select
               className={inp}
               value={systemSettings.roomNumbering}
               onChange={(e) => updateSettings({ roomNumbering: e.target.value })}
             >
-              <option>╪¬╪▒┘é┘è┘à ╪¬┘ä┘é╪º╪ª┘è ╪░┘â┘è (RM-XXXX)</option>
-              <option>╪¬╪▒┘é┘è┘à ┘è╪»┘ê┘è ┘à╪«╪╡╪╡ ┘à┘å ╪º┘ä╪Ñ╪»╪º╪▒╪⌐</option>
-              <option>╪¬╪▒┘é┘è┘à ╪¡╪│╪¿ ╪º┘ä┘à╪¿┘å┘ë ┘ê╪º┘ä╪╖╪º╪¿┘é (B1-F1-01)</option>
+              <option>ترقيم تلقائي ذكي (RM-XXXX)</option>
+              <option>ترقيم يدوي مخصص من الإدارة</option>
+              <option>ترقيم حسب المبنى والطابق (B1-F1-01)</option>
             </select>
           </Field>
 
-          <Field label="╪¬┘å╪¿┘è┘ç╪º╪¬ ╪º┘ä╪╡┘è╪º┘å╪⌐ ╪º┘ä┘ê┘é╪º╪ª┘è╪⌐ ╪º┘ä┘à╪¿┘â╪▒╪⌐">
+          <Field label="تنبيهات الصيانة الوقائية المبكرة">
             <select
               className={inp}
               value={systemSettings.maintenanceAlert}
               onChange={(e) => updateSettings({ maintenanceAlert: e.target.value })}
             >
-              <option>┘à┘ü╪╣┘ä (┘é╪¿┘ä 7 ╪ú┘è╪º┘à ┘à┘å ╪º┘ä┘à┘ê╪╣╪»)</option>
-              <option>┘à┘ü╪╣┘ä (┘é╪¿┘ä 3 ╪ú┘è╪º┘à ┘à┘å ╪º┘ä┘à┘ê╪╣╪»)</option>
-              <option>┘à┘ü╪╣┘ä (┘é╪¿┘ä 24 ╪│╪º╪╣╪⌐)</option>
-              <option>┘à╪╣╪╖┘ä</option>
+              <option>مفعل (قبل 7 أيام من الموعد)</option>
+              <option>مفعل (قبل 3 أيام من الموعد)</option>
+              <option>مفعل (قبل 24 ساعة)</option>
+              <option>معطل</option>
             </select>
           </Field>
         </div>
@@ -801,10 +801,10 @@ export function FacilitiesTab(props: SettingsTabProps) {
         <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-4">
           <div className="flex items-center gap-2 font-black text-sm text-foreground">
             <Building className="h-4 w-4 text-primary" />
-            <span>╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘à╪│╪¬┘ê╪»╪╣ ╪º┘ä┘à╪▒┘â╪▓┘è ┘ê╪¼╪▒╪» ╪º┘ä╪╣┘ç╪»</span>
+            <span>سياسات المستودع المركزي وجرد العهد</span>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="╪¡╪» ╪º┘ä╪¬┘å╪¿┘è┘ç ┘ä┘ä┘à╪«╪▓┘ê┘å ╪º┘ä┘à┘å╪«┘ü╪╢ (┘é╪╖╪╣)">
+            <Field label="حد التنبيه للمخزون المنخفض (قطع)">
               <input
                 type="number"
                 className={inp}
@@ -812,15 +812,15 @@ export function FacilitiesTab(props: SettingsTabProps) {
                 onChange={(e) => updateSettings({ inventoryAlertLimit: Math.max(0, parseInt(e.target.value) || 0) })}
               />
             </Field>
-            <Field label="╪╖╪▒┘è┘é╪⌐ ╪º╪¡╪¬╪│╪º╪¿ ╪¬┘â┘ä┘ü╪⌐ ┘ê╪¼╪▒╪» ╪º┘ä┘à╪«╪▓┘ê┘å">
+            <Field label="طريقة احتساب تكلفة وجرد المخزون">
               <select
                 className={inp}
                 value={systemSettings.inventoryMethod}
                 onChange={(e) => updateSettings({ inventoryMethod: e.target.value })}
               >
-                <option>FIFO (┘à╪º ┘è╪»╪«┘ä ╪ú┘ê┘ä╪º┘ï ┘è╪«╪▒╪¼ ╪ú┘ê┘ä╪º┘ï)</option>
-                <option>LIFO (┘à╪º ┘è╪»╪«┘ä ╪ó╪«╪▒╪º┘ï ┘è╪«╪▒╪¼ ╪ú┘ê┘ä╪º┘ï)</option>
-                <option>╪º┘ä┘à╪¬┘ê╪│╪╖ ╪º┘ä┘à╪▒╪¼╪¡ (Weighted Average)</option>
+                <option>FIFO (ما يدخل أولاً يخرج أولاً)</option>
+                <option>LIFO (ما يدخل آخراً يخرج أولاً)</option>
+                <option>المتوسط المرجح (Weighted Average)</option>
               </select>
             </Field>
           </div>
@@ -873,14 +873,14 @@ export function AcademicTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä╪│┘å┘ê╪º╪¬ ┘ê╪º┘ä╪¬┘é┘ê┘è┘à ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è"
-      description="╪¬╪╣┘è┘è┘å ╪º┘ä╪│┘å╪⌐ ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è╪⌐ ╪º┘ä╪¡╪º┘ä┘è╪⌐╪î ┘à┘ê╪º╪╣┘è╪» ╪º┘ä╪»┘ê╪º┘à ╪º┘ä╪┤╪¬┘ê┘è ┘ê╪º┘ä╪╡┘è┘ü┘è╪î ┘ê┘é┘ê╪º╪╣╪» ╪º┘ä╪║┘è╪º╪¿"
+      title="السنوات والتقويم الأكاديمي"
+      description="تعيين السنة الأكاديمية الحالية، مواعيد الدوام الشتوي والصيفي، وقواعد الغياب"
     >
       <div className="space-y-6">
         <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <label className="text-xs font-black text-foreground block">╪º┘ä╪│┘å╪⌐ ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è╪⌐ ╪º┘ä┘å╪┤╪╖╪⌐ ╪¡╪º┘ä┘è╪º┘ï ┘ä┘ä┘à┘å╪╡╪⌐</label>
-            <div className="text-xs text-muted-foreground">╪¬╪╣╪¬┘à╪» ┘â╪º┘ü╪⌐ ╪º┘ä┘ü╪╡┘ê┘ä ┘ê╪º┘ä╪¼╪»╪º┘ê┘ä ┘ê╪º┘ä╪»╪▒╪¼╪º╪¬ ╪╣┘ä┘ë ┘ç╪░┘ç ╪º┘ä╪│┘å╪⌐ ╪º┘ä┘à╪¡╪»╪»╪⌐</div>
+            <label className="text-xs font-black text-foreground block">السنة الأكاديمية النشطة حالياً للمنصة</label>
+            <div className="text-xs text-muted-foreground">تعتمد كافة الفصول والجداول والدرجات على هذه السنة المحددة</div>
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -890,7 +890,7 @@ export function AcademicTab(props: SettingsTabProps) {
             >
               {allAcademicYears.map((y) => (
                 <option key={y.id} value={y.id}>
-                  {y.name} {y.isCurrent ? "Γÿà (╪º┘ä╪│┘å╪⌐ ╪º┘ä┘å╪┤╪╖╪⌐)" : ""}
+                  {y.name} {y.isCurrent ? "★ (السنة النشطة)" : ""}
                 </option>
               ))}
             </select>
@@ -898,13 +898,13 @@ export function AcademicTab(props: SettingsTabProps) {
               onClick={() => setIsAddYearOpen(true)}
               className="inline-flex h-10 items-center gap-1.5 px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-xs"
             >
-              <Plus className="h-4 w-4" /> ╪│┘å╪⌐ ╪¼╪»┘è╪»╪⌐
+              <Plus className="h-4 w-4" /> سنة جديدة
             </button>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪¿╪»╪º┘è╪⌐ ╪º┘ä╪»┘ê╪º┘à ╪º┘ä╪┤╪¬┘ê┘è (╪º╪╡╪╖┘ü╪º┘ü ╪º┘ä╪╖╪º╪¿┘ê╪▒)">
+          <Field label="بداية الدوام الشتوي (اصطفاف الطابور)">
             <input
               type="time"
               value={systemSettings.winterTime}
@@ -912,7 +912,7 @@ export function AcademicTab(props: SettingsTabProps) {
               className={inp}
             />
           </Field>
-          <Field label="╪¿╪»╪º┘è╪⌐ ╪º┘ä╪»┘ê╪º┘à ╪º┘ä╪╡┘è┘ü┘è (╪º╪╡╪╖┘ü╪º┘ü ╪º┘ä╪╖╪º╪¿┘ê╪▒)">
+          <Field label="بداية الدوام الصيفي (اصطفاف الطابور)">
             <input
               type="time"
               value={systemSettings.summerTime}
@@ -923,17 +923,17 @@ export function AcademicTab(props: SettingsTabProps) {
         </div>
 
         <div className="border-t border-border pt-4 space-y-3">
-          <h3 className="font-black text-sm text-foreground">┘é┘ê╪º╪╣╪» ╪º┘ä╪║┘è╪º╪¿ ┘ê╪º┘ä╪º┘å╪╢╪¿╪º╪╖ ╪º┘ä┘à╪»╪▒╪│┘è</h3>
+          <h3 className="font-black text-sm text-foreground">قواعد الغياب والانضباط المدرسي</h3>
           <div className="space-y-3">
             <SwitchField
-              title="╪º╪¡╪¬╪│╪º╪¿ ╪º┘ä╪¬╪ú╪«╪▒ ╪╣┘å ╪º┘ä╪º╪╡╪╖┘ü╪º┘ü ╪º┘ä╪╡╪¿╪º╪¡┘è ┘â╪║┘è╪º╪¿ ╪¼╪▓╪ª┘è"
-              description="┘è╪¬┘à ╪¬╪│╪¼┘è┘ä ╪▒╪¿╪╣ ╪¡╪╡╪⌐ ╪║┘è╪º╪¿ ╪¬┘ä┘é╪º╪ª┘è╪º┘ï ╪╣┘å╪» ╪º┘ä╪¬╪ú╪«╪▒ ┘ä╪ú┘â╪½╪▒ ┘à┘å 15 ╪»┘é┘è┘é╪⌐ ╪¿╪╣╪» ╪º┘ä╪╖╪º╪¿┘ê╪▒"
+              title="احتساب التأخر عن الاصطفاف الصباحي كغياب جزئي"
+              description="يتم تسجيل ربع حصة غياب تلقائياً عند التأخر لأكثر من 15 دقيقة بعد الطابور"
               checked={systemSettings.lateAsPartialAbsence}
               onChange={(checked) => updateSettings({ lateAsPartialAbsence: checked })}
             />
             <SwitchField
-              title="╪«╪╡┘à ╪»╪▒╪¼╪º╪¬ ╪º┘ä╪│┘ä┘ê┘â ┘ê╪º┘ä┘à┘ê╪º╪╕╪¿╪⌐ ╪ó┘ä┘è╪º┘ï"
-              description="╪¬╪╖╪¿┘è┘é ╪º┘ä╪«╪╡┘à ╪º┘ä┘ä╪º╪ª╪¡┘è ╪º┘ä┘à╪╣╪¬┘à╪» ╪¬┘ä┘é╪º╪ª┘è╪º┘ï ╪╣┘å╪» ╪¬╪¼╪º┘ê╪▓ ╪║┘è╪º╪¿ ╪º┘ä╪╖╪º┘ä╪¿ 10 ╪ú┘è╪º┘à ╪¿╪»┘ê┘å ╪╣╪░╪▒ ╪▒╪│┘à┘è"
+              title="خصم درجات السلوك والمواظبة آلياً"
+              description="تطبيق الخصم اللائحي المعتمد تلقائياً عند تجاوز غياب الطالب 10 أيام بدون عذر رسمي"
               checked={systemSettings.deductBehaviorOnAbsence}
               onChange={(checked) => updateSettings({ deductBehaviorOnAbsence: checked })}
             />
@@ -987,23 +987,23 @@ export function AdmissionTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘é╪¿┘ê┘ä ┘ê╪º┘ä╪¬╪│╪¼┘è┘ä"
-      description="╪¡╪º┘ä╪⌐ ╪º┘ä╪¬╪│╪¼┘è┘ä ┘ä┘ä╪╣╪º┘à ╪º┘ä┘é╪º╪»┘à╪î ╪º┘ä╪│╪╣╪⌐ ╪º┘ä╪º╪│╪¬┘è╪╣╪º╪¿┘è╪⌐ ┘ä┘ä┘ü╪╡┘ê┘ä╪î ┘ê╪º┘ä┘à╪│╪¬┘å╪»╪º╪¬ ╪º┘ä╪Ñ┘ä╪▓╪º┘à┘è╪⌐"
+      title="سياسات القبول والتسجيل"
+      description="حالة التسجيل للعام القادم، السعة الاستيعابية للفصول، والمستندات الإلزامية"
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪¡╪º┘ä╪⌐ ╪º┘ä┘é╪¿┘ê┘ä ┘ê╪º┘ä╪¬╪│╪¼┘è┘ä ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è ╪º┘ä╪¡╪º┘ä┘è╪⌐">
+          <Field label="حالة القبول والتسجيل الإلكتروني الحالية">
             <select
               className={inp}
               value={systemSettings.admissionStatus}
               onChange={(e) => updateSettings({ admissionStatus: e.target.value })}
             >
-              <option>┘à┘ü╪¬┘ê╪¡ ┘ä┘ä╪¬╪│╪¼┘è┘ä ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è ╪º┘ä┘à╪¿╪º╪┤╪▒</option>
-              <option>┘à┘ü╪¬┘ê╪¡ ┘ä┘é╪º╪ª┘à╪⌐ ╪º┘ä╪º┘å╪¬╪╕╪º╪▒ ┘ê╪º┘ä┘à┘ü╪º╪╢┘ä╪⌐ ┘ü┘é╪╖</option>
-              <option>┘à╪║┘ä┘é (╪¬┘à ╪º┘ä┘ê╪╡┘ê┘ä ┘ä┘ä╪│╪╣╪⌐ ╪º┘ä╪º╪│╪¬┘è╪╣╪º╪¿┘è╪⌐ ╪º┘ä┘é╪╡┘ê┘ë)</option>
+              <option>مفتوح للتسجيل الإلكتروني المباشر</option>
+              <option>مفتوح لقائمة الانتظار والمفاضلة فقط</option>
+              <option>مغلق (تم الوصول للسعة الاستيعابية القصوى)</option>
             </select>
           </Field>
-          <Field label="╪º┘ä╪¡╪» ╪º┘ä╪ú┘é╪╡┘ë ┘ä┘ä╪╖┘ä╪º╪¿ ┘ü┘è ┘â┘ä ┘ü╪╡┘ä ╪»╪▒╪º╪│┘è">
+          <Field label="الحد الأقصى للطلاب في كل فصل دراسي">
             <input
               type="number"
               value={systemSettings.maxClassSize}
@@ -1014,25 +1014,25 @@ export function AdmissionTab(props: SettingsTabProps) {
         </div>
 
         <div className="border-t border-border pt-4">
-          <h3 className="font-black text-sm text-foreground mb-3">╪º┘ä┘à╪│╪¬┘å╪»╪º╪¬ ╪º┘ä╪Ñ┘ä╪▓╪º┘à┘è╪⌐ ╪º┘ä┘à╪╖┘ä┘ê╪¿╪⌐ ┘ä╪Ñ╪¬┘à╪º┘à ╪º┘ä┘é╪¿┘ê┘ä</h3>
+          <h3 className="font-black text-sm text-foreground mb-3">المستندات الإلزامية المطلوبة لإتمام القبول</h3>
           <div className="space-y-3">
             <SwitchField
-              title="╪ú╪╡┘ä ╪┤┘ç╪º╪»╪⌐ ╪º┘ä┘à┘è┘ä╪º╪» ┘ä┘ä┘à╪╖╪º╪¿┘é╪⌐"
+              title="أصل شهادة الميلاد للمطابقة"
               checked={systemSettings.reqBirthCert}
               onChange={(checked) => updateSettings({ reqBirthCert: checked })}
             />
             <SwitchField
-              title="╪│╪¼┘ä ╪º┘ä╪¬╪╖╪╣┘è┘à╪º╪¬ ┘ê╪º┘ä┘ü╪¡╪╡ ╪º┘ä╪╖╪¿┘è ╪º┘ä┘à╪╣╪¬┘à╪»"
+              title="سجل التطعيمات والفحص الطبي المعتمد"
               checked={systemSettings.reqVaccine}
               onChange={(checked) => updateSettings({ reqVaccine: checked })}
             />
             <SwitchField
-              title="╪┤┘ç╪º╪»╪⌐ ╪º┘ä┘å╪¼╪º╪¡ ┘ê╪¬┘é╪▒┘è╪▒ ╪º┘ä╪»╪▒╪¼╪º╪¬ ┘à┘å ╪º┘ä┘à╪»╪▒╪│╪⌐ ╪º┘ä╪│╪º╪¿┘é╪⌐"
+              title="شهادة النجاح وتقرير الدرجات من المدرسة السابقة"
               checked={systemSettings.reqPrevCert}
               onChange={(checked) => updateSettings({ reqPrevCert: checked })}
             />
             <SwitchField
-              title="╪╡┘ê╪▒╪⌐ ╪│╪¼┘ä ╪º┘ä╪ú╪│╪▒╪⌐ / ┘â╪▒╪¬ ╪º┘ä╪╣╪º╪ª┘ä╪⌐ ┘ä┘ä┘à╪╖╪º╪¿┘é╪⌐"
+              title="صورة سجل الأسرة / كرت العائلة للمطابقة"
               checked={systemSettings.reqFamilyCard}
               onChange={(checked) => updateSettings({ reqFamilyCard: checked })}
             />
@@ -1086,12 +1086,12 @@ export function HRTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘â╪º╪»╪▒ ┘ê╪º┘ä┘à┘ê╪º╪▒╪» ╪º┘ä╪¿╪┤╪▒┘è╪⌐"
-      description="╪╢┘ê╪º╪¿╪╖ ╪º┘ä╪Ñ╪¼╪º╪▓╪º╪¬ ╪º┘ä╪│┘å┘ê┘è╪⌐╪î ╪«╪╡┘ê┘à╪º╪¬ ╪º┘ä╪¬╪ú╪«┘è╪▒╪î ┘ê╪▒╪¿╪╖ ╪ú╪¼┘ç╪▓╪⌐ ╪º┘ä╪¿╪╡┘à╪⌐ ╪º┘ä╪░┘â┘è╪⌐"
+      title="سياسات الكادر والموارد البشرية"
+      description="ضوابط الإجازات السنوية، خصومات التأخير، وربط أجهزة البصمة الذكية"
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪▒╪╡┘è╪» ╪º┘ä╪Ñ╪¼╪º╪▓╪⌐ ╪º┘ä╪│┘å┘ê┘è╪⌐ ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è (╪ú┘è╪º┘à)">
+          <Field label="رصيد الإجازة السنوية الافتراضي (أيام)">
             <input
               type="number"
               value={systemSettings.annualLeaveDays}
@@ -1099,7 +1099,7 @@ export function HRTab(props: SettingsTabProps) {
               className={inp}
             />
           </Field>
-          <Field label="┘å╪│╪¿╪⌐ ╪«╪╡┘à ╪º┘ä╪¬╪ú╪«┘è╪▒ ╪º┘ä┘è┘ê┘à┘è ╪╣┘å ╪º┘ä╪▒╪º╪¬╪¿ (%)">
+          <Field label="نسبة خصم التأخير اليومي عن الراتب (%)">
             <input
               type="number"
               value={systemSettings.lateDeductionRate}
@@ -1110,17 +1110,17 @@ export function HRTab(props: SettingsTabProps) {
         </div>
 
         <div className="border-t border-border pt-4 space-y-3">
-          <h3 className="font-black text-sm text-foreground">┘é┘ê╪º╪╣╪» ╪º┘ä╪¡╪╢┘ê╪▒ ┘ê╪º┘ä╪º┘å╪╡╪▒╪º┘ü ╪º┘ä╪░┘â┘è</h3>
+          <h3 className="font-black text-sm text-foreground">قواعد الحضور والانصراف الذكي</h3>
           <div className="space-y-3">
             <SwitchField
-              title="╪º┘ä╪│┘à╪º╪¡ ╪¿┘ü╪¬╪▒╪⌐ ╪│┘à╪º╪¡ ╪╡╪¿╪º╪¡┘è╪⌐ 15 ╪»┘é┘è┘é╪⌐"
-              description="╪╣╪»┘à ╪º╪¡╪¬╪│╪º╪¿ ╪¬╪ú╪«┘è╪▒ ╪╣┘ä┘ë ╪º┘ä┘à┘ê╪╕┘ü ┘ü┘è ╪¡╪º┘ä ╪º┘ä╪¡╪╢┘ê╪▒ ╪«┘ä╪º┘ä ╪ú┘ê┘ä 15 ╪»┘é┘è┘é╪⌐ ┘à┘å ╪¿╪»╪º┘è╪⌐ ╪º┘ä╪»┘ê╪º┘à"
+              title="السماح بفترة سماح صباحية 15 دقيقة"
+              description="عدم احتساب تأخير على الموظف في حال الحضور خلال أول 15 دقيقة من بداية الدوام"
               checked={systemSettings.gracePeriod}
               onChange={(checked) => updateSettings({ gracePeriod: checked })}
             />
             <SwitchField
-              title="╪º┘ä┘à╪▓╪º┘à┘å╪⌐ ╪º┘ä╪¬┘ä┘é╪º╪ª┘è╪⌐ ┘à╪╣ ╪ú╪¼┘ç╪▓╪⌐ ╪º┘ä╪¿╪╡┘à╪⌐ ╪º┘ä╪¿┘è┘ê┘à╪¬╪▒┘è╪⌐"
-              description="╪¬╪▒╪¡┘è┘ä ╪│╪¼┘ä╪º╪¬ ╪º┘ä╪¡╪╢┘ê╪▒ ┘ê╪º┘ä╪º┘å╪╡╪▒╪º┘ü ╪¬┘ä┘é╪º╪ª┘è╪º┘ï ┘ä┘à╪│┘è╪▒ ╪º┘ä╪▒┘ê╪º╪¬╪¿ ╪º┘ä╪┤┘ç╪▒┘è"
+              title="المزامنة التلقائية مع أجهزة البصمة البيومترية"
+              description="ترحيل سجلات الحضور والانصراف تلقائياً لمسير الرواتب الشهري"
               checked={systemSettings.fingerprintSync}
               onChange={(checked) => updateSettings({ fingerprintSync: checked })}
             />
@@ -1174,23 +1174,23 @@ export function FinanceTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä╪│┘è╪º╪│╪º╪¬ ┘ê╪º┘ä╪╣┘à┘ä┘è╪º╪¬ ╪º┘ä┘à╪º┘ä┘è╪⌐"
-      description="╪º┘ä╪╣┘à┘ä╪⌐ ╪º┘ä╪▒╪│┘à┘è╪⌐╪î ┘å╪│╪¿╪⌐ ╪º┘ä╪╢╪▒┘è╪¿╪⌐ ╪º┘ä┘à╪╢╪º┘ü╪⌐╪î ╪│┘è╪º╪│╪⌐ ╪º┘ä╪º╪│╪¬╪▒╪»╪º╪»╪î ┘ê╪ú╪¬┘à╪¬╪⌐ ┘à╪│╪º╪▒╪º╪¬ ╪º┘ä┘à╪¡╪º╪│╪¿╪⌐"
+      title="السياسات والعمليات المالية"
+      description="العملة الرسمية، نسبة الضريبة المضافة، سياسة الاسترداد، وأتمتة مسارات المحاسبة"
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪º┘ä╪╣┘à┘ä╪⌐ ╪º┘ä╪▒╪│┘à┘è╪⌐ ╪º┘ä┘à╪╣╪¬┘à╪»╪⌐ ┘ä┘ä┘à┘å╪╡╪⌐">
+          <Field label="العملة الرسمية المعتمدة للمنصة">
             <input
               value={currency}
               onChange={(e) => {
                 const val = e.target.value;
                 setCurrency(val);
               }}
-              placeholder="┘à╪½╪º┘ä: ╪▒.╪│ ╪ú┘ê ╪¼.╪│ ╪ú┘ê $"
+              placeholder="مثال: ر.س أو ج.س أو $"
               className={inp}
             />
           </Field>
-          <Field label="╪º┘ä╪▒┘é┘à ╪º┘ä╪╢╪▒┘è╪¿┘è ╪º┘ä┘à┘ê╪¡╪» ┘ä┘ä┘à┘å╪┤╪ú╪⌐ (VAT Number)">
+          <Field label="الرقم الضريبي الموحد للمنشأة (VAT Number)">
             <input
               value={systemSettings.taxNumber}
               onChange={(e) => updateSettings({ taxNumber: e.target.value })}
@@ -1198,7 +1198,7 @@ export function FinanceTab(props: SettingsTabProps) {
               placeholder="300012345600003"
             />
           </Field>
-          <Field label="┘å╪│╪¿╪⌐ ╪╢╪▒┘è╪¿╪⌐ ╪º┘ä┘é┘è┘à╪⌐ ╪º┘ä┘à╪╢╪º┘ü╪⌐ (%)">
+          <Field label="نسبة ضريبة القيمة المضافة (%)">
             <input
               type="number"
               value={systemSettings.vatRate}
@@ -1206,38 +1206,38 @@ export function FinanceTab(props: SettingsTabProps) {
               className={inp}
             />
           </Field>
-          <Field label="╪│┘è╪º╪│╪⌐ ╪º┘ä╪º╪│╪¬╪▒╪»╪º╪» ┘ê╪º┘ä╪Ñ┘ä╪║╪º╪í ╪º┘ä┘à╪º┘ä┘è">
+          <Field label="سياسة الاسترداد والإلغاء المالي">
             <select
               className={inp}
               value={systemSettings.refundPolicy}
               onChange={(e) => updateSettings({ refundPolicy: e.target.value })}
             >
-              <option>╪«┘ä╪º┘ä 14 ┘è┘ê┘à╪º┘ï ┘à┘å ╪¬╪º╪▒┘è╪« ╪│╪»╪º╪» ╪º┘ä┘é╪│╪╖</option>
-              <option>┘é╪¿┘ä ╪¿╪»╪º┘è╪⌐ ╪º┘ä┘ü╪╡┘ä ╪º┘ä╪»╪▒╪º╪│┘è ┘ü┘é╪╖</option>
-              <option>╪º╪│╪¬╪▒╪»╪º╪» ╪¼╪▓╪ª┘è (╪¡╪│┘à 20% ╪▒╪│┘ê┘à ╪Ñ╪»╪º╪▒┘è╪⌐)</option>
-              <option>┘ä╪º ┘è┘ê╪¼╪» ╪º╪│╪¬╪▒╪»╪º╪» ┘å┘é╪»┘è ╪¿╪╣╪» ╪º┘ä╪¬╪│╪¼┘è┘ä</option>
+              <option>خلال 14 يوماً من تاريخ سداد القسط</option>
+              <option>قبل بداية الفصل الدراسي فقط</option>
+              <option>استرداد جزئي (حسم 20% رسوم إدارية)</option>
+              <option>لا يوجد استرداد نقدي بعد التسجيل</option>
             </select>
           </Field>
         </div>
 
         <div className="border-t border-border pt-4 space-y-3">
-          <h3 className="font-black text-sm text-foreground">╪ú╪¬┘à╪¬╪⌐ ╪º┘ä╪╣┘à┘ä┘è╪º╪¬ ┘ê╪º┘ä╪¬┘é╪º╪╖╪╣╪º╪¬ ╪º┘ä┘à╪º┘ä┘è╪⌐</h3>
+          <h3 className="font-black text-sm text-foreground">أتمتة العمليات والتقاطعات المالية</h3>
           <div className="space-y-3">
             <SwitchField
-              title="╪¬╪▒╪¡┘è┘ä ┘à╪│┘è╪▒ ╪º┘ä╪▒┘ê╪º╪¬╪¿ ╪ó┘ä┘è╪º┘ï ╪Ñ┘ä┘ë ┘é╪│┘à ╪º┘ä┘à╪╡╪▒┘ê┘ü╪º╪¬"
-              description="╪╣┘å╪» ╪º╪╣╪¬┘à╪º╪» ┘à╪│┘è╪▒ ╪º┘ä╪▒┘ê╪º╪¬╪¿ ╪º┘ä╪┤┘ç╪▒┘è ┘è╪¬┘à ╪Ñ┘å╪┤╪º╪í ╪│┘å╪»╪º╪¬ ╪╡╪▒┘ü ┘à╪¡╪º╪│╪¿┘è╪⌐ ╪¿╪╡┘ê╪▒╪⌐ ╪¬┘ä┘é╪º╪ª┘è╪⌐"
+              title="ترحيل مسير الرواتب آلياً إلى قسم المصروفات"
+              description="عند اعتماد مسير الرواتب الشهري يتم إنشاء سندات صرف محاسبية بصورة تلقائية"
               checked={systemSettings.autoTransferPayroll}
               onChange={(checked) => updateSettings({ autoTransferPayroll: checked })}
             />
             <SwitchField
-              title="┘é┘è╪» ╪¬┘â╪º┘ä┘è┘ü ╪╡┘è╪º┘å╪⌐ ╪º┘ä┘à╪▒╪º┘ü┘é ╪¬┘ä┘é╪º╪ª┘è╪º┘ï ┘â┘à╪╡╪▒┘ê┘ü"
-              description="┘à╪¬╪╡┘ä ┘à╪¿╪º╪┤╪▒╪⌐ ╪¿┘é╪│┘à ╪º┘ä┘à╪▒╪º┘ü┘é ╪╣┘å╪» ╪Ñ╪║┘ä╪º┘é ╪ú┘à╪▒ ╪╡┘è╪º┘å╪⌐ ┘à┘å╪¼╪▓"
+              title="قيد تكاليف صيانة المرافق تلقائياً كمصروف"
+              description="متصل مباشرة بقسم المرافق عند إغلاق أمر صيانة منجز"
               checked={systemSettings.autoMaintenanceExpense}
               onChange={(checked) => updateSettings({ autoMaintenanceExpense: checked })}
             />
             <SwitchField
-              title="╪Ñ╪╢╪º┘ü╪⌐ ╪║╪▒╪º┘à╪º╪¬ ╪º┘ä╪¬╪ú╪«┘è╪▒ ┘ü┘è ╪Ñ╪╣╪º╪»╪⌐ ╪º┘ä┘â╪¬╪¿ ╪º┘ä╪»╪▒╪º╪│┘è╪⌐ ┘â╪▒╪│┘ê┘à"
-              description="┘à╪¬╪╡┘ä ┘à╪¿╪º╪┤╪▒╪⌐ ╪¿┘å╪╕╪º┘à ╪º╪│╪¬╪╣╪º╪▒╪º╪¬ ╪º┘ä┘à┘â╪¬╪¿╪⌐ ╪╣┘å╪» ╪º┘ä╪¬╪ú╪«╪▒ ╪╣┘å ┘à┘ê╪╣╪» ╪º┘ä╪Ñ╪▒╪¼╪º╪╣"
+              title="إضافة غرامات التأخير في إعادة الكتب الدراسية كرسوم"
+              description="متصل مباشرة بنظام استعارات المكتبة عند التأخر عن موعد الإرجاع"
               checked={systemSettings.autoLibraryFee}
               onChange={(checked) => updateSettings({ autoLibraryFee: checked })}
             />
@@ -1291,24 +1291,24 @@ export function ThemeTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪¬╪«╪╡┘è╪╡ ╪º┘ä╪½┘è┘à ┘ê╪º┘ä┘à╪╕┘ç╪▒ ╪º┘ä╪¿╪╡╪▒┘è"
-      description="╪º╪«╪¬┘è╪º╪▒ ┘ê╪╢╪╣ ╪º┘ä╪ú┘ä┘ê╪º┘å ╪º┘ä┘à┘ü╪╢┘ä╪î ┘ä┘ê╪¡╪⌐ ╪º┘ä╪ú┘ä┘ê╪º┘å ╪º┘ä╪ú╪│╪º╪│┘è╪⌐ ┘ä┘ä┘å╪╕╪º┘à╪î ┘ê┘å┘à╪╖ ┘â╪½╪º┘ü╪⌐ ╪º┘ä╪¼╪»╪º┘ê┘ä"
+      title="تخصيص الثيم والمظهر البصري"
+      description="اختيار وضع الألوان المفضل، لوحة الألوان الأساسية للنظام، ونمط كثافة الجداول"
     >
       <div className="space-y-6">
         <div>
-          <h3 className="font-black text-xs text-muted-foreground mb-3">1. ┘ê╪╢╪╣ ╪º┘ä╪╣╪▒╪╢ ╪º┘ä╪▒╪ª┘è╪│┘è (Mode)</h3>
+          <h3 className="font-black text-xs text-muted-foreground mb-3">1. وضع العرض الرئيسي (Mode)</h3>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              { id: "light", label: "╪º┘ä┘ê╪╢╪╣ ╪º┘ä┘ü╪º╪¬╪¡ (Light)" },
-              { id: "dark", label: "╪º┘ä┘ê╪╢╪╣ ╪º┘ä╪»╪º┘â┘å (Dark)" },
-              { id: "system", label: "┘à╪¬╪▓╪º┘à┘å ┘à╪╣ ┘å╪╕╪º┘à ╪º┘ä╪¬╪┤╪║┘è┘ä" }
+              { id: "light", label: "الوضع الفاتح (Light)" },
+              { id: "dark", label: "الوضع الداكن (Dark)" },
+              { id: "system", label: "متزامن مع نظام التشغيل" }
             ].map((m) => (
               <button
                 key={m.id}
                 type="button"
                 onClick={() => {
                   updateSettings({ themeMode: m.id as any });
-                  toast.success(`╪¬┘à ╪¬┘ü╪╣┘è┘ä: ${m.label}`);
+                  toast.success(`تم تفعيل: ${m.label}`);
                 }}
                 className={`p-4 rounded-2xl border text-right transition-all flex items-center justify-between ${
                   systemSettings.themeMode === m.id
@@ -1324,7 +1324,7 @@ export function ThemeTab(props: SettingsTabProps) {
         </div>
 
         <div className="border-t border-border pt-4">
-          <h3 className="font-black text-xs text-muted-foreground mb-3">2. ┘ä┘ê╪¡╪⌐ ╪º┘ä╪ú┘ä┘ê╪º┘å ╪º┘ä╪ú╪│╪º╪│┘è╪⌐ ┘ä┘ä┘å╪╕╪º┘à (Primary Accent)</h3>
+          <h3 className="font-black text-xs text-muted-foreground mb-3">2. لوحة الألوان الأساسية للنظام (Primary Accent)</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {THEME_PALETTES.map((color) => {
               const isSelected = systemSettings.primaryColor === color.hex;
@@ -1335,7 +1335,7 @@ export function ThemeTab(props: SettingsTabProps) {
                   onClick={() => {
                     updateSettings({ primaryColor: color.hex });
                     document.documentElement.style.setProperty("--primary", color.hex);
-                    toast.success(`╪¬┘à ╪º╪«╪¬┘è╪º╪▒ ╪º┘ä┘ä┘ê┘å: ${color.name}`);
+                    toast.success(`تم اختيار اللون: ${color.name}`);
                   }}
                   className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${
                     isSelected
@@ -1357,25 +1357,25 @@ export function ThemeTab(props: SettingsTabProps) {
         </div>
 
         <div className="border-t border-border pt-4 grid gap-4 sm:grid-cols-2">
-          <Field label="┘â╪½╪º┘ü╪⌐ ┘ê╪¡╪¼┘à ╪º┘ä╪¼╪»╪º┘ê┘ä ╪º┘ä╪¿┘è╪º┘å┘è╪⌐">
+          <Field label="كثافة وحجم الجداول البيانية">
             <select
               className={inp}
               value={systemSettings.tableDensity || "comfortable"}
               onChange={(e) => updateSettings({ tableDensity: e.target.value as any })}
             >
-              <option value="comfortable">┘â╪½╪º┘ü╪⌐ ┘à╪▒┘è╪¡╪⌐ (Comfortable - ┘à╪│╪º╪¡╪º╪¬ ╪ú┘ê╪│╪╣)</option>
-              <option value="compact">┘â╪½╪º┘ü╪⌐ ╪╣╪º┘ä┘è╪⌐ (Compact - ╪╣╪▒╪╢ ╪¿┘è╪º┘å╪º╪¬ ╪ú┘â╪½╪▒)</option>
+              <option value="comfortable">كثافة مريحة (Comfortable - مساحات أوسع)</option>
+              <option value="compact">كثافة عالية (Compact - عرض بيانات أكثر)</option>
             </select>
           </Field>
-          <Field label="╪º┘ä╪«╪╖ ╪º┘ä╪╣╪▒╪¿┘è ╪º┘ä╪▒╪ª┘è╪│┘è ┘ä┘ê╪º╪¼┘ç╪⌐ ╪º┘ä┘à┘å╪╡╪⌐">
+          <Field label="الخط العربي الرئيسي لواجهة المنصة">
             <select
               className={inp}
               value={systemSettings.fontFamily || "Cairo"}
               onChange={(e) => updateSettings({ fontFamily: e.target.value })}
             >
-              <option value="Cairo">╪«╪╖ ╪º┘ä┘é╪º┘ç╪▒╪⌐ (Cairo) - ╪¡╪»┘è╪½ ┘ê╪▒╪│┘à┘è</option>
-              <option value="Tajawal">╪«╪╖ ╪¬╪¼┘ê╪º┘ä (Tajawal) - ┘ç┘å╪»╪│┘è ┘à╪¬┘å╪º╪│┘é</option>
-              <option value="IBM Plex Sans Arabic">IBM Plex Sans - ╪¬┘é┘å┘è ╪º╪¡╪¬╪▒╪º┘ü┘è</option>
+              <option value="Cairo">خط القاهرة (Cairo) - حديث ورسمي</option>
+              <option value="Tajawal">خط تجوال (Tajawal) - هندسي متناسق</option>
+              <option value="IBM Plex Sans Arabic">IBM Plex Sans - تقني احترافي</option>
             </select>
           </Field>
         </div>
@@ -1427,53 +1427,53 @@ export function LangTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä┘ä╪║╪⌐ ┘ê╪º┘ä╪¬┘é┘ê┘è┘à ┘ê╪º┘ä╪º╪¬╪¼╪º┘ç"
-      description="┘ä╪║╪⌐ ╪º┘ä┘å╪╕╪º┘à ╪º┘ä╪▒╪│┘à┘è╪⌐╪î ╪º┘ä╪¬┘å╪│┘è┘é ╪º┘ä╪▓┘à┘å┘è╪î ┘ê╪º┘ä╪¬┘é┘ê┘è┘à ╪º┘ä┘à╪╣╪¬┘à╪»"
+      title="اللغة والتقويم والاتجاه"
+      description="لغة النظام الرسمية، التنسيق الزمني، والتقويم المعتمد"
     >
       <div className="space-y-5">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="┘ä╪║╪⌐ ┘ê╪º╪¼┘ç╪⌐ ╪º┘ä┘å╪╕╪º┘à ╪º┘ä╪▒╪ª┘è╪│┘è╪⌐">
+          <Field label="لغة واجهة النظام الرئيسية">
             <select
               className={inp}
               value={systemSettings.language}
               onChange={(e) => updateSettings({ language: e.target.value as "ar" | "en" })}
             >
-              <option value="ar">╪º┘ä╪╣╪▒╪¿┘è╪⌐ (RTL - ╪º┘ä┘è┘à┘è┘å ┘ä┘ä┘è╪│╪º╪▒)</option>
+              <option value="ar">العربية (RTL - اليمين لليسار)</option>
               <option value="en">English (LTR - Left to Right)</option>
             </select>
           </Field>
-          <Field label="┘å╪╕╪º┘à ╪º┘ä╪¬┘é┘ê┘è┘à ╪º┘ä┘à╪╣╪¬┘à╪»">
+          <Field label="نظام التقويم المعتمد">
             <select
               className={inp}
               value={systemSettings.calendarType || "dual"}
               onChange={(e) => updateSettings({ calendarType: e.target.value as any })}
             >
-              <option value="dual">┘à╪▓╪»┘ê╪¼ (┘ç╪¼╪▒┘è ┘ê┘à┘è┘ä╪º╪»┘è ┘à╪╣╪º┘ï)</option>
-              <option value="hijri">╪º┘ä╪¬┘é┘ê┘è┘à ╪º┘ä┘ç╪¼╪▒┘è (╪ú┘à ╪º┘ä┘é╪▒┘ë)</option>
-              <option value="gregorian">╪º┘ä╪¬┘é┘ê┘è┘à ╪º┘ä┘à┘è┘ä╪º╪»┘è (Gregorian)</option>
+              <option value="dual">مزدوج (هجري وميلادي معاً)</option>
+              <option value="hijri">التقويم الهجري (أم القرى)</option>
+              <option value="gregorian">التقويم الميلادي (Gregorian)</option>
             </select>
           </Field>
-          <Field label="╪╡┘è╪║╪⌐ ╪╣╪▒╪╢ ╪º┘ä╪¬┘ê╪º╪▒┘è╪«">
+          <Field label="صيغة عرض التواريخ">
             <select
               className={inp}
               value={systemSettings.dateFormat}
               onChange={(e) => updateSettings({ dateFormat: e.target.value })}
             >
-              <option value="DD/MM/YYYY">┘è┘ê┘à / ╪┤┘ç╪▒ / ╪│┘å╪⌐ (DD/MM/YYYY)</option>
-              <option value="YYYY-MM-DD">╪│┘å╪⌐ - ╪┤┘ç╪▒ - ┘è┘ê┘à (YYYY-MM-DD)</option>
+              <option value="DD/MM/YYYY">يوم / شهر / سنة (DD/MM/YYYY)</option>
+              <option value="YYYY-MM-DD">سنة - شهر - يوم (YYYY-MM-DD)</option>
             </select>
           </Field>
-          <Field label="╪¿╪»╪º┘è╪⌐ ╪º┘ä╪ú╪│╪¿┘ê╪╣ ╪º┘ä╪»╪▒╪º╪│┘è">
-            <select className={inp} defaultValue="╪º┘ä╪ú╪¡╪»">
-              <option value="╪º┘ä╪ú╪¡╪»">┘è┘ê┘à ╪º┘ä╪ú╪¡╪» (╪º┘ä┘à╪╣╪¬┘à╪» ┘ü┘è ╪º┘ä╪«┘ä┘è╪¼ ┘ê╪º┘ä┘à┘à┘ä┘â╪⌐)</option>
-              <option value="╪º┘ä╪│╪¿╪¬">┘è┘ê┘à ╪º┘ä╪│╪¿╪¬</option>
-              <option value="╪º┘ä╪º╪½┘å┘è┘å">┘è┘ê┘à ╪º┘ä╪º╪½┘å┘è┘å (╪º┘ä┘å╪╕╪º┘à ╪º┘ä╪»┘ê┘ä┘è)</option>
+          <Field label="بداية الأسبوع الدراسي">
+            <select className={inp} defaultValue="الأحد">
+              <option value="الأحد">يوم الأحد (المعتمد في الخليج والمملكة)</option>
+              <option value="السبت">يوم السبت</option>
+              <option value="الاثنين">يوم الاثنين (النظام الدولي)</option>
             </select>
           </Field>
         </div>
 
         <div className="p-3.5 rounded-xl bg-muted/60 text-xs font-bold text-muted-foreground border border-border">
-          ≡ƒÆí ┘è╪¬┘à ╪¬╪╖╪¿┘è┘é ╪º╪¬╪¼╪º┘ç ╪º┘ä┘ê╪º╪¼┘ç╪⌐ (RTL/LTR) ╪¬┘ä┘é╪º╪ª┘è╪º┘ï ╪╣┘å╪» ╪¬╪║┘è┘è╪▒ ╪º┘ä┘ä╪║╪⌐ ┘ä╪¬┘ê┘ü┘è╪▒ ╪¬╪¼╪▒╪¿╪⌐ ┘à╪│╪¬╪«╪»┘à ╪│┘ä╪│╪⌐ ┘ê┘à╪¬┘â╪º┘à┘ä╪⌐.
+          💡 يتم تطبيق اتجاه الواجهة (RTL/LTR) تلقائياً عند تغيير اللغة لتوفير تجربة مستخدم سلسة ومتكاملة.
         </div>
       </div>
     </PageCard>
@@ -1523,42 +1523,42 @@ export function PrintTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="┘é┘ê╪º┘ä╪¿ ╪º┘ä╪╖╪¿╪º╪╣╪⌐ ┘ê╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪▒┘é┘à┘è"
-      description="╪Ñ╪╣╪»╪º╪»╪º╪¬ ┘â╪┤┘ê┘ü╪º╪¬ ╪º┘ä╪»╪▒╪¼╪º╪¬╪î ╪º┘ä┘ü┘ê╪º╪¬┘è╪▒ ╪º┘ä┘à╪╖╪¿┘ê╪╣╪⌐╪î ┘ê╪▒┘à┘ê╪▓ ╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪▒┘é┘à┘è QR"
+      title="قوالب الطباعة والتحقق الرقمي"
+      description="إعدادات كشوفات الدرجات، الفواتير المطبوعة، ورموز التحقق الرقمي QR"
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <Field label="╪º┘ä┘é╪º┘ä╪¿ ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è ┘ä┘â╪┤┘ê┘ü╪º╪¬ ╪º┘ä╪¿┘è╪º┘å╪º╪¬">
+          <Field label="القالب الافتراضي لكشوفات البيانات">
             <select
               className={inp}
               value={systemSettings.defaultTemplate}
               onChange={(e) => updateSettings({ defaultTemplate: e.target.value })}
             >
-              <option>╪¼╪»┘ê┘ä ┘à╪╢╪║┘ê╪╖ ┘à╪╣ ╪¬┘â╪▒╪º╪▒ ╪º┘ä╪¬╪▒┘ê┘è╪│╪⌐ ╪º┘ä╪▒╪│┘à┘è╪⌐</option>
-              <option>╪¼╪»┘ê┘ä ╪▒╪│┘à┘è ┘à╪╣╪¬┘à╪» ┘à╪╣ ┘ü╪▒╪º╪║╪º╪¬ ╪º┘ä╪¬┘ê┘é┘è╪╣╪º╪¬</option>
-              <option>╪¿╪╖╪º┘é╪º╪¬ ┘ü╪▒╪»┘è╪⌐ ┘ä┘â┘ä ╪╖╪º┘ä╪¿</option>
+              <option>جدول مضغوط مع تكرار الترويسة الرسمية</option>
+              <option>جدول رسمي معتمد مع فراغات التوقيعات</option>
+              <option>بطاقات فردية لكل طالب</option>
             </select>
           </Field>
-          <Field label="╪╣╪»╪» ╪º┘ä╪╡┘ü┘ê┘ü ┘ä┘â┘ä ╪»┘ü╪╣╪⌐ ╪╖╪¿╪º╪╣╪⌐">
+          <Field label="عدد الصفوف لكل دفعة طباعة">
             <select
               className={inp}
               value={systemSettings.rowsPerBatch}
               onChange={(e) => updateSettings({ rowsPerBatch: e.target.value })}
             >
-              <option>60 ╪╡┘ü ╪¿╪º┘ä╪╡┘ü╪¡╪⌐</option>
-              <option>90 ╪╡┘ü ╪¿╪º┘ä╪╡┘ü╪¡╪⌐</option>
-              <option>120 ╪╡┘ü ╪¿╪º┘ä╪╡┘ü╪¡╪⌐</option>
+              <option>60 صف بالصفحة</option>
+              <option>90 صف بالصفحة</option>
+              <option>120 صف بالصفحة</option>
             </select>
           </Field>
-          <Field label="╪º╪╣╪¬┘à╪º╪» ╪▒┘à╪▓ ╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪░┘â┘è QR">
+          <Field label="اعتماد رمز التحقق الذكي QR">
             <select
               className={inp}
               value={systemSettings.qrCodeUsage}
               onChange={(e) => updateSettings({ qrCodeUsage: e.target.value })}
             >
-              <option>┘à┘ü╪╣┘ä ┘ä┘â╪º┘ü╪⌐ ╪º┘ä╪┤┘ç╪º╪»╪º╪¬ ┘ê╪º┘ä┘ü┘ê╪º╪¬┘è╪▒ ╪º┘ä╪▒╪│┘à┘è╪⌐</option>
-              <option>┘à┘ü╪╣┘ä ┘ä┘ä╪┤┘ç╪º╪»╪º╪¬ ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è╪⌐ ┘ü┘é╪╖</option>
-              <option>┘à╪╣╪╖┘ä</option>
+              <option>مفعل لكافة الشهادات والفواتير الرسمية</option>
+              <option>مفعل للشهادات الأكاديمية فقط</option>
+              <option>معطل</option>
             </select>
           </Field>
         </div>
@@ -1567,16 +1567,16 @@ export function PrintTab(props: SettingsTabProps) {
           <div className="rounded-2xl border border-border p-4 space-y-3 bg-card/60">
             <div className="flex items-center gap-2 font-black text-sm text-foreground">
               <FileText className="h-4 w-4 text-primary" />
-              <span>╪¬╪▒┘ê┘è╪│╪⌐ ╪º┘ä┘à╪│╪¬┘å╪» ╪º┘ä╪▒╪│┘à┘è╪⌐</span>
+              <span>ترويسة المستند الرسمية</span>
             </div>
-            <Field label="╪º╪│┘à ╪º┘ä╪¼┘ç╪⌐ ╪º┘ä┘ê╪▓╪º╪▒┘è╪⌐ ╪ú╪╣┘ä┘ë ╪º┘ä┘à╪│╪¬┘å╪»">
+            <Field label="اسم الجهة الوزارية أعلى المستند">
               <input
                 className={inp}
                 value={systemSettings.headerEntity}
                 onChange={(e) => updateSettings({ headerEntity: e.target.value })}
               />
             </Field>
-            <Field label="╪º╪│┘à ╪º┘ä╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä╪¬╪╣┘ä┘è┘à┘è╪⌐ ╪º┘ä╪¬╪º╪¿╪╣ ┘ä┘ç╪º">
+            <Field label="اسم الإدارة التعليمية التابع لها">
               <input
                 className={inp}
                 value={systemSettings.headerDepartment}
@@ -1588,9 +1588,9 @@ export function PrintTab(props: SettingsTabProps) {
           <div className="rounded-2xl border border-border p-4 space-y-3 bg-card/60">
             <div className="flex items-center gap-2 font-black text-sm text-foreground">
               <QrCode className="h-4 w-4 text-primary" />
-              <span>╪╢┘ê╪º╪¿╪╖ ╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪▒┘é┘à┘è</span>
+              <span>ضوابط التحقق الرقمي</span>
             </div>
-            <Field label="╪▒╪º╪¿╪╖ ╪¿┘ê╪º╪¿╪⌐ ╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪╣╪º┘à╪⌐">
+            <Field label="رابط بوابة التحقق العامة">
               <input
                 className={inp}
                 dir="ltr"
@@ -1598,15 +1598,15 @@ export function PrintTab(props: SettingsTabProps) {
                 onChange={(e) => updateSettings({ qrVerifyUrl: e.target.value })}
               />
             </Field>
-            <Field label="╪╡┘ä╪º╪¡┘è╪⌐ ╪▒╪º╪¿╪╖ ╪º┘ä╪¬╪¡┘é┘é">
+            <Field label="صلاحية رابط التحقق">
               <select
                 className={inp}
                 value={systemSettings.qrExpiry}
                 onChange={(e) => updateSettings({ qrExpiry: e.target.value })}
               >
-                <option>╪│┘å╪⌐ ┘â╪º┘à┘ä╪⌐</option>
-                <option>90 ┘è┘ê┘à╪º┘ï</option>
-                <option>╪»╪º╪ª┘à (┘ä╪º ╪¬┘å╪¬┘ç┘è ╪º┘ä╪╡┘ä╪º╪¡┘è╪⌐)</option>
+                <option>سنة كاملة</option>
+                <option>90 يوماً</option>
+                <option>دائم (لا تنتهي الصلاحية)</option>
               </select>
             </Field>
           </div>
@@ -1617,7 +1617,7 @@ export function PrintTab(props: SettingsTabProps) {
             onClick={() => setIsPrintPreviewOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20"
           >
-            <Eye className="h-4 w-4" /> ┘ü╪¬╪¡ ┘å╪º┘ü╪░╪⌐ ╪º┘ä┘à╪╣╪º┘è┘å╪⌐ ╪º┘ä╪¡┘è╪⌐ (A4)
+            <Eye className="h-4 w-4" /> فتح نافذة المعاينة الحية (A4)
           </button>
         </div>
       </div>
@@ -1668,43 +1668,43 @@ export function NotifTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="┘é┘ê╪º╪╣╪» ╪º┘ä╪Ñ╪┤╪╣╪º╪▒╪º╪¬ ┘ê╪º┘ä╪▒╪│╪º╪ª┘ä ╪º┘ä╪¬┘ä┘é╪º╪ª┘è╪⌐"
-      description="╪¬╪«╪╡┘è╪╡ ┘é┘å┘ê╪º╪¬ ╪º┘ä╪¬┘å╪¿┘è┘ç ╪º┘ä┘ä╪¡╪╕┘è (SMS╪î WhatsApp╪î ┘ê╪º┘ä╪¿╪▒┘è╪») ┘ä╪¼┘à┘è╪╣ ╪ú╪¡╪»╪º╪½ ╪º┘ä┘à┘å╪╡╪⌐"
+      title="قواعد الإشعارات والرسائل التلقائية"
+      description="تخصيص قنوات التنبيه اللحظي (SMS، WhatsApp، والبريد) لجميع أحداث المنصة"
     >
       <div className="space-y-6">
         <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/40 border border-border">
           <div>
-            <div className="font-black text-sm text-foreground">┘é┘å┘ê╪º╪¬ ╪º┘ä╪¬┘å╪¿┘è┘ç ╪º┘ä┘å╪┤╪╖╪⌐</div>
-            <div className="text-xs text-muted-foreground mt-0.5">╪¡╪»╪» ╪º┘ä┘é┘å┘ê╪º╪¬ ╪º┘ä┘à╪│┘à┘ê╪¡ ┘ä┘ä┘à┘å╪╕┘ê┘à╪⌐ ╪º╪│╪¬╪«╪»╪º┘à┘ç╪º ┘ü┘è ╪º┘ä┘à╪▒╪º╪│┘ä╪º╪¬</div>
+            <div className="font-black text-sm text-foreground">قنوات التنبيه النشطة</div>
+            <div className="text-xs text-muted-foreground mt-0.5">حدد القنوات المسموح للمنظومة استخدامها في المراسلات</div>
           </div>
           <button
             onClick={() => setIsNotifTesterOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-sm"
           >
-            <Smartphone className="h-3.5 w-3.5" /> ┘ü╪¬╪¡ ┘à╪«╪¬╪¿╪▒ ╪º┘ä╪▒╪│╪º╪ª┘ä
+            <Smartphone className="h-3.5 w-3.5" /> فتح مختبر الرسائل
           </button>
         </div>
 
         <div className="space-y-3">
           <SwitchField
-            title="╪Ñ╪▒╪│╪º┘ä ╪▒╪│╪º┘ä╪⌐ SMS ┘ü┘ê╪▒┘è╪⌐ ┘ä┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒ ╪╣┘å╪» ╪¬╪│╪¼┘è┘ä ╪║┘è╪º╪¿ ╪º┘ä╪╖╪º┘ä╪¿"
-            description="┘è╪¬┘à ╪º┘ä╪Ñ╪▒╪│╪º┘ä ┘ü┘ê╪▒ ╪¬╪½╪¿┘è╪¬ ╪¼┘ä╪│╪⌐ ╪º┘ä╪¡╪╢┘ê╪▒ ╪º┘ä╪╡╪¿╪º╪¡┘è╪⌐ ┘ä┘ä╪╖╪º┘ä╪¿"
+            title="إرسال رسالة SMS فورية لولي الأمر عند تسجيل غياب الطالب"
+            description="يتم الإرسال فور تثبيت جلسة الحضور الصباحية للطالب"
             checked={systemSettings.defaultChannels.sms}
             onChange={(checked) =>
               updateSettings({ defaultChannels: { ...systemSettings.defaultChannels, sms: checked } })
             }
           />
           <SwitchField
-            title="╪Ñ╪┤╪╣╪º╪▒ ╪º┘ä┘à╪»┘è╪▒ ╪º┘ä╪╣╪º┘à ┘ê╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä┘à╪▒╪º┘ü┘é ╪¿╪╖┘ä╪¿╪º╪¬ ╪º┘ä╪╡┘è╪º┘å╪⌐ ╪º┘ä╪╣╪º╪¼┘ä╪⌐"
-            description="╪¬┘å╪¿┘è┘ç Push Notification ┘ä╪¡╪╕┘è ┘ü┘è ╪┤╪▒┘è╪╖ ╪Ñ╪┤╪╣╪º╪▒╪º╪¬ ╪º┘ä┘à┘å╪╡╪⌐ ┘ê╪¬╪╖╪¿┘è┘é ╪º┘ä╪Ñ╪»╪º╪▒╪⌐"
+            title="إشعار المدير العام وإدارة المرافق بطلبات الصيانة العاجلة"
+            description="تنبيه Push Notification لحظي في شريط إشعارات المنصة وتطبيق الإدارة"
             checked={systemSettings.defaultChannels.push}
             onChange={(checked) =>
               updateSettings({ defaultChannels: { ...systemSettings.defaultChannels, push: checked } })
             }
           />
           <SwitchField
-            title="╪Ñ╪▒╪│╪º┘ä ┘ü╪º╪¬┘ê╪▒╪⌐ ╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è╪⌐ ┘à╪╣╪¬┘à╪»╪⌐ ╪╣╪¿╪▒ ╪º┘ä╪¿╪▒┘è╪» ╪╣┘å╪» ╪Ñ╪╡╪»╪º╪▒ ┘à╪╖╪º┘ä╪¿╪⌐ ┘à╪º┘ä┘è╪⌐"
-            description="╪¬╪¬╪╢┘à┘å ╪º┘ä┘ü╪º╪¬┘ê╪▒╪⌐ ╪¬┘ü╪º╪╡┘è┘ä ╪º┘ä┘é╪│╪╖ ┘ê╪▒╪º╪¿╪╖ ╪º┘ä╪│╪»╪º╪» ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è ╪º┘ä┘à╪¿╪º╪┤╪▒"
+            title="إرسال فاتورة إلكترونية معتمدة عبر البريد عند إصدار مطالبة مالية"
+            description="تتضمن الفاتورة تفاصيل القسط ورابط السداد الإلكتروني المباشر"
             checked={systemSettings.defaultChannels.email}
             onChange={(checked) =>
               updateSettings({ defaultChannels: { ...systemSettings.defaultChannels, email: checked } })
@@ -1759,42 +1759,42 @@ export function RolesTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä╪╡┘ä╪º╪¡┘è╪º╪¬ ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è╪⌐"
-      description="╪¬╪╣┘è┘è┘å ╪º┘ä╪ú╪»┘ê╪º╪▒ ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è╪⌐ ┘ä┘ä┘à┘ê╪╕┘ü┘è┘å ╪º┘ä╪¼╪»╪» ┘ê╪╢┘ê╪º╪¿╪╖ ╪º┘ä┘ê╪╡┘ê┘ä ┘ä┘ä┘à┘å╪╡╪⌐"
+      title="إعدادات الصلاحيات الافتراضية"
+      description="تعيين الأدوار الافتراضية للموظفين الجدد وضوابط الوصول للمنصة"
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪º┘ä╪╡┘ä╪º╪¡┘è╪⌐ ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è╪⌐ ┘ä┘ä┘à┘ê╪╕┘ü ╪º┘ä╪¼╪»┘è╪»">
+          <Field label="الصلاحية الافتراضية للموظف الجديد">
             <select
               className={inp}
-              value={systemSettings.defaultStaffRole || "┘à╪╣┘ä┘à (╪╡┘ä╪º╪¡┘è╪º╪¬ ╪¬╪»╪▒┘è╪│ ┘ü┘é╪╖)"}
+              value={systemSettings.defaultStaffRole || "معلم (صلاحيات تدريس فقط)"}
               onChange={(e) => updateSettings({ defaultStaffRole: e.target.value })}
             >
-              <option>┘à╪╣┘ä┘à (╪╡┘ä╪º╪¡┘è╪º╪¬ ╪¬╪»╪▒┘è╪│ ┘ü┘é╪╖)</option>
-              <option>╪Ñ╪»╪º╪▒┘è (╪¿╪»┘ê┘å ┘à╪º┘ä┘è╪⌐)</option>
-              <option>┘à┘ê╪╕┘ü ╪º╪│╪¬┘é╪¿╪º┘ä ┘ê╪º╪│╪¬╪╣┘ä╪º┘à╪º╪¬</option>
-              <option>┘à╪┤╪▒┘ü ╪¬╪▒╪¿┘ê┘è</option>
+              <option>معلم (صلاحيات تدريس فقط)</option>
+              <option>إداري (بدون مالية)</option>
+              <option>موظف استقبال واستعلامات</option>
+              <option>مشرف تربوي</option>
             </select>
           </Field>
         </div>
 
         <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-2">
-          <h4 className="font-black text-sm text-primary">╪Ñ╪»╪º╪▒╪⌐ ┘à╪╡┘ü┘ê┘ü╪⌐ ╪º┘ä╪╡┘ä╪º╪¡┘è╪º╪¬ ╪º┘ä┘à╪¬┘é╪»┘à╪⌐</h4>
+          <h4 className="font-black text-sm text-primary">إدارة مصفوفة الصلاحيات المتقدمة</h4>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            ┘ä╪¬╪«╪╡┘è╪╡ ╪ú╪»┘é ╪º┘ä╪¬┘ü╪º╪╡┘è┘ä ┘ä┘â┘ä ╪»┘ê╪▒ ┘ê╪╡┘ä╪º╪¡┘è╪º╪¬ ╪º┘ä┘é╪▒╪º╪í╪⌐╪î ╪º┘ä╪¬╪╣╪»┘è┘ä╪î ╪º┘ä╪¡╪░┘ü╪î ┘ê╪º┘ä╪º╪╣╪¬┘à╪º╪» ╪º┘ä┘à╪º┘ä┘è ┘ä┘â┘ä ╪┤╪º╪┤╪⌐╪î ┘è╪▒╪¼┘ë ╪º┘ä╪º┘å╪¬┘é╪º┘ä ╪Ñ┘ä┘ë ╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä╪ú╪»┘ê╪º╪▒ ┘ê╪º┘ä╪╡┘ä╪º╪¡┘è╪º╪¬.
+            لتخصيص أدق التفاصيل لكل دور وصلاحيات القراءة، التعديل، الحذف، والاعتماد المالي لكل شاشة، يرجى الانتقال إلى إدارة الأدوار والصلاحيات.
           </p>
           <div className="pt-2 flex items-center gap-3">
             <Link
               to="/admin/permissions"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-sm"
             >
-              <ShieldCheck className="h-3.5 w-3.5" /> ╪º┘ä╪º┘å╪¬┘é╪º┘ä ┘ä┘à╪»┘è╪▒ ╪º┘ä╪╡┘ä╪º╪¡┘è╪º╪¬
+              <ShieldCheck className="h-3.5 w-3.5" /> الانتقال لمدير الصلاحيات
             </Link>
             <Link
               to="/admin/roles"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border bg-card text-xs font-bold hover:bg-accent"
             >
-              ╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä╪ú╪»┘ê╪º╪▒
+              إدارة الأدوار
             </Link>
           </div>
         </div>
@@ -1846,68 +1846,68 @@ export function BackupTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪¼╪»┘ê┘ä╪⌐ ┘ê╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä┘å╪│╪« ╪º┘ä╪º╪¡╪¬┘è╪º╪╖┘è"
-      description="╪ú╪¬┘à╪¬╪⌐ ╪º┘ä┘å╪│╪« ╪º┘ä╪»┘ê╪▒┘è ┘ä┘é╪º╪╣╪»╪⌐ ╪º┘ä╪¿┘è╪º┘å╪º╪¬╪î ╪«┘è╪º╪▒╪º╪¬ ╪º┘ä╪¬╪«╪▓┘è┘å ╪º┘ä╪│╪¡╪º╪¿┘è╪î ┘ê╪º┘ä┘å╪│╪« ╪º┘ä┘ü┘ê╪▒┘è"
+      title="جدولة وإدارة النسخ الاحتياطي"
+      description="أتمتة النسخ الدوري لقاعدة البيانات، خيارات التخزين السحابي، والنسخ الفوري"
     >
       <div className="space-y-6">
         <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/40 border border-border">
           <div>
-            <div className="font-black text-sm text-foreground">╪º┘ä┘å╪│╪« ╪º┘ä╪º╪¡╪¬┘è╪º╪╖┘è ╪º┘ä┘ü┘ê╪▒┘è</div>
-            <div className="text-xs text-muted-foreground mt-0.5">╪¬┘ê┘ä┘è╪» ┘ä┘é╪╖╪⌐ ╪┤╪º┘à┘ä╪⌐ ┘ä┘é╪º╪╣╪»╪⌐ ╪º┘ä╪¿┘è╪º┘å╪º╪¬ ┘ê╪¡┘ü╪╕┘ç╪º ╪╣┘ä┘ë ╪¼┘ç╪º╪▓┘â ╪º┘ä╪ó┘å</div>
+            <div className="font-black text-sm text-foreground">النسخ الاحتياطي الفوري</div>
+            <div className="text-xs text-muted-foreground mt-0.5">توليد لقطة شاملة لقاعدة البيانات وحفظها على جهازك الآن</div>
           </div>
           <button
             onClick={() => setIsBackupOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20"
           >
-            <HardDrive className="h-4 w-4" /> ┘ü╪¬╪¡ ┘å╪º┘ü╪░╪⌐ ╪º┘ä┘å╪│╪« ┘ê╪º┘ä╪º╪│╪¬╪╣╪º╪»╪⌐
+            <HardDrive className="h-4 w-4" /> فتح نافذة النسخ والاستعادة
           </button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪¬┘â╪▒╪º╪▒ ╪º┘ä┘å╪│╪« ╪º┘ä╪º╪¡╪¬┘è╪º╪╖┘è ╪º┘ä╪¬┘ä┘é╪º╪ª┘è">
+          <Field label="تكرار النسخ الاحتياطي التلقائي">
             <select
               className={inp}
-              value={systemSettings.backupFrequency || "┘è┘ê┘à┘è╪º┘ï (╪º┘ä╪│╪º╪╣╪⌐ 02:00 ╪╡╪¿╪º╪¡╪º┘ï)"}
+              value={systemSettings.backupFrequency || "يومياً (الساعة 02:00 صباحاً)"}
               onChange={(e) => updateSettings({ backupFrequency: e.target.value })}
             >
-              <option>┘è┘ê┘à┘è╪º┘ï (╪º┘ä╪│╪º╪╣╪⌐ 02:00 ╪╡╪¿╪º╪¡╪º┘ï)</option>
-              <option>╪ú╪│╪¿┘ê╪╣┘è╪º┘ï (┘â┘ä ┘è┘ê┘à ╪¼┘à╪╣╪⌐)</option>
-              <option>┘â┘ä 12 ╪│╪º╪╣╪⌐</option>
+              <option>يومياً (الساعة 02:00 صباحاً)</option>
+              <option>أسبوعياً (كل يوم جمعة)</option>
+              <option>كل 12 ساعة</option>
             </select>
           </Field>
-          <Field label="┘à╪»╪⌐ ╪º┘ä╪º╪¡╪¬┘ü╪º╪╕ ╪¿╪º┘ä┘å╪│╪«">
+          <Field label="مدة الاحتفاظ بالنسخ">
             <select
               className={inp}
-              value={systemSettings.backupRetention || "30 ┘è┘ê┘à╪º┘ï"}
+              value={systemSettings.backupRetention || "30 يوماً"}
               onChange={(e) => updateSettings({ backupRetention: e.target.value })}
             >
-              <option>30 ┘è┘ê┘à╪º┘ï</option>
-              <option>60 ┘è┘ê┘à╪º┘ï</option>
-              <option>90 ┘è┘ê┘à╪º┘ï</option>
-              <option>╪»╪º╪ª┘à╪º┘ï (╪╣╪»┘à ╪¡╪░┘ü ╪º┘ä┘å╪│╪«)</option>
+              <option>30 يوماً</option>
+              <option>60 يوماً</option>
+              <option>90 يوماً</option>
+              <option>دائماً (عدم حذف النسخ)</option>
             </select>
           </Field>
         </div>
 
         <div className="border-t border-border pt-4">
-          <h4 className="font-black text-sm text-foreground mb-3">┘ê╪¼┘ç╪º╪¬ ┘ê╪«┘è╪º╪▒╪º╪¬ ╪º┘ä╪¬╪«╪▓┘è┘å</h4>
+          <h4 className="font-black text-sm text-foreground mb-3">وجهات وخيارات التخزين</h4>
           <div className="space-y-3">
             <SwitchField
-              title="╪º┘ä╪¬╪«╪▓┘è┘å ╪º┘ä┘à╪¡┘ä┘è ╪╣┘ä┘ë ╪«╪º╪»┘à ╪º┘ä┘à╪»╪▒╪│╪⌐ ╪º┘ä╪»╪º╪«┘ä┘è"
+              title="التخزين المحلي على خادم المدرسة الداخلي"
               checked={systemSettings.backupStorage?.local ?? true}
               onChange={(checked) =>
                 updateSettings({ backupStorage: { ...systemSettings.backupStorage, local: checked } as any })
               }
             />
             <SwitchField
-              title="╪º┘ä┘à╪▓╪º┘à┘å╪⌐ ╪º┘ä╪│╪¡╪º╪¿┘è╪⌐ ┘à╪╣ Google Drive"
+              title="المزامنة السحابية مع Google Drive"
               checked={systemSettings.backupStorage?.cloud ?? true}
               onChange={(checked) =>
                 updateSettings({ backupStorage: { ...systemSettings.backupStorage, cloud: checked } as any })
               }
             />
             <SwitchField
-              title="╪º┘ä┘à╪▓╪º┘à┘å╪⌐ ╪º┘ä┘à╪┤┘ü╪▒╪⌐ ┘à╪╣ Amazon S3"
+              title="المزامنة المشفرة مع Amazon S3"
               checked={systemSettings.backupStorage?.s3 ?? false}
               onChange={(checked) =>
                 updateSettings({ backupStorage: { ...systemSettings.backupStorage, s3: checked } as any })
@@ -1963,19 +1963,19 @@ export function IntegrationsTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪¬╪╖╪¿┘è┘é╪º╪¬ ╪º┘ä╪▒╪¿╪╖ ┘ê╪º┘ä╪╖╪▒┘ü ╪º┘ä╪½╪º┘ä╪½ (Integrations)"
-      description="╪º┘ä╪▒╪¿╪╖ ┘à╪╣ ┘à┘å╪╡╪⌐ ┘å┘ê╪▒╪î ╪¿┘ê╪º╪¿╪º╪¬ ╪º┘ä╪»┘ü╪╣ ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è╪î ┘ê┘à╪▓┘ê╪»┘è ╪▒╪│╪º╪ª┘ä SMS ┘ê WhatsApp"
+      title="تطبيقات الربط والطرف الثالث (Integrations)"
+      description="الربط مع منصة نور، بوابات الدفع الإلكتروني، ومزودي رسائل SMS و WhatsApp"
     >
       <div className="space-y-6">
         {/* Noor System */}
         <div className="p-4 border border-border rounded-2xl bg-card space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-black text-sm text-foreground">┘à┘å╪╡╪⌐ ┘å┘ê╪▒ (┘ê╪▓╪º╪▒╪⌐ ╪º┘ä╪¬╪╣┘ä┘è┘à ╪º┘ä╪│╪╣┘ê╪»┘è╪⌐)</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">┘à╪▓╪º┘à┘å╪⌐ ╪º┘ä╪╖┘ä╪º╪¿╪î ╪º┘ä╪║┘è╪º╪¿ ╪º┘ä┘è┘ê┘à┘è╪î ┘ê┘å╪¬╪º╪ª╪¼ ╪º┘ä╪º╪«╪¬╪¿╪º╪▒╪º╪¬ ╪º┘ä╪▒╪│┘à┘è╪⌐</p>
+              <h4 className="font-black text-sm text-foreground">منصة نور (وزارة التعليم السعودية)</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">مزامنة الطلاب، الغياب اليومي، ونتائج الاختبارات الرسمية</p>
             </div>
             <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-black rounded-xl border border-emerald-500/20">
-              ┘à╪¬╪╡┘ä ┘ê┘å╪┤╪╖
+              متصل ونشط
             </span>
           </div>
           <div className="flex items-center gap-3 pt-2">
@@ -1983,13 +1983,13 @@ export function IntegrationsTab(props: SettingsTabProps) {
               onClick={() => setIsImporterOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 shadow-xs"
             >
-              <Database className="h-3.5 w-3.5" /> ┘à╪╖╪º╪¿┘é╪⌐ ╪¿┘è╪º┘å╪º╪¬ ┘å┘ê╪▒
+              <Database className="h-3.5 w-3.5" /> مطابقة بيانات نور
             </button>
             <button
               onClick={() => setIsExporterOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-accent text-xs font-bold"
             >
-              <Download className="h-3.5 w-3.5" /> ╪¬╪╡╪»┘è╪▒ ╪¿┘å╪│┘é ┘å┘ê╪▒
+              <Download className="h-3.5 w-3.5" /> تصدير بنسق نور
             </button>
           </div>
         </div>
@@ -1998,15 +1998,15 @@ export function IntegrationsTab(props: SettingsTabProps) {
         <div className="p-4 border border-border rounded-2xl bg-card space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-black text-sm text-foreground">╪¿┘ê╪º╪¿╪⌐ ╪º┘ä╪»┘ü╪╣ ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è (Online Payments)</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">╪¬╪¡╪╡┘è┘ä ╪º┘ä╪▒╪│┘ê┘à ╪º┘ä┘à╪»╪▒╪│┘è╪⌐ ╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è╪º┘ï ╪╣╪¿╪▒ ┘à╪»┘ë╪î ┘ü┘è╪▓╪º╪î ┘ê┘à╪º╪│╪¬╪▒┘â╪º╪▒╪»</p>
+              <h4 className="font-black text-sm text-foreground">بوابة الدفع الإلكتروني (Online Payments)</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">تحصيل الرسوم المدرسية إلكترونياً عبر مدى، فيزا، وماستركارد</p>
             </div>
             <select
               className="h-9 rounded-xl border border-border bg-background px-3 text-xs font-bold outline-none"
               value={systemSettings.paymentGateway}
               onChange={(e) => updateSettings({ paymentGateway: e.target.value })}
             >
-              <option value="none">╪║┘è╪▒ ┘à┘ü╪╣┘ä</option>
+              <option value="none">غير مفعل</option>
               <option value="stripe">Stripe</option>
               <option value="paytabs">PayTabs</option>
               <option value="urpay">Urpay</option>
@@ -2066,18 +2066,18 @@ export function IntegrationsTab(props: SettingsTabProps) {
         <div className="p-4 border border-border rounded-2xl bg-card space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-black text-sm text-foreground">┘à╪▓┘ê╪» ╪▒╪│╪º╪ª┘ä SMS ╪º┘ä┘à╪╣╪¬┘à╪»</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">┘ä╪Ñ╪▒╪│╪º┘ä ╪Ñ╪┤╪╣╪º╪▒╪º╪¬ ╪º┘ä╪║┘è╪º╪¿ ┘ê╪º┘ä┘à╪╖╪º┘ä╪¿╪º╪¬ ╪º┘ä┘à╪º┘ä┘è╪⌐ ╪º┘ä┘ü┘ê╪▒┘è╪⌐</p>
+              <h4 className="font-black text-sm text-foreground">مزود رسائل SMS المعتمد</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">لإرسال إشعارات الغياب والمطالبات المالية الفورية</p>
             </div>
             <select
               className="h-9 rounded-xl border border-border bg-background px-3 text-xs font-bold outline-none"
               value={systemSettings.smsProvider || "none"}
               onChange={(e) => updateSettings({ smsProvider: e.target.value })}
             >
-              <option value="none">╪║┘è╪▒ ┘à┘ü╪╣┘ä</option>
+              <option value="none">غير مفعل</option>
               <option value="twilio">Twilio</option>
-              <option value="unifonic">Unifonic (┘è┘ê┘å┘è┘ü┘ê┘å┘â)</option>
-              <option value="4jawaly">4jawaly (┘ü┘ê╪▒ ╪¼┘ê╪º┘ä┘è)</option>
+              <option value="unifonic">Unifonic (يونيفونك)</option>
+              <option value="4jawaly">4jawaly (فور جوالي)</option>
             </select>
           </div>
         </div>
@@ -2129,15 +2129,15 @@ export function MobileTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪¬╪╖╪¿┘è┘é ╪º┘ä┘ç╪º╪¬┘ü ┘ê╪¿┘ê╪º╪¿╪⌐ ┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒"
-      description="╪╢┘ê╪º╪¿╪╖ ╪¬╪╖╪¿┘è┘é ╪º┘ä┘ç┘ê╪º╪¬┘ü ╪º┘ä╪░┘â┘è╪⌐╪î ╪│┘è╪º╪│╪º╪¬ ╪º┘ä╪«╪╡┘ê╪╡┘è╪⌐╪î ┘ê╪¿╪╖╪º┘é╪º╪¬ ╪º┘ä╪»╪«┘ê┘ä"
+      title="تطبيق الهاتف وبوابة ولي الأمر"
+      description="ضوابط تطبيق الهواتف الذكية، سياسات الخصوصية، وبطاقات الدخول"
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           {[
-            { title: "╪¿┘ê╪º╪¿╪⌐ ┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒", desc: "┘ü┘ê╪º╪¬┘è╪▒╪î ┘å╪¬╪º╪ª╪¼╪î ┘ê┘å┘é┘ä ┘à╪»╪▒╪│┘è", status: "┘à┘ü╪╣┘ä" },
-            { title: "╪¬╪╖╪¿┘è┘é ╪º┘ä┘à╪╣┘ä┘à", desc: "╪▒╪╡╪» ╪º┘ä╪¡╪╢┘ê╪▒ ┘ê╪º┘ä┘ê╪º╪¼╪¿╪º╪¬ ┘ê╪º┘ä╪»╪▒╪¼╪º╪¬", status: "┘à┘ü╪╣┘ä" },
-            { title: "╪¬╪╖╪¿┘è┘é ╪º┘ä╪Ñ╪»╪º╪▒╪⌐", desc: "╪º╪╣╪¬┘à╪º╪»╪º╪¬ ┘ê╪¬┘å╪¿┘è┘ç╪º╪¬ ┘à╪º┘ä┘è╪⌐ ┘ê╪Ñ╪»╪º╪▒┘è╪⌐", status: "┘å╪┤╪╖" },
+            { title: "بوابة ولي الأمر", desc: "فواتير، نتائج، ونقل مدرسي", status: "مفعل" },
+            { title: "تطبيق المعلم", desc: "رصد الحضور والواجبات والدرجات", status: "مفعل" },
+            { title: "تطبيق الإدارة", desc: "اعتمادات وتنبيهات مالية وإدارية", status: "نشط" },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-border p-4 bg-card/60">
               <div className="mb-2 flex items-center justify-between">
@@ -2154,37 +2154,37 @@ export function MobileTab(props: SettingsTabProps) {
 
         <div className="flex justify-between items-center p-4 rounded-2xl bg-primary/5 border border-primary/20">
           <div>
-            <div className="font-black text-sm text-foreground">╪▒┘à╪▓ ╪º┘ä╪▒╪¿╪╖ ╪º┘ä╪│╪▒┘è╪╣ (QR Code)</div>
-            <div className="text-xs text-muted-foreground">╪º┘à╪│╪¡ ╪º┘ä╪▒┘à╪▓ ┘ä╪▒╪¿╪╖ ╪¬╪╖╪¿┘è┘é ╪º┘ä┘ç╪º╪¬┘ü ╪¿╪º┘ä┘à╪»╪▒╪│╪⌐ ┘ü┘ê╪▒╪º┘ï</div>
+            <div className="font-black text-sm text-foreground">رمز الربط السريع (QR Code)</div>
+            <div className="text-xs text-muted-foreground">امسح الرمز لربط تطبيق الهاتف بالمدرسة فوراً</div>
           </div>
           <button
             onClick={() => setIsMobileConnectOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
           >
-            <QrCode className="h-4 w-4" /> ╪º╪│╪¬╪«╪▒╪º╪¼ ╪▒┘à╪▓ ╪º┘ä╪▒╪¿╪╖ QR
+            <QrCode className="h-4 w-4" /> استخراج رمز الربط QR
           </button>
         </div>
 
         <div className="border-t border-border pt-4">
-          <h4 className="font-black text-sm text-foreground mb-3">┘é┘ê╪º╪╣╪» ╪º┘ä╪«╪╡┘ê╪╡┘è╪⌐ ┘ê╪¡┘à╪º┘è╪⌐ ╪¿┘è╪º┘å╪º╪¬ ╪º┘ä┘ç╪º╪¬┘ü</h4>
+          <h4 className="font-black text-sm text-foreground mb-3">قواعد الخصوصية وحماية بيانات الهاتف</h4>
           <div className="space-y-3">
             <SwitchField
-              title="┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒ ┘è╪▒┘ë ╪ú╪¿┘å╪º╪í┘ç ┘ü┘é╪╖ ╪¡╪│╪¿ ╪▒┘é┘à ╪º┘ä┘ç┘ê┘è╪⌐ ┘ê╪º┘ä╪¼┘ê╪º┘ä ╪º┘ä┘à╪╣╪¬┘à╪»"
+              title="ولي الأمر يرى أبناءه فقط حسب رقم الهوية والجوال المعتمد"
               checked={systemSettings.parentViewLimit}
               onChange={(checked) => updateSettings({ parentViewLimit: checked })}
             />
             <SwitchField
-              title="╪º┘ä┘à╪╣┘ä┘à ┘è╪▒┘ë ╪º┘ä┘à┘ê╪º╪» ┘ê╪º┘ä╪┤╪╣╪¿ ╪º┘ä┘à╪│┘å╪»╪⌐ ╪Ñ┘ä┘è┘ç ┘ü┘é╪╖"
+              title="المعلم يرى المواد والشعب المسندة إليه فقط"
               checked={systemSettings.teacherViewLimit}
               onChange={(checked) => updateSettings({ teacherViewLimit: checked })}
             />
             <SwitchField
-              title="╪¡╪¼╪¿ ╪º┘ä╪¿┘è╪º┘å╪º╪¬ ╪º┘ä┘à╪º┘ä┘è╪⌐ ╪╣┘å ╪º┘ä┘â╪º╪»╪▒ ╪║┘è╪▒ ╪º┘ä┘à╪«┘ê┘ä"
+              title="حجب البيانات المالية عن الكادر غير المخول"
               checked={systemSettings.hideFinancial}
               onChange={(checked) => updateSettings({ hideFinancial: checked })}
             />
             <SwitchField
-              title="╪¬╪│╪¼┘è┘ä ┘â┘ä ╪╣┘à┘ä┘è╪⌐ ╪»╪«┘ê┘ä ┘ê╪Ñ╪¼╪▒╪º╪í ┘à┘å ╪º┘ä┘ç╪º╪¬┘ü ┘ü┘è ╪│╪¼┘ä ╪º┘ä╪ú┘å╪┤╪╖╪⌐ ╪º┘ä┘à╪▒┘â╪▓┘è"
+              title="تسجيل كل عملية دخول وإجراء من الهاتف في سجل الأنشطة المركزي"
               checked={systemSettings.logMobileActivity}
               onChange={(checked) => updateSettings({ logMobileActivity: checked })}
             />
@@ -2238,36 +2238,36 @@ export function APITab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä┘à┘ü╪º╪¬┘è╪¡ ╪º┘ä╪¿╪▒┘à╪¼┘è╪⌐ ┘ê╪º┘ä╪▒╪¿╪╖ ╪º┘ä┘à╪¬┘é╪»┘à (API & Webhooks)"
-      description="╪Ñ╪»╪º╪▒╪⌐ ┘à┘ü╪º╪¬┘è╪¡ ╪º┘ä╪▒╪¿╪╖ ╪º┘ä╪¿╪▒┘à╪¼┘è╪î ╪╣┘å╪º┘ê┘è┘å Webhook╪î ┘ê┘à╪╣╪»┘ä ╪º╪│╪¬╪»╪╣╪º╪í ╪º┘ä╪╖┘ä╪¿╪º╪¬"
+      title="المفاتيح البرمجية والربط المتقدم (API & Webhooks)"
+      description="إدارة مفاتيح الربط البرمجي، عناوين Webhook، ومعدل استدعاء الطلبات"
     >
       <div className="space-y-6">
         {/* API Key Box */}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <div className="font-black text-sm text-foreground">┘à┘ü╪¬╪º╪¡ API ╪º┘ä╪¡┘è ╪º┘ä╪▒╪ª┘è╪│┘è</div>
-              <div className="text-xs text-muted-foreground">┘è╪│╪¬╪«╪»┘à ┘ä┘à╪▓╪º┘à┘å╪⌐ ╪º┘ä╪¬╪╖╪¿┘è┘é╪º╪¬ ┘ê╪º┘ä╪▒╪¿╪╖ ╪º┘ä╪¿╪▒┘à╪¼┘è ╪º┘ä╪ó┘à┘å</div>
+              <div className="font-black text-sm text-foreground">مفتاح API الحي الرئيسي</div>
+              <div className="text-xs text-muted-foreground">يستخدم لمزامنة التطبيقات والربط البرمجي الآمن</div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   navigator.clipboard?.writeText(systemSettings.apiKey);
-                  toast.success("╪¬┘à ┘å╪│╪« ┘à┘ü╪¬╪º╪¡ API ┘ä┘ä╪¡╪º┘ü╪╕╪⌐");
+                  toast.success("تم نسخ مفتاح API للحافظة");
                 }}
                 className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border bg-background hover:bg-accent text-xs font-bold"
               >
-                <Copy className="h-3.5 w-3.5" /> ┘å╪│╪«
+                <Copy className="h-3.5 w-3.5" /> نسخ
               </button>
               <button
                 onClick={() => {
                   const newKey = `sk_live_school_${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
                   updateSettings({ apiKey: newKey });
-                  toast.success("╪¬┘à ╪¬╪»┘ê┘è╪▒ ┘ê╪¬┘ê┘ä┘è╪» ┘à┘ü╪¬╪º╪¡ API ╪¼╪»┘è╪» ╪¿┘å╪¼╪º╪¡");
+                  toast.success("تم تدوير وتوليد مفتاح API جديد بنجاح");
                 }}
                 className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90"
               >
-                <RefreshCcw className="h-3.5 w-3.5" /> ╪¬╪»┘ê┘è╪▒ ╪º┘ä┘à┘ü╪¬╪º╪¡
+                <RefreshCcw className="h-3.5 w-3.5" /> تدوير المفتاح
               </button>
             </div>
           </div>
@@ -2284,17 +2284,17 @@ export function APITab(props: SettingsTabProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-black text-sm text-foreground">
               <Webhook className="h-4 w-4 text-primary" />
-              <span>╪Ñ╪▒╪│╪º┘ä ╪º┘ä╪ú╪¡╪»╪º╪½ ╪º┘ä┘ä╪¡╪╕┘è╪⌐ (Webhooks)</span>
+              <span>إرسال الأحداث اللحظية (Webhooks)</span>
             </div>
             <button
               onClick={() => setIsWebhookTesterOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-sm"
             >
-              <Sparkles className="h-3.5 w-3.5" /> ┘ü╪¬╪¡ ┘à╪«╪¬╪¿╪▒ ╪º┘ä╪ú╪¡╪»╪º╪½
+              <Sparkles className="h-3.5 w-3.5" /> فتح مختبر الأحداث
             </button>
           </div>
 
-          <Field label="╪▒╪º╪¿╪╖ ╪º╪│╪¬┘é╪¿╪º┘ä ╪º┘ä╪ú╪¡╪»╪º╪½ (Webhook Endpoint URL)">
+          <Field label="رابط استقبال الأحداث (Webhook Endpoint URL)">
             <input
               className={inp}
               dir="ltr"
@@ -2305,7 +2305,7 @@ export function APITab(props: SettingsTabProps) {
           </Field>
 
           <div className="space-y-2 pt-1">
-            <div className="text-xs font-black text-muted-foreground">╪º┘ä╪ú╪¡╪»╪º╪½ ╪º┘ä┘à╪┤╪¬╪▒┘â ╪¿┘ç╪º:</div>
+            <div className="text-xs font-black text-muted-foreground">الأحداث المشترك بها:</div>
             <div className="grid gap-2 sm:grid-cols-2 text-xs font-bold">
               <label className="flex items-center gap-2 p-2.5 rounded-xl border border-border bg-background cursor-pointer">
                 <input
@@ -2314,7 +2314,7 @@ export function APITab(props: SettingsTabProps) {
                   onChange={(e) => updateSettings({ whStudentCreated: e.target.checked })}
                   className="rounded text-primary h-4 w-4"
                 />
-                <span>student.created (╪¬╪│╪¼┘è┘ä ╪╖╪º┘ä╪¿)</span>
+                <span>student.created (تسجيل طالب)</span>
               </label>
               <label className="flex items-center gap-2 p-2.5 rounded-xl border border-border bg-background cursor-pointer">
                 <input
@@ -2323,7 +2323,7 @@ export function APITab(props: SettingsTabProps) {
                   onChange={(e) => updateSettings({ whInvoicePaid: e.target.checked })}
                   className="rounded text-primary h-4 w-4"
                 />
-                <span>invoice.paid (╪│╪»╪º╪» ┘ü╪º╪¬┘ê╪▒╪⌐)</span>
+                <span>invoice.paid (سداد فاتورة)</span>
               </label>
               <label className="flex items-center gap-2 p-2.5 rounded-xl border border-border bg-background cursor-pointer">
                 <input
@@ -2332,7 +2332,7 @@ export function APITab(props: SettingsTabProps) {
                   onChange={(e) => updateSettings({ whExamUpdated: e.target.checked })}
                   className="rounded text-primary h-4 w-4"
                 />
-                <span>exam.grade.updated (╪º╪╣╪¬┘à╪º╪» ┘å╪¬┘è╪¼╪⌐)</span>
+                <span>exam.grade.updated (اعتماد نتيجة)</span>
               </label>
               <label className="flex items-center gap-2 p-2.5 rounded-xl border border-border bg-background cursor-pointer">
                 <input
@@ -2394,48 +2394,48 @@ export function SecurityTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä╪ú┘à╪º┘å ┘ê╪│┘è╪º╪│╪º╪¬ ╪º┘ä╪¬╪¡┘â┘à ╪¿╪º┘ä╪»╪«┘ê┘ä"
-      description="╪¬╪╣┘é┘è╪» ┘â┘ä┘à╪º╪¬ ╪º┘ä┘à╪▒┘ê╪▒╪î ┘à┘ç┘ä╪⌐ ╪¬╪│╪¼┘è┘ä ╪º┘ä╪«╪▒┘ê╪¼ ╪º┘ä╪¬┘ä┘é╪º╪ª┘è╪î ┘ê╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪½┘å╪º╪ª┘è 2FA"
+      title="الأمان وسياسات التحكم بالدخول"
+      description="تعقيد كلمات المرور، مهلة تسجيل الخروج التلقائي، والتحقق الثنائي 2FA"
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="╪│┘è╪º╪│╪⌐ ╪¬╪╣┘é┘è╪» ┘â┘ä┘à╪⌐ ╪º┘ä┘à╪▒┘ê╪▒ ┘ä┘ä┘à╪│╪¬╪«╪»┘à┘è┘å">
+          <Field label="سياسة تعقيد كلمة المرور للمستخدمين">
             <select
               className={inp}
               value={systemSettings.passwordPolicy}
               onChange={(e) => updateSettings({ passwordPolicy: e.target.value })}
             >
-              <option>┘à╪╣┘é╪»╪⌐ (╪ú╪¡╪▒┘ü ┘â╪¿┘è╪▒╪⌐ ┘ê╪╡╪║┘è╪▒╪⌐╪î ╪ú╪▒┘é╪º┘à╪î ╪▒┘à┘ê╪▓ ╪«╪º╪╡╪⌐)</option>
-              <option>┘à╪¬┘ê╪│╪╖╪⌐ (╪ú╪¡╪▒┘ü ┘ê╪ú╪▒┘é╪º┘à ┘à╪╣╪º┘ï)</option>
-              <option>╪¿╪│┘è╪╖╪⌐ (╪ú╪▒┘é╪º┘à ┘ü┘é╪╖ - ╪║┘è╪▒ ┘à╪│╪¬╪¡╪│┘å)</option>
+              <option>معقدة (أحرف كبيرة وصغيرة، أرقام، رموز خاصة)</option>
+              <option>متوسطة (أحرف وأرقام معاً)</option>
+              <option>بسيطة (أرقام فقط - غير مستحسن)</option>
             </select>
           </Field>
-          <Field label="┘à┘ç┘ä╪⌐ ╪º┘å╪¬┘ç╪º╪í ╪º┘ä╪¼┘ä╪│╪⌐ ┘ê╪º┘ä╪«╪▒┘ê╪¼ ╪º┘ä╪¬┘ä┘é╪º╪ª┘è (Session Timeout)">
+          <Field label="مهلة انتهاء الجلسة والخروج التلقائي (Session Timeout)">
             <select
               className={inp}
               value={systemSettings.sessionTimeout}
               onChange={(e) => updateSettings({ sessionTimeout: e.target.value })}
             >
-              <option>╪¿╪╣╪» 30 ╪»┘é┘è┘é╪⌐ ┘à┘å ╪º┘ä╪«┘à┘ê┘ä</option>
-              <option>╪¿╪╣╪» ╪│╪º╪╣╪⌐ ┘ê╪º╪¡╪»╪⌐</option>
-              <option>╪¿╪╣╪» 4 ╪│╪º╪╣╪º╪¬</option>
-              <option>┘ä╪º ╪¬╪│╪¼┘ä ╪«╪▒┘ê╪¼ ╪¬┘ä┘é╪º╪ª┘è╪º┘ï</option>
+              <option>بعد 30 دقيقة من الخمول</option>
+              <option>بعد ساعة واحدة</option>
+              <option>بعد 4 ساعات</option>
+              <option>لا تسجل خروج تلقائياً</option>
             </select>
           </Field>
         </div>
 
         <div className="border-t border-border pt-4 space-y-3">
-          <h4 className="font-black text-sm text-foreground">╪º┘ä╪¡┘à╪º┘è╪⌐ ┘à╪¬╪╣╪»╪»╪⌐ ╪º┘ä╪╖╪¿┘é╪º╪¬</h4>
+          <h4 className="font-black text-sm text-foreground">الحماية متعددة الطبقات</h4>
           <div className="space-y-3">
             <SwitchField
-              title="┘ü╪▒╪╢ ╪º┘ä╪¬╪¡┘é┘é ╪¿╪«╪╖┘ê╪¬┘è┘å (2FA) ┘ä┘ä╪Ñ╪»╪º╪▒┘è┘è┘å ┘ê╪º┘ä┘à╪¡╪º╪│╪¿┘è┘å"
-              description="╪╖┘ä╪¿ ╪▒┘à╪▓ OTP ╪¬╪ú┘â┘è╪»┘è ╪Ñ╪╢╪º┘ü┘è ╪╣┘å╪» ╪¬╪│╪¼┘è┘ä ╪º┘ä╪»╪«┘ê┘ä ┘à┘å ╪ú╪¼┘ç╪▓╪⌐ ╪¼╪»┘è╪»╪⌐"
+              title="فرض التحقق بخطوتين (2FA) للإداريين والمحاسبين"
+              description="طلب رمز OTP تأكيدي إضافي عند تسجيل الدخول من أجهزة جديدة"
               checked={systemSettings.force2FA}
               onChange={(checked) => updateSettings({ force2FA: checked })}
             />
             <SwitchField
-              title="╪¡╪╕╪▒ ╪º┘ä╪¡╪│╪º╪¿ ┘à╪ñ┘é╪¬╪º┘ï ╪¿╪╣╪» 5 ┘à╪¡╪º┘ê┘ä╪º╪¬ ╪»╪«┘ê┘ä ┘ü╪º╪┤┘ä╪⌐ ┘à╪¬╪¬╪º┘ä┘è╪⌐"
-              description="╪¡┘à╪º┘è╪⌐ ╪º┘ä┘å╪╕╪º┘à ╪╢╪» ┘ç╪¼┘à╪º╪¬ ╪º┘ä╪¬╪«┘à┘è┘å ┘ê╪º┘ä╪º╪«╪¬╪▒╪º┘é ╪º┘ä╪╣╪┤┘ê╪º╪ª┘è"
+              title="حظر الحساب مؤقتاً بعد 5 محاولات دخول فاشلة متتالية"
+              description="حماية النظام ضد هجمات التخمين والاختراق العشوائي"
               checked={systemSettings.lockAfter5Fails}
               onChange={(checked) => updateSettings({ lockAfter5Fails: checked })}
             />
@@ -2489,8 +2489,8 @@ export function DataIOTab(props: SettingsTabProps) {
   const setTab = props.setTab ?? (() => {});
   return (
     <PageCard
-      title="╪º┘ä┘à╪│╪¬┘ê╪▒╪» ┘ê╪º┘ä┘à┘Å╪╡╪»┘æ╪▒ ╪º┘ä╪░┘â┘è (Smart Engine)"
-      description="╪º╪│╪¬┘è╪▒╪º╪» ┘ê╪¬╪╡╪»┘è╪▒ ┘à╪¼┘à┘ê╪╣╪º╪¬ ╪º┘ä╪¿┘è╪º┘å╪º╪¬ ╪º┘ä┘â╪¿┘è╪▒╪⌐ ┘ä┘å╪╕╪º┘à ┘å┘ê╪▒╪î ╪Ñ┘â╪│┘ä╪î ┘ê┘à┘ä┘ü╪º╪¬ CSV ╪º┘ä┘à╪╣╪¬┘à╪»╪⌐"
+      title="المستورد والمُصدّر الذكي (Smart Engine)"
+      description="استيراد وتصدير مجموعات البيانات الكبيرة لنظام نور، إكسل، وملفات CSV المعتمدة"
     >
       <div className="space-y-6">
         <div className="grid md:grid-cols-2 gap-4">
@@ -2503,13 +2503,13 @@ export function DataIOTab(props: SettingsTabProps) {
               <div className="p-3 rounded-xl bg-primary/10 text-primary w-fit mb-3 group-hover:scale-105 transition-transform">
                 <ArrowDownToLine className="h-6 w-6" />
               </div>
-              <h4 className="font-black text-base text-foreground">╪º┘ä┘à╪│╪¬┘ê╪▒╪» ╪º┘ä╪░┘â┘è ┘ê┘à╪╖╪º╪¿┘é╪⌐ ╪¿┘è╪º┘å╪º╪¬ "┘å┘ê╪▒"</h4>
+              <h4 className="font-black text-base text-foreground">المستورد الذكي ومطابقة بيانات "نور"</h4>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                ╪▒┘ü╪╣ ┘à┘ä┘ü╪º╪¬ Excel ╪ú┘ê CSV ┘ä┘à╪╖╪º╪¿┘é╪⌐ ╪º┘ä╪╖┘ä╪º╪¿ ┘ê╪º┘ä┘à╪╣┘ä┘à┘è┘å ╪ó┘ä┘è╪º┘ï╪î ┘ê╪º┘ä╪¬╪¡┘é┘é ┘à┘å ╪╡╪¡╪⌐ ╪º┘ä┘ç┘ê┘è╪º╪¬ ┘é╪¿┘ä ╪º┘ä╪º╪╣╪¬┘à╪º╪».
+                رفع ملفات Excel أو CSV لمطابقة الطلاب والمعلمين آلياً، والتحقق من صحة الهويات قبل الاعتماد.
               </p>
             </div>
             <div className="pt-4 flex items-center gap-1.5 text-xs font-black text-primary">
-              <span>┘ü╪¬╪¡ ┘å╪º┘ü╪░╪⌐ ╪º┘ä╪º╪│╪¬┘è╪▒╪º╪» ┘ê╪º┘ä┘à╪╖╪º╪¿┘é╪⌐</span>
+              <span>فتح نافذة الاستيراد والمطابقة</span>
               <ExternalLink className="h-3.5 w-3.5" />
             </div>
           </div>
@@ -2523,13 +2523,13 @@ export function DataIOTab(props: SettingsTabProps) {
               <div className="p-3 rounded-xl bg-primary/10 text-primary w-fit mb-3 group-hover:scale-105 transition-transform">
                 <ArrowUpFromLine className="h-6 w-6" />
               </div>
-              <h4 className="font-black text-base text-foreground">╪¬╪╡╪»┘è╪▒ ╪¿┘è╪º┘å╪º╪¬ ╪º┘ä┘å╪╕╪º┘à ╪º┘ä┘à╪¼┘à╪╣╪⌐</h4>
+              <h4 className="font-black text-base text-foreground">تصدير بيانات النظام المجمعة</h4>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                ╪¬╪╡╪»┘è╪▒ ╪│╪¼┘ä╪º╪¬ ╪º┘ä╪╖┘ä╪º╪¿╪î ╪º┘ä┘à╪º┘ä┘è╪⌐╪î ┘ê╪º┘ä┘â╪º╪»╪▒ ╪¿╪╡┘è╪║ Excel╪î JSON╪î ╪ú┘ê ┘å╪│┘é ┘à┘å╪╡╪⌐ ┘å┘ê╪▒ ╪º┘ä┘à╪╣╪¬┘à╪».
+                تصدير سجلات الطلاب، المالية، والكادر بصيغ Excel، JSON، أو نسق منصة نور المعتمد.
               </p>
             </div>
             <div className="pt-4 flex items-center gap-1.5 text-xs font-black text-primary">
-              <span>┘ü╪¬╪¡ ┘å╪º┘ü╪░╪⌐ ╪º┘ä╪¬╪╡╪»┘è╪▒ ╪º┘ä╪┤╪º┘à┘ä</span>
+              <span>فتح نافذة التصدير الشامل</span>
               <ExternalLink className="h-3.5 w-3.5" />
             </div>
           </div>
@@ -2537,21 +2537,21 @@ export function DataIOTab(props: SettingsTabProps) {
 
         {/* Operations History Log */}
         <div className="border-t border-border pt-4">
-          <h4 className="font-black text-sm text-foreground mb-3">╪│╪¼┘ä ╪ú╪¡╪»╪½ ╪╣┘à┘ä┘è╪º╪¬ ╪º┘ä┘à╪▓╪º┘à┘å╪⌐ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐</h4>
+          <h4 className="font-black text-sm text-foreground mb-3">سجل أحدث عمليات المزامنة المركزية</h4>
           <div className="border border-border rounded-xl divide-y divide-border overflow-hidden text-xs">
             <div className="p-3 flex justify-between items-center bg-card">
               <div className="font-bold flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span>╪º╪│╪¬┘è╪▒╪º╪» ╪»┘ü╪╣╪⌐ ╪╖┘ä╪º╪¿ ┘à┘å ┘à┘å╪╡╪⌐ ┘å┘ê╪▒</span>
+                <span>استيراد دفعة طلاب من منصة نور</span>
               </div>
-              <span className="text-muted-foreground font-mono text-[11px]">┘à┘â╪¬┘à┘ä ╪¿┘å╪¼╪º╪¡ (450 ╪│╪¼┘ä)</span>
+              <span className="text-muted-foreground font-mono text-[11px]">مكتمل بنجاح (450 سجل)</span>
             </div>
             <div className="p-3 flex justify-between items-center bg-card">
               <div className="font-bold flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span>╪¬╪╡╪»┘è╪▒ ┘â╪┤┘ü ┘à╪│┘è╪▒ ╪º┘ä╪▒┘ê╪º╪¬╪¿ ╪º┘ä┘à╪╣╪¬┘à╪»</span>
+                <span>تصدير كشف مسير الرواتب المعتمد</span>
               </div>
-              <span className="text-muted-foreground font-mono text-[11px]">┘à┘å╪░ ┘è┘ê┘à┘è┘å</span>
+              <span className="text-muted-foreground font-mono text-[11px]">منذ يومين</span>
             </div>
           </div>
         </div>

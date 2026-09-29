@@ -29,59 +29,59 @@ import {
 } from "@/components/settings/settings-tabs";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ╪º┘ä╪┤╪º┘à┘ä╪⌐ | ┘à┘å╪╡╪⌐ ┘à╪»╪º╪▒╪│" }] }),
+  head: () => ({ meta: [{ title: "الإعدادات المركزية الشاملة | منصة مدارس" }] }),
   component: SettingsPage,
 });
 
 // Grouped Tabs Hierarchy for superior UX & clarity
 const TAB_GROUPS = [
   {
-    category: "╪º┘ä╪¬╪¡┘â┘à ╪¿╪º┘ä┘à┘è╪▓╪º╪¬ ┘ê╪º┘ä┘ê╪¡╪»╪º╪¬",
+    category: "التحكم بالميزات والوحدات",
     tabs: [
-      { id: "features", label: "╪º┘ä╪¬╪¡┘â┘à ╪¿┘à┘è╪▓╪º╪¬ ╪º┘ä┘å╪╕╪º┘à ┘ê╪º┘ä┘ê╪¡╪»╪º╪¬", icon: SlidersHorizontal, badge: "┘à╪▒┘â╪▓ ╪º┘ä┘à┘è╪▓╪º╪¬" },
+      { id: "features", label: "التحكم بميزات النظام والوحدات", icon: SlidersHorizontal, badge: "مركز الميزات" },
     ]
   },
   {
-    category: "╪º┘ä┘à╪ñ╪│╪│╪⌐ ┘ê╪º┘ä╪¿┘è╪º┘å╪º╪¬ ╪º┘ä╪ú╪│╪º╪│┘è╪⌐",
+    category: "المؤسسة والبيانات الأساسية",
     tabs: [
-      { id: "school", label: "╪¿┘è╪º┘å╪º╪¬ ┘ê┘ç┘ê┘è╪⌐ ╪º┘ä┘à╪»╪▒╪│╪⌐", icon: SchoolIcon, badge: "╪ú╪│╪º╪│┘è" },
-      { id: "brand", label: "╪º┘ä┘ç┘ê┘è╪⌐ ╪º┘ä╪¿╪╡╪▒┘è╪⌐ ┘ê╪º┘ä┘à╪╖╪¿┘ê╪╣╪º╪¬", icon: Palette, badge: "╪┤╪╣╪º╪▒ ┘ê╪«╪¬┘à" },
-      { id: "facilities", label: "╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä┘à╪▒╪º┘ü┘é ┘ê╪º┘ä╪ú╪╡┘ê┘ä", icon: Building },
+      { id: "school", label: "بيانات وهوية المدرسة", icon: SchoolIcon, badge: "أساسي" },
+      { id: "brand", label: "الهوية البصرية والمطبوعات", icon: Palette, badge: "شعار وختم" },
+      { id: "facilities", label: "إدارة المرافق والأصول", icon: Building },
     ]
   },
   {
-    category: "╪º┘ä╪│┘è╪º╪│╪º╪¬ ┘ê╪º┘ä╪¬╪┤╪║┘è┘ä ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è",
+    category: "السياسات والتشغيل الأكاديمي",
     tabs: [
-      { id: "academic", label: "╪º┘ä╪│┘å┘ê╪º╪¬ ┘ê╪º┘ä╪¬┘é┘ê┘è┘à ╪º┘ä╪»╪▒╪º╪│┘è", icon: Calendar, badge: "╪º┘ä╪¬┘é┘ê┘è┘à" },
-      { id: "admission", label: "╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘é╪¿┘ê┘ä ┘ê╪º┘ä╪¬╪│╪¼┘è┘ä", icon: UserPlus },
-      { id: "hr", label: "╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘à┘ê╪º╪▒╪» ╪º┘ä╪¿╪┤╪▒┘è╪⌐", icon: Users },
-      { id: "finance", label: "╪º┘ä╪│┘è╪º╪│╪º╪¬ ┘ê╪º┘ä╪╣┘à┘ä┘è╪º╪¬ ╪º┘ä┘à╪º┘ä┘è╪⌐", icon: DollarSign, badge: "╪º┘ä╪╣┘à┘ä╪⌐" },
+      { id: "academic", label: "السنوات والتقويم الدراسي", icon: Calendar, badge: "التقويم" },
+      { id: "admission", label: "سياسات القبول والتسجيل", icon: UserPlus },
+      { id: "hr", label: "سياسات الموارد البشرية", icon: Users },
+      { id: "finance", label: "السياسات والعمليات المالية", icon: DollarSign, badge: "العملة" },
     ]
   },
   {
-    category: "╪º┘ä┘à╪╕┘ç╪▒ ┘ê╪º┘ä╪¬╪«╪╡┘è╪╡",
+    category: "المظهر والتخصيص",
     tabs: [
-      { id: "theme", label: "╪º┘ä╪½┘è┘à ┘ê╪º┘ä╪ú┘ä┘ê╪º┘å ┘ê╪º┘ä┘ê╪º╪¼┘ç╪⌐", icon: Palette, badge: "╪ú┘ä┘ê╪º┘å" },
-      { id: "lang", label: "╪º┘ä┘ä╪║╪⌐ ┘ê╪º┘ä╪¬┘é┘ê┘è┘à ┘ê╪º┘ä╪º╪¬╪¼╪º┘ç", icon: Languages },
-      { id: "print", label: "┘é┘ê╪º┘ä╪¿ ┘ê┘à╪¡╪»╪»╪º╪¬ ╪º┘ä╪╖╪¿╪º╪╣╪⌐", icon: FileText },
+      { id: "theme", label: "الثيم والألوان والواجهة", icon: Palette, badge: "ألوان" },
+      { id: "lang", label: "اللغة والتقويم والاتجاه", icon: Languages },
+      { id: "print", label: "قوالب ومحددات الطباعة", icon: FileText },
     ]
   },
   {
-    category: "╪º┘ä╪▒╪¿╪╖ ┘ê╪º┘ä╪º╪¬╪╡╪º┘ä╪º╪¬ ╪º┘ä╪░┘â┘è╪⌐",
+    category: "الربط والاتصالات الذكية",
     tabs: [
-      { id: "notif", label: "┘é┘ê╪º╪╣╪» ╪º┘ä╪Ñ╪┤╪╣╪º╪▒╪º╪¬ ┘ê╪º┘ä╪▒╪│╪º╪ª┘ä", icon: BellRing, badge: "SMS/┘ê╪º╪¬╪│╪º╪¿" },
-      { id: "mobile", label: "╪¬╪╖╪¿┘è┘é ╪º┘ä┘ç╪º╪¬┘ü ┘ê╪¿┘ê╪º╪¿╪⌐ ┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒", icon: Smartphone },
-      { id: "integrations", label: "╪¬╪╖╪¿┘è┘é╪º╪¬ ╪º┘ä╪▒╪¿╪╖ ┘ê╪º┘ä╪╖╪▒┘ü ╪º┘ä╪½╪º┘ä╪½", icon: LinkIcon, badge: "┘å┘ê╪▒/╪¿┘ê╪º╪¿╪º╪¬" },
-      { id: "api", label: "API ┘ê╪º┘ä╪▒╪¿╪╖ ╪º┘ä┘à╪¬┘é╪»┘à (Webhooks)", icon: KeyRound },
+      { id: "notif", label: "قواعد الإشعارات والرسائل", icon: BellRing, badge: "SMS/واتساب" },
+      { id: "mobile", label: "تطبيق الهاتف وبوابة ولي الأمر", icon: Smartphone },
+      { id: "integrations", label: "تطبيقات الربط والطرف الثالث", icon: LinkIcon, badge: "نور/بوابات" },
+      { id: "api", label: "API والربط المتقدم (Webhooks)", icon: KeyRound },
     ]
   },
   {
-    category: "╪º┘ä╪ú┘à╪º┘å ┘ê╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä╪¿┘è╪º┘å╪º╪¬",
+    category: "الأمان وإدارة البيانات",
     tabs: [
-      { id: "security", label: "╪º┘ä╪ú┘à╪º┘å ┘ê╪│┘è╪º╪│╪º╪¬ ╪º┘ä╪»╪«┘ê┘ä", icon: Lock },
-      { id: "roles", label: "╪º┘ä╪╡┘ä╪º╪¡┘è╪º╪¬ ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è╪⌐", icon: ShieldCheck },
-      { id: "backup", label: "╪º┘ä┘å╪│╪« ╪º┘ä╪º╪¡╪¬┘è╪º╪╖┘è ┘ê╪º┘ä╪¡┘ü╪╕", icon: HardDrive },
-      { id: "data_io", label: "╪º┘ä┘à╪│╪¬┘ê╪▒╪» ┘ê╪º┘ä┘à╪╡╪»╪▒ ╪º┘ä╪░┘â┘è", icon: Database, badge: "┘å╪╕╪º┘à ┘å┘ê╪▒" },
+      { id: "security", label: "الأمان وسياسات الدخول", icon: Lock },
+      { id: "roles", label: "الصلاحيات الافتراضية", icon: ShieldCheck },
+      { id: "backup", label: "النسخ الاحتياطي والحفظ", icon: HardDrive },
+      { id: "data_io", label: "المستورد والمصدر الذكي", icon: Database, badge: "نظام نور" },
     ]
   }
 ] as const;
@@ -89,14 +89,14 @@ const TAB_GROUPS = [
 type TabId = typeof TAB_GROUPS[number]["tabs"][number]["id"];
 
 const THEME_PALETTES = [
-  { id: "blue", name: "╪ú╪▓╪▒┘é ┘à┘ä┘â┘è", hex: "#2563eb", border: "border-blue-600" },
-  { id: "sky", name: "╪│┘à╪º┘ê┘è ╪╣╪╡╪▒┘è", hex: "#0ea5e9", border: "border-sky-500" },
-  { id: "emerald", name: "╪▓┘à╪▒╪»┘è ╪¬╪╣┘ä┘è┘à┘è", hex: "#10b981", border: "border-emerald-500" },
-  { id: "indigo", name: "┘å┘è┘ä┘è ┘ê┘é┘ê╪▒", hex: "#4f46e5", border: "border-indigo-600" },
-  { id: "violet", name: "╪¿┘å┘ü╪│╪¼┘è ╪º╪¿╪¬┘â╪º╪▒┘è", hex: "#8b5cf6", border: "border-violet-500" },
-  { id: "rose", name: "┘è╪º┘é┘ê╪¬┘è ╪▒╪º┘é┘ì", hex: "#e11d48", border: "border-rose-600" },
-  { id: "amber", name: "╪╣┘å╪¿╪▒┘è ╪»╪º┘ü╪ª", hex: "#d97706", border: "border-amber-600" },
-  { id: "teal", name: "┘â╪¡┘ä┘è ╪¿╪¡╪▒┘è", hex: "#0f766e", border: "border-teal-700" },
+  { id: "blue", name: "أزرق ملكي", hex: "#2563eb", border: "border-blue-600" },
+  { id: "sky", name: "سماوي عصري", hex: "#0ea5e9", border: "border-sky-500" },
+  { id: "emerald", name: "زمردي تعليمي", hex: "#10b981", border: "border-emerald-500" },
+  { id: "indigo", name: "نيلي وقور", hex: "#4f46e5", border: "border-indigo-600" },
+  { id: "violet", name: "بنفسجي ابتكاري", hex: "#8b5cf6", border: "border-violet-500" },
+  { id: "rose", name: "ياقوتي راقٍ", hex: "#e11d48", border: "border-rose-600" },
+  { id: "amber", name: "عنبري دافئ", hex: "#d97706", border: "border-amber-600" },
+  { id: "teal", name: "كحلي بحري", hex: "#0f766e", border: "border-teal-700" },
 ];
 
 // Definition of All 20 Platform Modules & Features
@@ -120,279 +120,279 @@ interface FeatureDefinition {
 const ALL_FEATURES: FeatureDefinition[] = [
   {
     key: "transport",
-    name: "┘ê╪¡╪»╪⌐ ╪º┘ä┘å┘é┘ä ╪º┘ä┘à╪»╪▒╪│┘è ┘ê╪º┘ä╪¡╪º┘ü┘ä╪º╪¬",
-    desc: "╪Ñ╪»╪º╪▒╪⌐ ╪«╪╖┘ê╪╖ ╪º┘ä╪│┘è╪▒╪î ╪º┘ä┘à╪┤╪▒┘ü┘è┘å╪î ╪º┘ä╪¡╪º┘ü┘ä╪º╪¬╪î ┘ê╪º╪┤╪¬╪▒╪º┘â╪º╪¬ ╪º┘ä╪╖┘ä╪º╪¿ ┘à╪╣ ┘ü┘ê╪¬╪▒╪⌐ ╪º┘ä┘å┘é┘ä ╪ó┘ä┘è╪º┘ï",
+    name: "وحدة النقل المدرسي والحافلات",
+    desc: "إدارة خطوط السير، المشرفين، الحافلات، واشتراكات الطلاب مع فوترة النقل آلياً",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪¬╪┤╪║┘è┘ä┘è╪⌐",
+    categoryLabel: "وحدات تشغيلية",
     icon: Compass,
     route: "/transport/routes",
-    routeLabel: "┘ü╪¬╪¡ ╪┤╪º╪┤╪⌐ ╪º┘ä┘å┘é┘ä",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪º┘ä┘à╪▒┘â╪▓ ╪º┘ä┘à╪º┘ä┘è ┘ê┘à┘ä┘ü╪º╪¬ ╪º┘ä╪╖┘ä╪º╪¿",
-    badge: "╪¡╪º┘ü┘ä╪º╪¬",
+    routeLabel: "فتح شاشة النقل",
+    dependency: "مرتبط بالمركز المالي وملفات الطلاب",
+    badge: "حافلات",
   },
   {
     key: "library",
-    name: "┘ê╪¡╪»╪⌐ ╪º┘ä┘à┘â╪¬╪¿╪⌐ ┘ê╪¬┘ê╪▓┘è╪╣ ╪º┘ä┘à┘é╪▒╪▒╪º╪¬",
-    desc: "╪Ñ╪»╪º╪▒╪⌐ ┘ü┘ç╪º╪▒╪│ ╪º┘ä┘â╪¬╪¿ ┘ê╪º┘ä┘à┘é╪▒╪▒╪º╪¬╪î ╪«╪╖╪╖ ╪¬╪│┘ä┘è┘à ╪º┘ä┘â╪¬╪¿ ╪º┘ä┘à╪»╪▒╪│┘è╪⌐╪î ┘ê╪▒╪╡╪» ╪º┘ä╪Ñ╪▒╪¼╪º╪╣",
+    name: "وحدة المكتبة وتوزيع المقررات",
+    desc: "إدارة فهارس الكتب والمقررات، خطط تسليم الكتب المدرسية، ورصد الإرجاع",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪¬╪┤╪║┘è┘ä┘è╪⌐",
+    categoryLabel: "وحدات تشغيلية",
     icon: BookOpen,
     route: "/library/textbooks",
-    routeLabel: "┘ü╪¬╪¡ ╪º┘ä┘à┘â╪¬╪¿╪⌐",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪º┘ä╪╡┘ü┘ê┘ü ┘ê╪º┘ä╪┤╪╣╪¿",
-    badge: "┘à┘é╪▒╪▒╪º╪¬",
+    routeLabel: "فتح المكتبة",
+    dependency: "مرتبط بالصفوف والشعب",
+    badge: "مقررات",
   },
   {
     key: "clinic",
-    name: "┘ê╪¡╪»╪⌐ ╪º┘ä╪╣┘è╪º╪»╪⌐ ╪º┘ä╪╖╪¿┘è╪⌐ ┘ê╪º┘ä╪▒╪╣╪º┘è╪⌐ ╪º┘ä╪╡╪¡┘è╪⌐",
-    desc: "╪º┘ä╪│╪¼┘ä╪º╪¬ ╪º┘ä╪╡╪¡┘è╪⌐╪î ┘à┘ä┘ü╪º╪¬ ╪º┘ä╪¡╪│╪º╪│┘è╪⌐ ┘ê╪º┘ä╪ú┘à╪▒╪º╪╢ ╪º┘ä┘à╪▓┘à┘å╪⌐╪î ┘ê╪¬┘ê╪½┘è┘é ╪▓┘è╪º╪▒╪º╪¬ ╪º┘ä╪╣┘è╪º╪»╪⌐",
+    name: "وحدة العيادة الطبية والرعاية الصحية",
+    desc: "السجلات الصحية، ملفات الحساسية والأمراض المزمنة، وتوثيق زيارات العيادة",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪¬╪┤╪║┘è┘ä┘è╪⌐",
+    categoryLabel: "وحدات تشغيلية",
     icon: ShieldCheck,
     route: "/clinic/visits",
-    routeLabel: "┘ü╪¬╪¡ ╪º┘ä╪╣┘è╪º╪»╪⌐",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿┘à┘ä┘ü╪º╪¬ ╪º┘ä╪╖┘ä╪º╪¿ ┘ê╪º┘ä╪║┘è╪º╪¿",
-    badge: "╪╡╪¡╪⌐",
+    routeLabel: "فتح العيادة",
+    dependency: "مرتبط بملفات الطلاب والغياب",
+    badge: "صحة",
   },
   {
     key: "facilities",
-    name: "┘ê╪¡╪»╪⌐ ╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä┘à╪▒╪º┘ü┘é ┘ê╪º┘ä┘à╪¿╪º┘å┘è ┘ê╪º┘ä╪╡┘è╪º┘å╪⌐",
-    desc: "╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä┘à╪¿╪º┘å┘è╪î ╪º┘ä┘é╪º╪╣╪º╪¬╪î ╪º┘ä┘à╪╣╪º┘à┘ä╪î ╪╖┘ä╪¿╪º╪¬ ╪º┘ä╪╡┘è╪º┘å╪⌐ ╪º┘ä╪»┘ê╪▒┘è╪⌐╪î ┘ê┘é┘è╪» ╪¬┘â╪º┘ä┘è┘ü ╪º┘ä╪╡┘è╪º┘å╪⌐",
+    name: "وحدة إدارة المرافق والمباني والصيانة",
+    desc: "إدارة المباني، القاعات، المعامل، طلبات الصيانة الدورية، وقيد تكاليف الصيانة",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪¬╪┤╪║┘è┘ä┘è╪⌐",
+    categoryLabel: "وحدات تشغيلية",
     icon: Building,
     route: "/facilities/rooms",
-    routeLabel: "┘ü╪¬╪¡ ╪º┘ä┘à╪▒╪º┘ü┘é",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿┘à╪▒╪º┘â╪▓ ╪º┘ä╪¬┘â┘ä┘ü╪⌐ ┘ê╪º┘ä┘à╪╡╪▒┘ê┘ü╪º╪¬",
-    badge: "┘à╪¿╪º┘å┘è",
+    routeLabel: "فتح المرافق",
+    dependency: "مرتبط بمراكز التكلفة والمصروفات",
+    badge: "مباني",
     tabShortcut: "facilities",
-    tabLabel: "╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä╪ú╪╡┘ê┘ä",
+    tabLabel: "إعدادات الأصول",
   },
   {
     key: "inventory",
-    name: "┘ê╪¡╪»╪⌐ ╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä┘à╪│╪¬┘ê╪»╪╣╪º╪¬ ┘ê╪º┘ä╪╣┘ç╪» ╪º┘ä┘à╪»╪▒╪│┘è╪⌐",
-    desc: "╪¼╪▒╪» ╪º┘ä╪ú╪╡┘ê┘ä╪î ╪º┘ä╪ú╪╡┘å╪º┘ü ╪º┘ä┘à╪«╪▓┘å┘è╪⌐╪î ╪ú╪░┘ê┘å╪º╪¬ ╪º┘ä╪╡╪▒┘ü ┘ê╪º┘ä╪Ñ╪╢╪º┘ü╪⌐╪î ┘ê╪¬┘å╪¿┘è┘ç╪º╪¬ ╪º┘ä┘å┘é╪╡",
+    name: "وحدة إدارة المستودعات والعهد المدرسية",
+    desc: "جرد الأصول، الأصناف المخزنية، أذونات الصرف والإضافة، وتنبيهات النقص",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪¬╪┤╪║┘è┘ä┘è╪⌐",
+    categoryLabel: "وحدات تشغيلية",
     icon: HardDrive,
     route: "/inventory/items",
-    routeLabel: "┘ü╪¬╪¡ ╪º┘ä┘à╪│╪¬┘ê╪»╪╣",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪º┘ä┘à╪┤╪¬╪▒┘è╪º╪¬ ┘ê╪º┘ä╪╣┘ç╪»",
-    badge: "┘à╪«╪▓┘ê┘å",
+    routeLabel: "فتح المستودع",
+    dependency: "مرتبط بالمشتريات والعهد",
+    badge: "مخزون",
   },
   {
     key: "hrPayroll",
-    name: "┘ê╪¡╪»╪⌐ ╪º┘ä┘à┘ê╪º╪▒╪» ╪º┘ä╪¿╪┤╪▒┘è╪⌐ ┘ê┘à╪│┘è╪▒ ╪º┘ä╪▒┘ê╪º╪¬╪¿",
-    desc: "╪»┘ä┘è┘ä ╪º┘ä┘â╪º╪»╪▒╪î ┘à╪│┘è╪▒╪º╪¬ ╪º┘ä╪▒┘ê╪º╪¬╪¿ ╪º┘ä╪┤┘ç╪▒┘è╪⌐╪î ╪º┘ä╪¿╪»┘ä╪º╪¬╪î ╪º┘ä╪¡╪│┘à┘è╪º╪¬╪î ┘ê╪º┘ä╪Ñ╪¼╪º╪▓╪º╪¬ ╪º┘ä╪│┘å┘ê┘è╪⌐",
+    name: "وحدة الموارد البشرية ومسير الرواتب",
+    desc: "دليل الكادر، مسيرات الرواتب الشهرية، البدلات، الحسميات، والإجازات السنوية",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪¬╪┤╪║┘è┘ä┘è╪⌐",
+    categoryLabel: "وحدات تشغيلية",
     icon: Users,
     route: "/hr/staff",
-    routeLabel: "┘ü╪¬╪¡ ╪┤╪ñ┘ê┘å ╪º┘ä┘à┘ê╪╕┘ü┘è┘å",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪º┘ä╪«╪▓┘è┘å╪⌐ ┘ê╪º┘ä╪¡╪│╪º╪¿╪º╪¬",
-    badge: "╪▒┘ê╪º╪¬╪¿",
+    routeLabel: "فتح شؤون الموظفين",
+    dependency: "مرتبط بالخزينة والحسابات",
+    badge: "رواتب",
     tabShortcut: "hr",
-    tabLabel: "╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘à┘ê╪º╪▒╪» ╪º┘ä╪¿╪┤╪▒┘è╪⌐",
+    tabLabel: "سياسات الموارد البشرية",
   },
   {
     key: "examsReports",
-    name: "┘ê╪¡╪»╪⌐ ╪º┘ä╪º╪«╪¬╪¿╪º╪▒╪º╪¬ ┘ê╪▒╪╡╪» ╪º┘ä╪»╪▒╪¼╪º╪¬ ┘ê╪º┘ä╪┤┘ç╪º╪»╪º╪¬",
-    desc: "╪¼╪»╪º┘ê┘ä ╪º┘ä╪º┘à╪¬╪¡╪º┘å╪º╪¬╪î ╪▒╪╡╪» ╪º┘ä╪»╪▒╪¼╪º╪¬╪î ┘â╪┤┘ê┘ü ╪º┘ä┘å╪¬╪º╪ª╪¼╪î ┘ê╪Ñ╪╡╪»╪º╪▒ ╪º┘ä╪┤┘ç╪º╪»╪º╪¬ ╪º┘ä╪▒╪│┘à┘è╪⌐",
+    name: "وحدة الاختبارات ورصد الدرجات والشهادات",
+    desc: "جداول الامتحانات، رصد الدرجات، كشوف النتائج، وإصدار الشهادات الرسمية",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪ú┘â╪º╪»┘è┘à┘è╪⌐",
+    categoryLabel: "وحدات أكاديمية",
     icon: FileText,
     route: "/exams",
-    routeLabel: "┘ü╪¬╪¡ ╪º┘ä╪º╪«╪¬╪¿╪º╪▒╪º╪¬",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪º┘ä┘à┘å╪º┘ç╪¼ ┘ê╪º┘ä┘à┘ê╪º╪» ┘ê╪º┘ä┘ü╪╡┘ê┘ä",
-    badge: "┘å╪¬╪º╪ª╪¼",
+    routeLabel: "فتح الاختبارات",
+    dependency: "مرتبط بالمناهج والمواد والفصول",
+    badge: "نتائج",
   },
   {
     key: "financeInvoicing",
-    name: "╪º┘ä┘à╪▒┘â╪▓ ╪º┘ä┘à╪º┘ä┘è ┘ê╪º┘ä┘ü┘ê╪¬╪▒╪⌐ ┘ê╪º┘ä╪¬╪¡╪╡┘è┘ä",
-    desc: "╪Ñ╪╡╪»╪º╪▒ ╪º┘ä┘ü┘ê╪º╪¬┘è╪▒╪î ╪│┘å╪»╪º╪¬ ╪º┘ä┘é╪¿╪╢ ┘ê╪º┘ä╪╡╪▒┘ü╪î ╪│╪¼┘ä╪º╪¬ ╪º┘ä╪«╪▓┘è┘å╪⌐╪î ┘ê╪Ñ╪»╪º╪▒╪⌐ ╪º┘ä╪«╪╡┘ê┘à╪º╪¬ ┘ê╪º┘ä┘à┘å╪¡",
+    name: "المركز المالي والفوترة والتحصيل",
+    desc: "إصدار الفواتير، سندات القبض والصرف، سجلات الخزينة، وإدارة الخصومات والمنح",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪¬╪┤╪║┘è┘ä┘è╪⌐",
+    categoryLabel: "وحدات تشغيلية",
     icon: DollarSign,
     route: "/finance",
-    routeLabel: "┘ü╪¬╪¡ ╪º┘ä┘à╪º┘ä┘è╪⌐",
-    dependency: "╪º┘ä┘ê╪¡╪»╪⌐ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ┘ä╪¼┘à┘è╪╣ ╪º┘ä╪Ñ┘è╪▒╪º╪»╪º╪¬ ┘ê╪º┘ä┘à╪╡╪▒┘ê┘ü╪º╪¬",
-    badge: "┘à╪º┘ä┘è╪⌐",
+    routeLabel: "فتح المالية",
+    dependency: "الوحدة المركزية لجميع الإيرادات والمصروفات",
+    badge: "مالية",
     tabShortcut: "finance",
-    tabLabel: "╪º┘ä╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘à╪º┘ä┘è╪⌐",
+    tabLabel: "السياسات المالية",
   },
   {
     key: "admissionRegistration",
-    name: "╪¿┘ê╪º╪¿╪⌐ ╪º┘ä┘é╪¿┘ê┘ä ┘ê╪º┘ä╪¬╪│╪¼┘è┘ä ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è",
-    desc: "╪º╪│╪¬┘é╪¿╪º┘ä ╪╖┘ä╪¿╪º╪¬ ╪º┘ä┘à╪│╪¬╪¼╪»┘è┘å╪î ┘à╪▒╪º╪¼╪╣╪⌐ ╪º┘ä┘à╪│╪¬┘å╪»╪º╪¬╪î ┘ê┘ü╪¡╪╡ ╪º┘ä╪│╪╣╪⌐ ╪º┘ä╪º╪│╪¬┘è╪╣╪º╪¿┘è╪⌐ ┘ä┘ä┘ü╪╡┘ê┘ä",
+    name: "بوابة القبول والتسجيل الإلكتروني",
+    desc: "استقبال طلبات المستجدين، مراجعة المستندات، وفحص السعة الاستيعابية للفصول",
     category: "core",
-    categoryLabel: "┘ê╪¡╪»╪º╪¬ ╪ú┘â╪º╪»┘è┘à┘è╪⌐",
+    categoryLabel: "وحدات أكاديمية",
     icon: UserPlus,
     route: "/students/new",
-    routeLabel: "╪¬╪│╪¼┘è┘ä ╪╖╪º┘ä╪¿",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪º┘ä╪│┘å┘ê╪º╪¬ ╪º┘ä╪»╪▒╪º╪│┘è╪⌐ ┘ê╪º┘ä╪╡┘ü┘ê┘ü",
-    badge: "╪¬╪│╪¼┘è┘ä",
+    routeLabel: "تسجيل طالب",
+    dependency: "مرتبط بالسنوات الدراسية والصفوف",
+    badge: "تسجيل",
     tabShortcut: "admission",
-    tabLabel: "╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘é╪¿┘ê┘ä",
+    tabLabel: "سياسات القبول",
   },
   {
     key: "parentPortal",
-    name: "╪¿┘ê╪º╪¿╪⌐ ┘ê╪¬╪╖╪¿┘è┘é ┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒ ╪º┘ä╪▒┘é┘à┘è",
-    desc: "┘à╪¬╪º╪¿╪╣╪⌐ ╪»╪▒╪¼╪º╪¬ ╪º┘ä╪ú╪¿┘å╪º╪í╪î ╪º┘ä╪¡╪╢┘ê╪▒ ┘ê╪º┘ä╪║┘è╪º╪¿╪î ╪│╪»╪º╪» ╪º┘ä╪▒╪│┘ê┘à ╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è╪º┘ï╪î ┘ê╪º┘ä╪¬┘é╪º╪▒┘è╪▒",
+    name: "بوابة وتطبيق ولي الأمر الرقمي",
+    desc: "متابعة درجات الأبناء، الحضور والغياب، سداد الرسوم إلكترونياً، والتقارير",
     category: "portals",
-    categoryLabel: "╪¿┘ê╪º╪¿╪º╪¬ ┘ê╪¬╪╖╪¿┘è┘é╪º╪¬",
+    categoryLabel: "بوابات وتطبيقات",
     icon: Smartphone,
     route: "/guardians",
-    routeLabel: "╪ú┘ê┘ä┘è╪º╪í ╪º┘ä╪ú┘à┘ê╪▒",
-    dependency: "┘è╪¬╪╖┘ä╪¿ ╪¡╪│╪º╪¿╪º╪¬ ╪ú┘ê┘ä┘è╪º╪í ╪ú┘à┘ê╪▒ ┘à╪╣╪¬┘à╪»╪⌐",
-    badge: "╪¬╪╖╪¿┘è┘é",
+    routeLabel: "أولياء الأمور",
+    dependency: "يتطلب حسابات أولياء أمور معتمدة",
+    badge: "تطبيق",
     modalOpener: "mobile",
-    modalLabel: "╪▒╪¿╪╖ ╪º┘ä╪¬╪╖╪¿┘è┘é ┘ê╪º┘ä┘Ç PIN",
+    modalLabel: "ربط التطبيق والـ PIN",
     tabShortcut: "mobile",
-    tabLabel: "╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä╪¬╪╖╪¿┘è┘é",
+    tabLabel: "إعدادات التطبيق",
   },
   {
     key: "teacherApp",
-    name: "╪¬╪╖╪¿┘è┘é ╪º┘ä┘à╪╣┘ä┘à ┘ê╪▒╪╡╪» ╪º┘ä╪¡╪╡╪╡ ┘ê╪º┘ä╪»╪▒╪¼╪º╪¬",
-    desc: "╪▒╪╡╪» ╪º┘ä╪¡╪╢┘ê╪▒ ╪º┘ä╪╡╪¿╪º╪¡┘è ┘ê╪¿╪º┘ä╪¡╪╡╪╡╪î ╪¬╪│╪¼┘è┘ä ╪º┘ä┘ê╪º╪¼╪¿╪º╪¬ ┘ê╪º┘ä┘à┘ä╪º╪¡╪╕╪º╪¬ ╪º┘ä╪│┘ä┘ê┘â┘è╪⌐ ╪º┘ä┘è┘ê┘à┘è╪⌐",
+    name: "تطبيق المعلم ورصد الحصص والدرجات",
+    desc: "رصد الحضور الصباحي وبالحصص، تسجيل الواجبات والملاحظات السلوكية اليومية",
     category: "portals",
-    categoryLabel: "╪¿┘ê╪º╪¿╪º╪¬ ┘ê╪¬╪╖╪¿┘è┘é╪º╪¬",
+    categoryLabel: "بوابات وتطبيقات",
     icon: Users,
     route: "/attendance/take",
-    routeLabel: "╪▒╪╡╪» ╪º┘ä╪¡╪╢┘ê╪▒",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪¼╪»┘ê┘ä ╪º┘ä╪¡╪╡╪╡ ┘ê╪º┘ä╪Ñ╪│┘å╪º╪»",
-    badge: "┘à╪╣┘ä┘à",
+    routeLabel: "رصد الحضور",
+    dependency: "مرتبط بجدول الحصص والإسناد",
+    badge: "معلم",
     modalOpener: "mobile",
-    modalLabel: "╪▒╪¿╪╖ ╪¬╪╖╪¿┘è┘é ╪º┘ä┘à╪╣┘ä┘à",
+    modalLabel: "ربط تطبيق المعلم",
   },
   {
     key: "smsAlerts",
-    name: "╪¬┘å╪¿┘è┘ç╪º╪¬ ╪º┘ä╪▒╪│╪º╪ª┘ä ╪º┘ä┘å╪╡┘è╪⌐ ╪º┘ä┘é╪╡┘è╪▒╪⌐ SMS",
-    desc: "╪Ñ╪▒╪│╪º┘ä ╪▒╪│╪º╪ª┘ä ┘å╪╡┘è╪⌐ ┘ü┘ê╪▒┘è╪⌐ ┘ä┘ê┘ä┘è ╪º┘ä╪ú┘à╪▒ ╪╣┘å╪» ╪║┘è╪º╪¿ ╪º┘ä╪╖╪º┘ä╪¿ ╪ú┘ê ╪º╪│╪¬╪¡┘é╪º┘é ┘é╪│╪╖ ┘à╪º┘ä┘è",
+    name: "تنبيهات الرسائل النصية القصيرة SMS",
+    desc: "إرسال رسائل نصية فورية لولي الأمر عند غياب الطالب أو استحقاق قسط مالي",
     category: "portals",
-    categoryLabel: "╪º╪¬╪╡╪º┘ä╪º╪¬ ┘ê╪¬┘å╪¿┘è┘ç╪º╪¬",
+    categoryLabel: "اتصالات وتنبيهات",
     icon: Smartphone,
     route: "/admin/notifications",
-    routeLabel: "┘à╪▒┘â╪▓ ╪º┘ä╪¬┘å╪¿┘è┘ç╪º╪¬",
-    dependency: "┘è╪¬╪╖┘ä╪¿ ╪º╪┤╪¬╪▒╪º┘â ┘à╪▓┘ê╪» SMS ┘à╪╣╪¬┘à╪»",
+    routeLabel: "مركز التنبيهات",
+    dependency: "يتطلب اشتراك مزود SMS معتمد",
     badge: "SMS",
     modalOpener: "notif",
-    modalLabel: "┘à╪¡╪º┘â╪º╪⌐ ┘ê┘ü╪¡╪╡ SMS",
+    modalLabel: "محاكاة وفحص SMS",
     tabShortcut: "notif",
-    tabLabel: "┘é┘ê╪º╪╣╪» ╪º┘ä╪Ñ╪┤╪╣╪º╪▒╪º╪¬",
+    tabLabel: "قواعد الإشعارات",
   },
   {
     key: "whatsappAlerts",
-    name: "╪Ñ╪┤╪╣╪º╪▒╪º╪¬ ┘ê╪¬┘å╪¿┘è┘ç╪º╪¬ ┘ê╪º╪¬╪│╪º╪¿ ╪º┘ä╪¬┘ä┘é╪º╪ª┘è╪⌐",
-    desc: "┘é┘å╪º╪⌐ ╪¬┘ê╪º╪╡┘ä ╪¬┘ü╪º╪╣┘ä┘è╪⌐ ┘ü┘ê╪▒┘è╪⌐ ┘ä╪Ñ╪▒╪│╪º┘ä ╪Ñ╪┤╪╣╪º╪▒╪º╪¬ ╪º┘ä╪»╪▒╪¼╪º╪¬ ┘ê╪▒┘ê╪º╪¿╪╖ ╪º┘ä╪│╪»╪º╪» ┘ê╪º┘ä╪║┘è╪º╪¿",
+    name: "إشعارات وتنبيهات واتساب التلقائية",
+    desc: "قناة تواصل تفاعلية فورية لإرسال إشعارات الدرجات وروابط السداد والغياب",
     category: "portals",
-    categoryLabel: "╪º╪¬╪╡╪º┘ä╪º╪¬ ┘ê╪¬┘å╪¿┘è┘ç╪º╪¬",
+    categoryLabel: "اتصالات وتنبيهات",
     icon: MessageSquare,
     route: "/admin/notifications",
-    routeLabel: "┘à╪▒┘â╪▓ ╪º┘ä╪¬┘å╪¿┘è┘ç╪º╪¬",
-    dependency: "┘è╪¬╪╖┘ä╪¿ ┘à┘ü╪¬╪º╪¡ WhatsApp Business",
-    badge: "┘ê╪º╪¬╪│╪º╪¿",
+    routeLabel: "مركز التنبيهات",
+    dependency: "يتطلب مفتاح WhatsApp Business",
+    badge: "واتساب",
     modalOpener: "notif",
-    modalLabel: "┘à╪¡╪º┘â╪º╪⌐ ╪Ñ╪▒╪│╪º┘ä ┘ê╪º╪¬╪│╪º╪¿",
+    modalLabel: "محاكاة إرسال واتساب",
   },
   {
     key: "onlinePayments",
-    name: "╪¿┘ê╪º╪¿╪º╪¬ ╪º┘ä╪│╪»╪º╪» ┘ê╪º┘ä╪»┘ü╪╣ ╪º┘ä╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è",
-    desc: "╪»╪╣┘à ╪│╪»╪º╪» ╪º┘ä╪▒╪│┘ê┘à ╪º┘ä┘à╪»╪▒╪│┘è╪⌐ ╪╣╪¿╪▒ ┘à╪»┘ë╪î ┘ü┘è╪▓╪º╪î ┘à╪º╪│╪¬╪▒┘â╪º╪▒╪»╪î ┘ê╪ú╪¿┘ä ╪¿╪º┘è ╪Ñ┘ä┘â╪¬╪▒┘ê┘å┘è╪º┘ï",
+    name: "بوابات السداد والدفع الإلكتروني",
+    desc: "دعم سداد الرسوم المدرسية عبر مدى، فيزا، ماستركارد، وأبل باي إلكترونياً",
     category: "tech",
-    categoryLabel: "╪¬┘é┘å┘è╪⌐ ┘ê╪¬┘â╪º┘à┘ä",
+    categoryLabel: "تقنية وتكامل",
     icon: DollarSign,
     route: "/finance",
-    routeLabel: "╪¿┘ê╪º╪¿╪⌐ ╪º┘ä╪│╪»╪º╪»",
-    dependency: "┘à╪▒╪¬╪¿╪╖ ╪¿╪¿┘ê╪º╪¿╪º╪¬ Stripe ╪ú┘ê PayTabs",
-    badge: "╪│╪»╪º╪»",
+    routeLabel: "بوابة السداد",
+    dependency: "مرتبط ببوابات Stripe أو PayTabs",
+    badge: "سداد",
     tabShortcut: "integrations",
-    tabLabel: "╪╢╪¿╪╖ ╪¿┘ê╪º╪¿╪º╪¬ ╪º┘ä╪»┘ü╪╣",
+    tabLabel: "ضبط بوابات الدفع",
   },
   {
     key: "qrVerification",
-    name: "╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪▒┘é┘à┘è ╪º┘ä┘à╪╣╪¬┘à╪» ╪¿╪º┘ä╪¿╪º╪▒┘â┘ê╪» QR",
-    desc: "╪¬╪╢┘à┘è┘å ╪▒┘à╪▓ QR ╪░┘â┘è ┘ü┘è ╪º┘ä╪┤┘ç╪º╪»╪º╪¬ ┘ê╪º┘ä┘ü┘ê╪º╪¬┘è╪▒ ╪º┘ä╪▒╪│┘à┘è╪⌐ ┘ä┘ä╪¬╪¡┘é┘é ╪º┘ä┘ü┘ê╪▒┘è ┘à┘å ╪╡╪¡╪¬┘ç╪º",
+    name: "التحقق الرقمي المعتمد بالباركود QR",
+    desc: "تضمين رمز QR ذكي في الشهادات والفواتير الرسمية للتحقق الفوري من صحتها",
     category: "tech",
-    categoryLabel: "╪¬┘é┘å┘è╪⌐ ┘ê╪¬┘â╪º┘à┘ä",
+    categoryLabel: "تقنية وتكامل",
     icon: QrCode,
     route: "/settings",
-    routeLabel: "┘é┘ê╪º┘ä╪¿ ╪º┘ä╪╖╪¿╪º╪╣╪⌐",
-    dependency: "┘à╪»┘à╪¼ ┘à╪╣ ┘à╪¡╪▒┘â ╪º┘ä╪╖╪¿╪º╪╣╪⌐ ┘ê╪º┘ä╪┤┘ç╪º╪»╪º╪¬",
+    routeLabel: "قوالب الطباعة",
+    dependency: "مدمج مع محرك الطباعة والشهادات",
     badge: "QR",
     modalOpener: "print",
-    modalLabel: "┘à╪╣╪º┘è┘å╪⌐ ╪º┘ä┘ê╪½┘è┘é╪⌐ A4 ┘ê╪º┘ä┘Ç QR",
+    modalLabel: "معاينة الوثيقة A4 والـ QR",
     tabShortcut: "print",
-    tabLabel: "┘é┘ê╪º┘ä╪¿ ╪º┘ä╪╖╪¿╪º╪╣╪⌐",
+    tabLabel: "قوالب الطباعة",
   },
   {
     key: "noorIntegration",
-    name: "╪º┘ä┘à╪▓╪º┘à┘å╪⌐ ╪º┘ä┘à╪¿╪º╪┤╪▒╪⌐ ┘à╪╣ ┘å╪╕╪º┘à ┘å┘ê╪▒ ╪º┘ä┘ê╪▓╪º╪▒┘è",
-    desc: "╪¬╪╡╪»┘è╪▒ ┘ê╪º╪│╪¬┘è╪▒╪º╪» ╪¿┘è╪º┘å╪º╪¬ ╪º┘ä╪╖┘ä╪º╪¿ ┘ê╪º┘ä╪»╪▒╪¼╪º╪¬ ┘ê╪º┘ä╪║┘è╪º╪¿ ┘ê┘ü┘é ┘å╪│┘é ┘ê╪▓╪º╪▒╪⌐ ╪º┘ä╪¬╪╣┘ä┘è┘à",
+    name: "المزامنة المباشرة مع نظام نور الوزاري",
+    desc: "تصدير واستيراد بيانات الطلاب والدرجات والغياب وفق نسق وزارة التعليم",
     category: "tech",
-    categoryLabel: "╪¬┘é┘å┘è╪⌐ ┘ê╪¬┘â╪º┘à┘ä",
+    categoryLabel: "تقنية وتكامل",
     icon: LinkIcon,
     route: "/settings",
-    routeLabel: "╪º┘ä┘à╪│╪¬┘ê╪▒╪» ┘ê┘à╪╖╪º╪¿┘é╪⌐ ┘å┘ê╪▒",
-    dependency: "┘à╪╖╪º╪¿┘é ┘ä┘à╪╣╪º┘è┘è╪▒ ┘ê╪▓╪º╪▒╪⌐ ╪º┘ä╪¬╪╣┘ä┘è┘à",
-    badge: "┘å╪╕╪º┘à ┘å┘ê╪▒",
+    routeLabel: "المستورد ومطابقة نور",
+    dependency: "مطابق لمعايير وزارة التعليم",
+    badge: "نظام نور",
     modalOpener: "importer",
-    modalLabel: "╪º┘ä┘à╪│╪¬┘ê╪▒╪» ┘ê┘à╪╖╪º╪¿┘é╪⌐ ┘å┘ê╪▒",
+    modalLabel: "المستورد ومطابقة نور",
     tabShortcut: "data_io",
-    tabLabel: "╪º┘ä┘à╪│╪¬┘ê╪▒╪» ┘ê╪º┘ä┘à╪╡╪»╪▒",
+    tabLabel: "المستورد والمصدر",
   },
   {
     key: "webhooksApi",
-    name: "╪º┘ä┘à┘ü╪º╪¬┘è╪¡ ╪º┘ä╪¿╪▒┘à╪¼┘è╪⌐ ┘ê╪ú╪¡╪»╪º╪½ ╪º┘ä┘Ç Webhooks",
-    desc: "╪¿╪½ ╪º┘ä╪ú╪¡╪»╪º╪½ ╪º┘ä┘ä╪¡╪╕┘è╪⌐ ┘ä╪ú┘å╪╕┘à╪⌐ ╪º┘ä┘à╪»╪º╪▒╪│ ╪º┘ä╪«╪º╪▒╪¼┘è╪⌐ ┘ê╪¬┘ê┘ü┘è╪▒ ┘ê╪º╪¼┘ç╪º╪¬ ╪¿╪▒┘à╪¼╪⌐ REST API",
+    name: "المفاتيح البرمجية وأحداث الـ Webhooks",
+    desc: "بث الأحداث اللحظية لأنظمة المدارس الخارجية وتوفير واجهات برمجة REST API",
     category: "tech",
-    categoryLabel: "╪¬┘é┘å┘è╪⌐ ┘ê╪¬┘â╪º┘à┘ä",
+    categoryLabel: "تقنية وتكامل",
     icon: KeyRound,
     route: "/settings",
-    routeLabel: "╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘Ç API",
-    dependency: "┘à╪«╪╡╪╡ ┘ä┘ä╪▒╪¿╪╖ ╪º┘ä╪¬┘é┘å┘è ╪º┘ä╪«╪º╪▒╪¼┘è",
+    routeLabel: "إعدادات الـ API",
+    dependency: "مخصص للربط التقني الخارجي",
     badge: "API",
     modalOpener: "webhook",
-    modalLabel: "┘à╪«╪¬╪¿╪▒ ╪º┘ä┘Ç Webhooks ┘ê╪º┘ä╪¿╪½",
+    modalLabel: "مختبر الـ Webhooks والبث",
     tabShortcut: "api",
-    tabLabel: "╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘Ç API",
+    tabLabel: "إعدادات الـ API",
   },
   {
     key: "twoFactorAuth",
-    name: "╪º┘ä╪¬╪¡┘é┘é ╪º┘ä╪½┘å╪º╪ª┘è ╪¿╪«╪╖┘ê╪¬┘è┘å (2FA)",
-    desc: "┘ü╪▒╪╢ ╪▒┘à╪▓ ╪ú┘à╪º┘å ╪Ñ╪╢╪º┘ü┘è OTP ╪╣┘å╪» ╪¬╪│╪¼┘è┘ä ╪»╪«┘ê┘ä ╪º┘ä╪Ñ╪»╪º╪▒┘è┘è┘å ┘ê╪º┘ä┘à╪¡╪º╪│╪¿┘è┘å ┘ä╪¡┘à╪º┘è╪⌐ ╪º┘ä╪¿┘è╪º┘å╪º╪¬",
+    name: "التحقق الثنائي بخطوتين (2FA)",
+    desc: "فرض رمز أمان إضافي OTP عند تسجيل دخول الإداريين والمحاسبين لحماية البيانات",
     category: "security",
-    categoryLabel: "╪ú┘à╪º┘å ┘ê╪¡┘à╪º┘è╪⌐",
+    categoryLabel: "أمان وحماية",
     icon: Lock,
     route: "/admin/permissions",
-    routeLabel: "╪│┘è╪º╪│╪º╪¬ ╪º┘ä╪ú┘à╪º┘å",
-    dependency: "╪│┘è╪º╪│╪⌐ ╪¡┘à╪º┘è╪⌐ ╪º┘ä╪¿┘è╪º┘å╪º╪¬ ╪º┘ä╪¡╪│╪º╪│╪⌐",
-    badge: "╪ú┘à╪º┘å",
+    routeLabel: "سياسات الأمان",
+    dependency: "سياسة حماية البيانات الحساسة",
+    badge: "أمان",
     tabShortcut: "security",
-    tabLabel: "╪│┘è╪º╪│╪º╪¬ ╪º┘ä╪»╪«┘ê┘ä ┘ê 2FA",
+    tabLabel: "سياسات الدخول و 2FA",
   },
   {
     key: "smartAnalyticsAi",
-    name: "╪º┘ä╪¬╪¡┘ä┘è┘ä╪º╪¬ ╪º┘ä╪░┘â┘è╪⌐ ┘ê┘à╪│╪º╪╣╪» ╪º┘ä╪░┘â╪º╪í ╪º┘ä╪º╪╡╪╖┘å╪º╪╣┘è",
-    desc: "╪¬┘ê┘é╪╣ ┘à╪│╪¬┘ê┘è╪º╪¬ ╪º┘ä╪¬╪╣╪½╪▒ ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è╪î ╪¬┘ê╪╡┘è╪º╪¬ ╪¬┘ê╪▓┘è╪╣ ╪º┘ä╪¡╪╡╪╡╪î ┘ê╪º┘ä┘à╪│╪º╪╣╪» ╪º┘ä╪░┘â┘è ┘ä┘ä╪Ñ╪»╪º╪▒╪⌐",
+    name: "التحليلات الذكية ومساعد الذكاء الاصطناعي",
+    desc: "توقع مستويات التعثر الأكاديمي، توصيات توزيع الحصص، والمساعد الذكي للإدارة",
     category: "tech",
-    categoryLabel: "╪¬┘é┘å┘è╪⌐ ┘ê╪¬┘â╪º┘à┘ä",
+    categoryLabel: "تقنية وتكامل",
     icon: Sparkles,
     route: "/exams/archive",
-    routeLabel: "╪│╪¼┘ä ╪º┘ä╪¬╪¡┘ä┘è┘ä╪º╪¬",
-    dependency: "╪¬╪¡┘ä┘è┘ä ┘à╪»┘à╪¼ ┘ä┘é┘ê╪º╪╣╪» ╪º┘ä╪¿┘è╪º┘å╪º╪¬",
-    badge: "AI ╪░┘â┘è",
+    routeLabel: "سجل التحليلات",
+    dependency: "تحليل مدمج لقواعد البيانات",
+    badge: "AI ذكي",
   },
   {
     key: "trashBin",
-    name: "╪│┘ä╪⌐ ╪º┘ä┘à╪¡╪░┘ê┘ü╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ┘ê╪º╪│╪¬╪▒╪¼╪º╪╣ ╪º┘ä╪¿┘è╪º┘å╪º╪¬",
-    desc: "╪º┘ä╪¡╪░┘ü ╪º┘ä╪ó┘à┘å ╪º┘ä┘à╪ñ┘é╪¬ ┘ä┘ä╪╖┘ä╪º╪¿ ┘ê╪º┘ä┘à┘ê╪╕┘ü┘è┘å ┘à╪╣ ╪Ñ┘à┘â╪º┘å┘è╪⌐ ╪º┘ä╪º╪│╪¬╪▒╪¼╪º╪╣ ╪ú┘ê ╪º┘ä╪Ñ╪¬┘ä╪º┘ü ╪º┘ä┘å┘ç╪º╪ª┘è",
+    name: "سلة المحذوفات المركزية واسترجاع البيانات",
+    desc: "الحذف الآمن المؤقت للطلاب والموظفين مع إمكانية الاسترجاع أو الإتلاف النهائي",
     category: "security",
-    categoryLabel: "╪ú┘à╪º┘å ┘ê╪¡┘à╪º┘è╪⌐",
+    categoryLabel: "أمان وحماية",
     icon: Trash2,
     route: "/settings/trash",
-    routeLabel: "╪│┘ä╪⌐ ╪º┘ä┘à╪¡╪░┘ê┘ü╪º╪¬",
-    dependency: "╪¡┘à╪º┘è╪⌐ ╪╢╪» ╪º┘ä╪¡╪░┘ü ╪º┘ä╪╣┘ü┘ê┘è ┘ä┘ä╪¿┘è╪º┘å╪º╪¬",
-    badge: "╪º╪│╪¬╪╣╪º╪»╪⌐",
+    routeLabel: "سلة المحذوفات",
+    dependency: "حماية ضد الحذف العفوي للبيانات",
+    badge: "استعادة",
   },
 ];
 
@@ -481,14 +481,14 @@ function SettingsPage() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 2 * 1024 * 1024) {
-        toast.error("╪¡╪¼┘à ╪º┘ä╪╡┘ê╪▒╪⌐ ┘â╪¿┘è╪▒ ╪¼╪»╪º┘ï╪î ┘è┘ü╪╢┘ä ╪ú┘å ┘è┘â┘ê┘å ╪ú┘é┘ä ┘à┘å 2 ┘à┘è╪║╪º╪¿╪º┘è╪¬");
+        toast.error("حجم الصورة كبير جداً، يفضل أن يكون أقل من 2 ميغابايت");
         return;
       }
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         updateSettings({ logoUrl: dataUrl });
-        toast.success("╪¬┘à ╪¬╪¡╪»┘è╪½ ┘ê╪¡┘ü╪╕ ╪º┘ä╪┤╪╣╪º╪▒ ╪º┘ä╪▒╪│┘à┘è ╪¿┘å╪¼╪º╪¡ ┘ê╪¬╪╖╪¿┘è┘é┘ç ╪╣┘ä┘ë ╪º┘ä┘å╪╕╪º┘à");
+        toast.success("تم تحديث وحفظ الشعار الرسمي بنجاح وتطبيقه على النظام");
       };
       reader.readAsDataURL(file);
     }
@@ -502,7 +502,7 @@ function SettingsPage() {
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         updateSettings({ stampUrl: dataUrl });
-        toast.success("╪¬┘à ╪¡┘ü╪╕ ╪º┘ä╪«╪¬┘à ╪º┘ä╪▒╪│┘à┘è ┘ê╪¬┘ü╪╣┘è┘ä┘ç ╪╣┘ä┘ë ╪º┘ä╪┤┘ç╪º╪»╪º╪¬ ┘ê╪º┘ä┘à╪╖╪¿┘ê╪╣╪º╪¬");
+        toast.success("تم حفظ الختم الرسمي وتفعيله على الشهادات والمطبوعات");
       };
       reader.readAsDataURL(file);
     }
@@ -519,7 +519,7 @@ function SettingsPage() {
     link.download = `darasi_settings_${new Date().toISOString().split("T")[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success("╪¬┘à ╪¬╪╡╪»┘è╪▒ ┘à┘ä┘ü ╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘å╪╕╪º┘à ╪¿┘å╪¼╪º╪¡");
+    toast.success("تم تصدير ملف إعدادات النظام بنجاح");
   };
 
   // Import Settings from JSON file
@@ -532,12 +532,12 @@ function SettingsPage() {
           const parsed = JSON.parse(event.target?.result as string);
           if (parsed && typeof parsed === "object") {
             updateSettings(parsed);
-            toast.success("╪¬┘à ╪º╪│╪¬┘è╪▒╪º╪» ┘ê╪¬╪╖╪¿┘è┘é ╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ╪¿┘å╪¼╪º╪¡");
+            toast.success("تم استيراد وتطبيق الإعدادات المركزية بنجاح");
           } else {
-            toast.error("┘à┘ä┘ü ╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪║┘è╪▒ ╪╡╪º┘ä╪¡");
+            toast.error("ملف الإعدادات غير صالح");
           }
         } catch {
-          toast.error("╪«╪╖╪ú ┘ü┘è ┘é╪▒╪º╪í╪⌐ ┘à┘ä┘ü ╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬");
+          toast.error("خطأ في قراءة ملف الإعدادات");
         }
       };
       reader.readAsText(file);
@@ -549,7 +549,7 @@ function SettingsPage() {
     allAcademicYears.forEach(y => {
       updateAcademicYear(y.id, { isCurrent: y.id === yearId });
     });
-    toast.success("╪¬┘à ╪¬╪╣┘è┘è┘å ╪º┘ä╪│┘å╪⌐ ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è╪⌐ ╪º┘ä┘å╪┤╪╖╪⌐ ┘ä┘ä┘à┘å╪╡╪⌐");
+    toast.success("تم تعيين السنة الأكاديمية النشطة للمنصة");
   };
 
   // Presets for features
@@ -560,7 +560,7 @@ function SettingsPage() {
         return acc;
       }, {} as SystemFeatures);
       updateFeatures(allOn);
-      toast.success("╪¬┘à ╪¬┘ü╪╣┘è┘ä ╪¡╪▓┘à╪⌐ Enterprise ╪º┘ä╪┤╪º┘à┘ä╪⌐ (┘â╪º┘ü╪⌐ ╪º┘ä┘à┘è╪▓╪º╪¬ ┘å╪┤╪╖╪⌐)");
+      toast.success("تم تفعيل حزمة Enterprise الشاملة (كافة الميزات نشطة)");
     } else if (preset === "academic") {
       updateFeatures({
         ...defaultFeatures,
@@ -569,7 +569,7 @@ function SettingsPage() {
         clinic: false,
         onlinePayments: false,
       });
-      toast.success("╪¬┘à ╪¬┘ü╪╣┘è┘ä ┘å┘à╪╖ ╪º┘ä╪¬╪┤╪║┘è┘ä ╪º┘ä╪ú┘â╪º╪»┘è┘à┘è ╪º┘ä╪ú╪│╪º╪│┘è (╪¿╪»┘ê┘å ╪«╪»┘à╪º╪¬ ╪º┘ä┘à╪▒╪º┘ü┘é ┘ê╪º┘ä┘å┘é┘ä)");
+      toast.success("تم تفعيل نمط التشغيل الأكاديمي الأساسي (بدون خدمات المرافق والنقل)");
     } else if (preset === "minimal") {
       const minimal: SystemFeatures = {
         transport: false,
@@ -594,23 +594,23 @@ function SettingsPage() {
         trashBin: true,
       };
       updateFeatures(minimal);
-      toast.success("╪¬┘à ╪¬┘ü╪╣┘è┘ä ╪º┘ä┘ê╪╢╪╣ ╪º┘ä┘à╪╡╪║╪▒ (╪º┘ä╪╡┘ü┘ê┘ü╪î ╪º┘ä╪╖┘ä╪º╪¿╪î ┘ê╪º┘ä╪»╪▒╪¼╪º╪¬ ┘ü┘é╪╖)");
+      toast.success("تم تفعيل الوضع المصغر (الصفوف، الطلاب، والدرجات فقط)");
     } else {
       updateFeatures(defaultFeatures);
-      toast.success("╪¬┘à╪¬ ╪º╪│╪¬╪╣╪º╪»╪⌐ ╪º┘ä╪¬┘ç┘è╪ª╪⌐ ╪º┘ä╪º┘ü╪¬╪▒╪º╪╢┘è╪⌐ ┘ä┘â╪º┘ü╪⌐ ┘à┘è╪▓╪º╪¬ ╪º┘ä┘å╪╕╪º┘à");
+      toast.success("تمت استعادة التهيئة الافتراضية لكافة ميزات النظام");
     }
   };
 
   const handleGlobalSave = () => {
     addActivityLog({
-      user: "┘à╪»┘è╪▒ ╪º┘ä┘å╪╕╪º┘à",
-      action: "╪¬╪½╪¿┘è╪¬ ┘ê╪¡┘ü╪╕ ╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐",
-      entity: "╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ┘ê╪º┘ä┘à┘è╪▓╪º╪¬",
-      details: "╪¬┘à ╪¬╪ú┘â┘è╪» ┘ê╪¡┘ü╪╕ ┘â╪º┘ü╪⌐ ╪º┘ä╪│┘è╪º╪│╪º╪¬ ┘ê╪¡╪º┘ä╪⌐ ╪¬┘ü╪╣┘è┘ä ╪º┘ä┘à┘è╪▓╪º╪¬ ╪¿┘å╪¼╪º╪¡",
+      user: "مدير النظام",
+      action: "تثبيت وحفظ الإعدادات المركزية",
+      entity: "الإعدادات المركزية والميزات",
+      details: "تم تأكيد وحفظ كافة السياسات وحالة تفعيل الميزات بنجاح",
     });
     setIsSavedRecently(true);
     setTimeout(() => setIsSavedRecently(false), 3000);
-    toast.success("╪¬┘à ╪¡┘ü╪╕ ┘ê╪¬╪½╪¿┘è╪¬ ┘â╪º┘ü╪⌐ ╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ┘ê╪º┘ä╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ╪¿┘å╪¼╪º╪¡");
+    toast.success("تم حفظ وتثبيت كافة الإعدادات والسياسات المركزية بنجاح");
   };
 
   // Filtered features list
@@ -624,7 +624,7 @@ function SettingsPage() {
   }, [featureCategoryFilter, searchQuery]);
 
   return (
-    <AppShell breadcrumb={[{ label: "╪º┘ä╪▒╪ª┘è╪│┘è╪⌐", to: "/" }, { label: "╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ┘ê┘à┘è╪▓╪º╪¬ ╪º┘ä┘å╪╕╪º┘à" }]}>
+    <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الإعدادات المركزية وميزات النظام" }]}>
       {/* Top Banner & Quick Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/80 pb-5 mb-6">
         <div className="flex items-center gap-3.5">
@@ -633,13 +633,13 @@ function SettingsPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight text-foreground">╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘à╪▒┘â╪▓┘è╪⌐ ┘ê╪º┘ä╪¬╪¡┘â┘à ╪¿╪º┘ä┘à┘è╪▓╪º╪¬</h1>
+              <h1 className="text-2xl font-black tracking-tight text-foreground">الإعدادات المركزية والتحكم بالميزات</h1>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-black flex items-center gap-1.5 shadow-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {activeFeaturesCount} ┘à┘è╪▓╪⌐ ┘å╪┤╪╖╪⌐ ({activePercentage}%)
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {activeFeaturesCount} ميزة نشطة ({activePercentage}%)
               </span>
             </div>
             <p className="text-xs font-bold text-muted-foreground mt-0.5">
-              ┘ä┘ê╪¡╪⌐ ╪º┘ä╪¬╪¡┘â┘à ╪º┘ä╪┤╪º┘à┘ä╪⌐ ╪¿╪│┘è╪º╪│╪º╪¬ ╪º┘ä┘à╪ñ╪│╪│╪⌐╪î ╪¬╪▒╪«┘è╪╡ ╪º┘ä┘ê╪¡╪»╪º╪¬╪î ╪º┘ä┘ç┘ê┘è╪⌐ ╪º┘ä╪▒╪│┘à┘è╪⌐╪î ┘ê╪º┘ä╪▒╪¿╪╖ ╪º┘ä╪¿╪▒┘à╪¼┘è
+              لوحة التحكم الشاملة بسياسات المؤسسة، ترخيص الوحدات، الهوية الرسمية، والربط البرمجي
             </p>
           </div>
         </div>
@@ -656,77 +656,77 @@ function SettingsPage() {
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>┘à╪▒┘â╪▓ ╪º┘ä┘à┘è╪▓╪º╪¬</span>
+            <span>مركز الميزات</span>
           </button>
 
           {/* Smart Importer Shortcut */}
           <button
             onClick={() => setIsImporterOpen(true)}
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs text-foreground"
-            title="┘ü╪¬╪¡ ╪º┘ä┘à╪│╪¬┘ê╪▒╪» ╪º┘ä╪░┘â┘è ┘ê┘à╪╖╪º╪¿┘é╪⌐ ┘å┘ê╪▒"
+            title="فتح المستورد الذكي ومطابقة نور"
           >
             <Database className="h-3.5 w-3.5 text-primary" />
-            <span>╪º┘ä┘à╪│╪¬┘ê╪▒╪» ╪º┘ä╪░┘â┘è</span>
+            <span>المستورد الذكي</span>
           </button>
 
           {/* System Exporter Shortcut */}
           <button
             onClick={() => setIsExporterOpen(true)}
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs text-foreground"
-            title="╪¬╪╡╪»┘è╪▒ ╪¿┘è╪º┘å╪º╪¬ ╪º┘ä┘å╪╕╪º┘à ╪º┘ä┘à╪¼┘à╪╣╪⌐"
+            title="تصدير بيانات النظام المجمعة"
           >
             <ArrowUpFromLine className="h-3.5 w-3.5 text-primary" />
-            <span>╪¬╪╡╪»┘è╪▒ ╪┤╪º┘à┘ä</span>
+            <span>تصدير شامل</span>
           </button>
 
           {/* Notification Simulator Shortcut */}
           <button
             onClick={() => setIsNotifTesterOpen(true)}
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs text-foreground"
-            title="┘à╪¡╪º┘â╪º╪⌐ ┘ê╪º╪«╪¬╪¿╪º╪▒ ┘é┘å┘ê╪º╪¬ ╪º┘ä╪Ñ╪▒╪│╪º┘ä SMS ┘ê┘ê╪º╪¬╪│╪º╪¿"
+            title="محاكاة واختبار قنوات الإرسال SMS وواتساب"
           >
             <BellRing className="h-3.5 w-3.5 text-primary" />
-            <span>┘à╪¡╪º┘â┘è ╪º┘ä╪Ñ╪┤╪╣╪º╪▒╪º╪¬</span>
+            <span>محاكي الإشعارات</span>
           </button>
 
           {/* Official Print Preview Shortcut */}
           <button
             onClick={() => setIsPrintPreviewOpen(true)}
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs text-foreground"
-            title="┘à╪╣╪º┘è┘å╪⌐ ╪º┘ä┘à╪╖╪¿┘ê╪╣╪º╪¬ ╪º┘ä╪▒╪│┘à┘è╪⌐ A4 ┘ê╪º┘ä┘Ç QR"
+            title="معاينة المطبوعات الرسمية A4 والـ QR"
           >
             <FileText className="h-3.5 w-3.5 text-primary" />
-            <span>┘à╪╣╪º┘è┘å╪⌐ A4</span>
+            <span>معاينة A4</span>
           </button>
 
           {/* Settings JSON Export */}
           <button
             onClick={handleExportSettingsJson}
-            title="╪¬╪╡╪»┘è╪▒ ╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ┘â┘à┘ä┘ü JSON"
+            title="تصدير الإعدادات كملف JSON"
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs"
           >
             <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
-            <span>╪¬╪╡╪»┘è╪▒ Config</span>
+            <span>تصدير Config</span>
           </button>
 
           {/* Settings JSON Import */}
           <label
-            title="╪º╪│╪¬┘è╪▒╪º╪» ╪Ñ╪╣╪»╪º╪»╪º╪¬ ┘à┘å ┘à┘ä┘ü JSON"
+            title="استيراد إعدادات من ملف JSON"
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
             <input type="file" accept=".json" onChange={handleImportSettingsJson} className="hidden" />
             <ArrowUpFromLine className="h-3.5 w-3.5 text-primary" />
-            <span>╪º╪│╪¬┘è╪▒╪º╪» Config</span>
+            <span>استيراد Config</span>
           </label>
 
           {/* Instant Backup Shortcut */}
           <button
             onClick={() => setIsBackupOpen(true)}
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs text-foreground"
-            title="╪ú╪«╪░ ┘å╪│╪«╪⌐ ╪º╪¡╪¬┘è╪º╪╖┘è╪⌐ ┘ü┘ê╪▒┘è╪⌐ ┘ä┘ä┘å╪╕╪º┘à"
+            title="أخذ نسخة احتياطية فورية للنظام"
           >
             <HardDrive className="h-3.5 w-3.5 text-primary" />
-            <span>┘å╪│╪« ┘ü┘ê╪▒┘è</span>
+            <span>نسخ فوري</span>
           </button>
 
           {/* System Trash Button with counter */}
@@ -735,7 +735,7 @@ function SettingsPage() {
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs text-foreground"
           >
             <Trash2 className="h-3.5 w-3.5 text-danger" />
-            <span>╪│┘ä╪⌐ ╪º┘ä┘à┘ç┘à┘ä╪º╪¬</span>
+            <span>سلة المهملات</span>
             {deletedCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-danger/10 text-danger text-[10px] font-black">
                 {deletedCount}
@@ -747,10 +747,10 @@ function SettingsPage() {
           <button
             onClick={() => setIsFactoryResetOpen(true)}
             className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-danger/30 bg-danger/5 hover:bg-danger/10 text-danger text-xs font-bold transition-all shadow-xs"
-            title="╪º╪│╪¬╪╣╪º╪»╪⌐ ╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘à╪╡┘å╪╣ ┘ê╪╢╪¿╪╖ ╪º┘ä╪ú┘à╪º┘å"
+            title="استعادة إعدادات المصنع وضبط الأمان"
           >
             <ShieldAlert className="h-3.5 w-3.5" />
-            <span>╪╢╪¿╪╖ ╪º┘ä┘à╪╡┘å╪╣</span>
+            <span>ضبط المصنع</span>
           </button>
         </div>
       </div>
@@ -760,10 +760,10 @@ function SettingsPage() {
         <div className="flex items-center justify-between text-xs">
           <label className="font-black text-muted-foreground flex items-center gap-1.5">
             <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
-            <span>╪º┘ä╪º┘å╪¬┘é╪º┘ä ╪º┘ä╪│╪▒┘è╪╣ ┘ä┘ä┘é╪│┘à:</span>
+            <span>الانتقال السريع للقسم:</span>
           </label>
           <span className="text-[10px] text-muted-foreground font-bold">
-            {TAB_GROUPS.reduce((acc, g) => acc + g.tabs.length, 0)} ┘é╪│┘à╪º┘ï ┘à╪¬╪º╪¡╪º┘ï
+            {TAB_GROUPS.reduce((acc, g) => acc + g.tabs.length, 0)} قسماً متاحاً
           </span>
         </div>
         <div className="flex gap-2">
@@ -788,7 +788,7 @@ function SettingsPage() {
             className="h-10 px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-black shrink-0 flex items-center gap-1.5 shadow-sm"
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>╪º┘ä┘à┘è╪▓╪º╪¬</span>
+            <span>الميزات</span>
           </button>
         </div>
       </div>
@@ -802,7 +802,7 @@ function SettingsPage() {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="╪¿╪¡╪½ ┘ü┘è ╪º┘ä╪Ñ╪╣╪»╪º╪»╪º╪¬ ┘ê╪º┘ä┘à┘è╪▓╪º╪¬..."
+              placeholder="بحث في الإعدادات والميزات..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-9 w-full rounded-xl border border-border bg-background pr-9 pl-3 text-xs font-bold placeholder:text-muted-foreground/70 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
@@ -820,7 +820,7 @@ function SettingsPage() {
           {/* Grouped Tab List */}
           <div className="space-y-4 max-h-[calc(100vh-220px)] overflow-y-auto custom-scrollbar pr-1">
             {filteredGroups.length === 0 ? (
-              <div className="p-4 text-center text-xs text-muted-foreground">┘ä╪º ╪¬┘ê╪¼╪» ╪ú┘é╪│╪º┘à ┘à╪╖╪º╪¿┘é╪⌐ ┘ä╪¿╪¡╪½┘â</div>
+              <div className="p-4 text-center text-xs text-muted-foreground">لا توجد أقسام مطابقة لبحثك</div>
             ) : (
               filteredGroups.map((group) => (
                 <div key={group.category} className="space-y-1">
@@ -849,7 +849,7 @@ function SettingsPage() {
                             className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
                               active
                                 ? "bg-white/20 text-white"
-                                : t.badge === "┘à╪▒┘â╪▓ ╪º┘ä┘à┘è╪▓╪º╪¬"
+                                : t.badge === "مركز الميزات"
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-primary/10 text-primary"
                             }`}
@@ -870,7 +870,7 @@ function SettingsPage() {
         <div className="space-y-6">
           
           {/* ========================================================================= */}
-          {/* TAB 0: Features & Modules Control Center (╪º┘ä╪¬╪¡┘â┘à ╪¿╪º┘ä┘à┘è╪▓╪º╪¬ ┘ê╪º┘ä┘ê╪¡╪»╪º╪¬) */}
+          {/* TAB 0: Features & Modules Control Center (التحكم بالميزات والوحدات) */}
           {/* ========================================================================= */}
 
           {/* ─── Tab Panels (extracted to settings-tabs.tsx) ─── */}
@@ -1661,7 +1661,7 @@ function SettingsPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* Integrated Modal Windows Suite (╪º┘ä┘å┘ê╪º┘ü╪░ ╪º┘ä┘à╪╡╪║╪▒╪⌐ ╪º┘ä┘à╪¬┘â╪º┘à┘ä╪⌐) */}
+      {/* Integrated Modal Windows Suite (النوافذ المصغرة المتكاملة) */}
       {/* ========================================================================= */}
 
       {/* 1. Smart Data Importer Modal */}
@@ -1712,7 +1712,7 @@ function SettingsPage() {
         onClose={() => setIsFactoryResetOpen(false)}
         onConfirm={() => {
           resetSettings();
-          toast.success("╪¬┘à╪¬ ╪º╪│╪¬╪╣╪º╪»╪⌐ ┘â╪º┘ü╪⌐ ╪Ñ╪╣╪»╪º╪»╪º╪¬ ╪º┘ä┘å╪╕╪º┘à ╪Ñ┘ä┘ë ╪╢╪¿╪╖ ╪º┘ä┘à╪╡┘å╪╣ ╪¿┘å╪¼╪º╪¡");
+          toast.success("تمت استعادة كافة إعدادات النظام إلى ضبط المصنع بنجاح");
         }}
       />
 
