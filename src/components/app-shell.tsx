@@ -136,10 +136,10 @@ const NAV: Item[] = [
       label: "الاختبارات والشهادات",
       icon: ClipboardList,
       items: [
-        { to: "/exams", label: "جدول الاختبارات", icon: CalendarDays, badge: "مواعيد" },
-        { to: "/exams/grades", label: "النتائج ورصد الدرجات", icon: ClipboardCheck, badge: "رصد" },
-        { to: "/exams/archive", label: "سجل وحفظ النتائج والتحليلات", icon: BarChart3, badge: "قياس وتحليل" },
-        { to: "/exams/reports", label: "التقارير والشهادات", icon: FileText, badge: "طباعة" },
+        { to: "/exams", label: "الجدولة وفترات الاختبارات", icon: CalendarDays, badge: "تخطيط" },
+        { to: "/exams/grades", label: "رصد الدرجات وكشوف الحصر", icon: ClipboardCheck, badge: "رصد" },
+        { to: "/exams/reports", label: "التقارير والشيت الماستر والشهادات", icon: FileText, badge: "شهادات وشيت" },
+        { to: "/exams/archive", label: "أرشيف النتائج والتحليلات والقياس", icon: BarChart3, badge: "قياس وتحليل" },
       ],
     },
   },
@@ -207,6 +207,7 @@ const NAV: Item[] = [
       icon: ShieldCheck,
       items: [
         { to: "/admin/dashboard", label: "لوحة الإدارة", icon: LayoutDashboard, badge: "نظام" },
+        { to: "/admin/features", label: "التحكم بالميزات والوحدات", icon: SlidersHorizontal, badge: "ميزات" },
         { to: "/admin/users", label: "إدارة المستخدمين", icon: Users, badge: "حسابات" },
         { to: "/admin/roles", label: "الأدوار والصلاحيات", icon: ShieldCheck, badge: "أدوار" },
         { to: "/admin/permissions", label: "مصفوفة الأذونات", icon: SlidersHorizontal, badge: "صلاحيات" },
@@ -937,13 +938,50 @@ function Sidebar({
   const { stage, getStageLabel } = useStage();
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [expandAll, setExpandAll] = useState<boolean | null>(null);
+  const { currentAcademicYear, activeAcademicTerm, systemSettings } = useGlobalStore();
 
-  // Live real-time menu search filter
+  // Helper to check if a navigation link is allowed based on active feature toggles
+  const isItemAllowed = (to: string): boolean => {
+    const f = systemSettings?.features;
+    if (!f) return true;
+    if (to.startsWith("/transport") && f.transport === false) return false;
+    if (to.startsWith("/clinic") && f.clinic === false) return false;
+    if (to.startsWith("/library") && f.library === false) return false;
+    if (to.startsWith("/inventory") && f.inventory === false) return false;
+    if (to.startsWith("/facilities") && f.facilities === false) return false;
+    if (to.startsWith("/hr") && f.hrPayroll === false) return false;
+    if (to.startsWith("/exams") && f.examsReports === false) return false;
+    if (to.startsWith("/finance") && f.financeInvoicing === false) return false;
+    if (to === "/students/new" && f.admissionRegistration === false) return false;
+    if (to.startsWith("/guardians") && f.parentPortal === false) return false;
+    if (to === "/attendance/take" && f.teacherApp === false) return false;
+    if (to === "/settings/trash" && f.trashBin === false) return false;
+    return true;
+  };
+
+  // Live real-time menu search filter + Feature Flags filtering
   const filteredNav = useMemo(() => {
     const q = sidebarSearch.trim().toLowerCase();
-    if (!q) return NAV;
 
-    return NAV.map((item) => {
+    // First filter by features
+    const featureAllowedNav = NAV.map((item) => {
+      if (item.kind === "leaf") {
+        return isItemAllowed(item.to) ? item : null;
+      }
+      const allowedItems = item.group.items.filter((sub) => isItemAllowed(sub.to));
+      if (allowedItems.length === 0) return null;
+      return {
+        kind: "group" as const,
+        group: {
+          ...item.group,
+          items: allowedItems,
+        },
+      };
+    }).filter(Boolean) as Item[];
+
+    if (!q) return featureAllowedNav;
+
+    return featureAllowedNav.map((item) => {
       if (item.kind === "leaf") {
         return item.label.toLowerCase().includes(q) ? item : null;
       }
@@ -964,9 +1002,7 @@ function Sidebar({
       }
       return null;
     }).filter(Boolean) as Item[];
-  }, [sidebarSearch]);
-
-  const { currentAcademicYear, activeAcademicTerm } = useGlobalStore();
+  }, [sidebarSearch, systemSettings?.features]);
 
   // Determine width based on mode
   const sidebarWidthClass =
@@ -1001,12 +1037,20 @@ function Sidebar({
         ) : (
           <>
             <Link to="/" onClick={onNavigate} className="flex items-center gap-3 min-w-0 group">
-              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-white/20 group-hover:scale-105 transition-all shrink-0">
-                <School className="h-5 w-5" />
-              </div>
+              {systemSettings?.logoUrl ? (
+                <img
+                  src={systemSettings.logoUrl}
+                  alt="School Logo"
+                  className="h-10 w-10 rounded-2xl object-cover ring-1 ring-white/20 group-hover:scale-105 transition-all shrink-0 bg-white shadow-md"
+                />
+              ) : (
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-1 ring-white/20 group-hover:scale-105 transition-all shrink-0">
+                  <School className="h-5 w-5" />
+                </div>
+              )}
               <div className="leading-tight min-w-0">
                 <div className="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
-                  <span className="truncate">منصة مدارس</span>
+                  <span className="truncate">{systemSettings?.schoolName || "منصة مدارس"}</span>
                   <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-400/30 text-[10px] font-black tracking-wide shadow-xs">Pro</span>
                 </div>
                 <div className="text-[11px] font-extrabold text-blue-400/90 truncate flex items-center gap-1 mt-0.5">

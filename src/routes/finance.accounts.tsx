@@ -2,10 +2,13 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useGlobalStore, Account, JournalEntry, JournalLine } from '../contexts/GlobalStoreContext';
 import { useState, useMemo } from 'react';
 import { AppShell, PageCard, Badge } from '@/components/app-shell';
+import { AdminModal } from '@/components/admin/admin-modal';
+import { FinanceNavTabs } from '@/components/finance/finance-nav';
 import { 
   FolderTree, Search, Plus, Edit, Trash2, Power, Eye, 
   Building2, Briefcase, Star, CheckCircle2, Clock, 
-  Scale, Wallet, TrendingUp, TrendingDown, Sparkles, Printer, Download, Filter, RotateCcw
+  Scale, Wallet, TrendingUp, TrendingDown, Sparkles, Printer, Download, Filter, RotateCcw,
+  AlertTriangle, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FinancialCard, FilterBar } from '@/components/financial-components';
@@ -32,6 +35,7 @@ function FinanceAccounts() {
   
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [statementAccount, setStatementAccount] = useState<Account | null>(null);
+  const [deleteConfirmAccount, setDeleteConfirmAccount] = useState<Account | null>(null);
 
   // Form State for Add / Edit Account
   const [formData, setFormData] = useState({ 
@@ -117,10 +121,45 @@ function FinanceAccounts() {
       toast.error("لا يمكن حذف حسابات النظام الأساسية المعتمدة");
       return;
     }
-    if (window.confirm(`هل أنت متأكد من حذف الحساب الفرعي (${acc.name}) نهائياً؟`)) {
-      deleteAccount(acc.id);
-      toast.success("تم حذف الحساب بنجاح");
+    setDeleteConfirmAccount(acc);
+  };
+
+  const handleExportCSV = () => {
+    if (filteredAccounts.length === 0) {
+      toast.error("لا توجد حسابات لتصديرها");
+      return;
     }
+
+    const headers = [
+      "رمز الحساب",
+      "اسم الحساب الدفتري",
+      "التصنيف المحاسبي",
+      "طبيعة الحساب",
+      "نوع الحساب",
+      "حالة التفعيل",
+      "الوصف"
+    ];
+
+    const rows = filteredAccounts.map((a: any) => [
+      `"${a.code}"`,
+      `"${a.name?.replace(/"/g, '""') || ''}"`,
+      `"${getTypeName(a.type)}"`,
+      a.normalBalance === 'debit' ? "مدين" : "دائن",
+      a.isSystemAccount ? "حساب نظام أساسي" : "حساب فرعي مخصص",
+      a.isActive !== false ? "نشط" : "معطل",
+      `"${a.description?.replace(/"/g, '""') || ''}"`
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `الدليل_المحاسبي_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("تم تصدير الدليل المحاسبي بنجاح");
   };
 
   const openEdit = (acc: Account) => {
@@ -207,7 +246,13 @@ function FinanceAccounts() {
         { label: "الدليل المحاسبي الشامل" },
       ]}
       actions={
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleExportCSV}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-bold hover:bg-accent shadow-sm"
+          >
+            <Download className="h-4 w-4 text-primary" /> تصدير CSV
+          </button>
           <button onClick={() => setIsPrintOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-bold hover:bg-accent shadow-sm">
             <Printer className="h-4 w-4" /> طباعة شجرة الحسابات
           </button>
@@ -221,6 +266,8 @@ function FinanceAccounts() {
       }
     >
       <div className="space-y-6 animate-in fade-in duration-500 pb-20 max-w-7xl mx-auto">
+        {/* Unified Finance Navigation Tabs */}
+        <FinanceNavTabs activeTab="accounts" />
         
         {/* Header Banner */}
         <div className="bg-card p-6 rounded-3xl border border-border/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -419,147 +466,203 @@ function FinanceAccounts() {
       </div>
 
       {/* Add / Edit Account Modal */}
-      {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-border/50 bg-primary/10">
-              <h3 className="font-black text-lg text-primary flex items-center gap-2">
-                <FolderTree className="w-5 h-5 text-primary" />
-                {editingAccount ? 'تعديل بيانات الحساب المحاسبي' : 'إضافة حساب فرعي جديد للشجرة'}
-              </h3>
-              <button onClick={() => setIsAddOpen(false)} className="p-1.5 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground">✕</button>
+      <AdminModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        title={editingAccount ? 'تعديل بيانات الحساب المحاسبي' : 'إضافة حساب فرعي جديد للشجرة'}
+        description="تحديد التصنيف الرئيسي ورمز الحساب وطبيعته المحاسبية"
+        icon={FolderTree}
+        tone="primary"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleSaveAccount} className="space-y-4">
+          <div>
+            <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">اختر نوع التصنيف الرئيسي <span className="text-danger">*</span></label>
+            <select 
+              value={formData.type} 
+              onChange={e => setFormData({...formData, type: e.target.value as any})}
+              className="w-full h-11 bg-background border-2 border-border/60 rounded-xl px-4 font-extrabold text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer"
+              disabled={!!editingAccount?.isSystemAccount}
+            >
+              <option value="revenue">💰 الإيرادات (Revenues)</option>
+              <option value="expense">💸 المصروفات والأجور (Expenses)</option>
+              <option value="asset">🏢 الأصول والموجودات (Assets)</option>
+              <option value="liability">⚖️ الخصوم والموردين (Liabilities)</option>
+              <option value="equity">⭐️ حقوق الملكية (Equity)</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">رمز الحساب (Account Code)</label>
+              <input 
+                type="text" 
+                value={formData.code} 
+                onChange={e => setFormData({...formData, code: e.target.value})}
+                className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-mono font-bold text-sm focus:border-primary outline-none"
+                placeholder="مثال: 5015"
+              />
             </div>
 
-            <form onSubmit={handleSaveAccount} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">اختر نوع التصنيف الرئيسي <span className="text-danger">*</span></label>
-                <select 
-                  value={formData.type} 
-                  onChange={e => setFormData({...formData, type: e.target.value as any})}
-                  className="w-full h-11 bg-background border-2 border-border/60 rounded-xl px-4 font-extrabold text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer"
-                  disabled={!!editingAccount?.isSystemAccount}
-                >
-                  <option value="revenue">💰 الإيرادات (Revenues)</option>
-                  <option value="expense">💸 المصروفات والأجور (Expenses)</option>
-                  <option value="asset">🏢 الأصول والموجودات (Assets)</option>
-                  <option value="liability">⚖️ الخصوم والموردين (Liabilities)</option>
-                  <option value="equity">⭐️ حقوق الملكية (Equity)</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">رمز الحساب (Account Code)</label>
-                  <input 
-                    type="text" 
-                    value={formData.code} 
-                    onChange={e => setFormData({...formData, code: e.target.value})}
-                    className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-mono font-bold text-sm focus:border-primary outline-none"
-                    placeholder="مثال: 5015"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">طبيعة الحساب (Normal Balance)</label>
-                  <select
-                    value={formData.normalBalance}
-                    onChange={e => setFormData({...formData, normalBalance: e.target.value as any})}
-                    className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-bold text-sm outline-none cursor-pointer"
-                  >
-                    <option value="debit">مدين (Debit)</option>
-                    <option value="credit">دائن (Credit)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">اسم الحساب الدفتري <span className="text-danger">*</span></label>
-                <input 
-                  type="text" 
-                  required
-                  value={formData.name} 
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-black text-sm focus:border-primary outline-none"
-                  placeholder="مثال: مصروفات نظافة وتطهير فرعية..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">الوصف والبيان المحاسبي</label>
-                <textarea 
-                  value={formData.description} 
-                  onChange={e => setFormData({...formData, description: e.target.value})}
-                  rows={2}
-                  className="w-full p-3 bg-background border border-border/60 rounded-xl font-bold text-xs focus:border-primary outline-none"
-                  placeholder="ملاحظات توضيحية حول الغرض من الحساب..."
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3 border-t border-border/50">
-                <button type="submit" className="flex-1 bg-primary text-primary-foreground font-extrabold py-3 rounded-xl hover:bg-primary/90 transition-all shadow-md text-sm">
-                  {editingAccount ? 'حفظ التعديلات' : 'إضافة الحساب للشجرة'}
-                </button>
-                <button type="button" onClick={() => setIsAddOpen(false)} className="px-6 bg-muted text-muted-foreground font-bold py-3 rounded-xl hover:bg-accent transition-all text-sm">
-                  إلغاء
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">طبيعة الحساب (Normal Balance)</label>
+              <select
+                value={formData.normalBalance}
+                onChange={e => setFormData({...formData, normalBalance: e.target.value as any})}
+                className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-bold text-sm outline-none cursor-pointer"
+              >
+                <option value="debit">مدين (Debit)</option>
+                <option value="credit">دائن (Credit)</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">اسم الحساب الدفتري <span className="text-danger">*</span></label>
+            <input 
+              type="text" 
+              required
+              value={formData.name} 
+              onChange={e => setFormData({...formData, name: e.target.value})}
+              className="w-full h-11 bg-background border border-border/60 rounded-xl px-4 font-black text-sm focus:border-primary outline-none"
+              placeholder="مثال: مصروفات نظافة وتطهير فرعية..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-extrabold text-muted-foreground mb-1.5">الوصف والبيان المحاسبي</label>
+            <textarea 
+              value={formData.description} 
+              onChange={e => setFormData({...formData, description: e.target.value})}
+              rows={2}
+              className="w-full p-3 bg-background border border-border/60 rounded-xl font-bold text-xs focus:border-primary outline-none"
+              placeholder="ملاحظات توضيحية حول الغرض من الحساب..."
+            />
+          </div>
+
+          <div className="pt-4 flex gap-3 border-t border-border/50">
+            <button type="submit" className="flex-1 bg-primary text-primary-foreground font-extrabold py-3 rounded-xl hover:bg-primary/90 transition-all shadow-md text-sm">
+              {editingAccount ? 'حفظ التعديلات' : 'إضافة الحساب للشجرة'}
+            </button>
+            <button type="button" onClick={() => setIsAddOpen(false)} className="px-6 bg-muted text-muted-foreground font-bold py-3 rounded-xl hover:bg-accent transition-all text-sm">
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </AdminModal>
 
       {/* Account Statement Detailed Modal */}
-      {isStatementOpen && statementAccount && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative bg-card w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-border/50 flex justify-between items-center bg-primary/10 shrink-0">
-              <div>
-                <h3 className="font-black text-xl text-primary flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-primary" /> كشف حساب: {statementAccount.name}
-                </h3>
-                <div className="text-xs text-muted-foreground font-bold mt-1">
-                  الرمز: <span className="font-mono text-foreground font-black">{statementAccount.code}</span> • التصنيف: <span className="text-foreground font-black">{getTypeName(statementAccount.type)}</span>
-                </div>
+      <AdminModal
+        isOpen={isStatementOpen && !!statementAccount}
+        onClose={() => setIsStatementOpen(false)}
+        title={`كشف حساب: ${statementAccount?.name || ''}`}
+        description={statementAccount ? `الرمز: ${statementAccount.code} • التصنيف: ${getTypeName(statementAccount.type)}` : ''}
+        icon={Eye}
+        tone="primary"
+        maxWidth="4xl"
+        footer={
+          <div className="flex justify-end w-full">
+            <button 
+              type="button"
+              onClick={() => setIsStatementOpen(false)} 
+              className="btn-secondary px-6 py-2 rounded-xl text-xs font-bold"
+            >
+              إغلاق
+            </button>
+          </div>
+        }
+      >
+        {statementAccount && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/20 space-y-1">
+                <div className="text-xs text-rose-700 font-extrabold">إجمالي حركات المدين (+)</div>
+                <div className="text-2xl font-black text-rose-900 tabular-nums">{stmtTotalDebit.toLocaleString()} {currency}</div>
               </div>
-              <button onClick={() => setIsStatementOpen(false)} className="p-2 bg-muted hover:bg-accent rounded-full text-muted-foreground">✕</button>
+
+              <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/20 space-y-1">
+                <div className="text-xs text-emerald-700 font-extrabold">إجمالي حركات الدائن (-)</div>
+                <div className="text-2xl font-black text-emerald-900 tabular-nums">{stmtTotalCredit.toLocaleString()} {currency}</div>
+              </div>
+
+              <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 space-y-1">
+                <div className="text-xs text-primary font-extrabold">الرصيد الدفتري الحالي</div>
+                <div className="text-2xl font-black text-primary tabular-nums">{stmtBalance.toLocaleString()} {currency}</div>
+              </div>
             </div>
-            
-            <div className="p-6 flex-1 overflow-y-auto space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/20 space-y-1">
-                  <div className="text-xs text-rose-700 font-extrabold">إجمالي حركات المدين (+)</div>
-                  <div className="text-2xl font-black text-rose-900 tabular-nums">{stmtTotalDebit.toLocaleString()} {currency}</div>
-                </div>
 
-                <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/20 space-y-1">
-                  <div className="text-xs text-emerald-700 font-extrabold">إجمالي حركات الدائن (-)</div>
-                  <div className="text-2xl font-black text-emerald-900 tabular-nums">{stmtTotalCredit.toLocaleString()} {currency}</div>
-                </div>
+            <PageCard title="سجل حركات القيود المسجلة بالدفتر العام">
+              <DataTable
+                rows={statementLines}
+                columns={[
+                  { key: "date", header: "التاريخ", cell: (r) => <span className="font-bold text-xs font-mono">{r.date}</span> },
+                  { key: "journalEntryId", header: "مرجع القيد", cell: (r) => <span className="font-mono font-black text-xs text-primary">{r.entryRef || r.journalEntryId}</span> },
+                  { key: "description", header: "البيان والشارحة المحاسبية", cell: (r) => <span className="text-xs font-bold text-foreground">{r.description}</span> },
+                  { key: "debit", header: "مدين (+)", cell: (r) => r.debit > 0 ? <span className="text-rose-600 font-black tabular-nums text-xs">+{r.debit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
+                  { key: "credit", header: "دائن (-)", cell: (r) => r.credit > 0 ? <span className="text-emerald-600 font-black tabular-nums text-xs">-{r.credit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
+                ]}
+                pageSize={10}
+                empty="لا توجد حركات مسجلة في هذا الحساب للعام الحالي"
+              />
+            </PageCard>
+          </div>
+        )}
+      </AdminModal>
 
-                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 space-y-1">
-                  <div className="text-xs text-primary font-extrabold">الرصيد الدفتري الحالي</div>
-                  <div className="text-2xl font-black text-primary tabular-nums">{stmtBalance.toLocaleString()} {currency}</div>
-                </div>
+      {/* Delete Confirmation Modal */}
+      <AdminModal
+        isOpen={!!deleteConfirmAccount}
+        onClose={() => setDeleteConfirmAccount(null)}
+        title="تأكيد حذف الحساب الدفتري"
+        description="حذف الحساب الفرعي نهائياً من شجرة الحسابات"
+        icon={AlertTriangle}
+        tone="danger"
+        maxWidth="md"
+      >
+        {deleteConfirmAccount && (
+          <div className="space-y-4">
+            <p className="text-xs font-bold text-foreground">
+              هل أنت متأكد من رغبتك في حذف الحساب الفرعي التالي نهائياً من شجرة الحسابات؟
+            </p>
+
+            <div className="p-3.5 bg-muted/40 rounded-xl border border-border/70 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground font-bold">رمز الحساب:</span>
+                <span className="font-mono font-bold text-foreground">{deleteConfirmAccount.code}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground font-bold">اسم الحساب:</span>
+                <span className="font-extrabold text-foreground">{deleteConfirmAccount.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground font-bold">التصنيف:</span>
+                <span className="font-bold text-foreground">{getTypeName(deleteConfirmAccount.type)}</span>
+              </div>
+            </div>
 
-              <PageCard title="سجل حركات القيود المسجلة بالدفتر العام">
-                <DataTable
-                  rows={statementLines}
-                  columns={[
-                    { key: "date", header: "التاريخ", cell: (r) => <span className="font-bold text-xs font-mono">{r.date}</span> },
-                    { key: "journalEntryId", header: "مرجع القيد", cell: (r) => <span className="font-mono font-black text-xs text-primary">{r.entryRef || r.journalEntryId}</span> },
-                    { key: "description", header: "البيان والشارحة المحاسبية", cell: (r) => <span className="text-xs font-bold text-foreground">{r.description}</span> },
-                    { key: "debit", header: "مدين (+)", cell: (r) => r.debit > 0 ? <span className="text-rose-600 font-black tabular-nums text-xs">+{r.debit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
-                    { key: "credit", header: "دائن (-)", cell: (r) => r.credit > 0 ? <span className="text-emerald-600 font-black tabular-nums text-xs">-{r.credit.toLocaleString()} {currency}</span> : <span className="text-muted-foreground/30">-</span> },
-                  ]}
-                  pageSize={10}
-                  empty="لا توجد حركات مسجلة في هذا الحساب للعام الحالي"
-                />
-              </PageCard>
+            <div className="pt-2 flex gap-3">
+              <button 
+                type="button"
+                onClick={() => {
+                  deleteAccount(deleteConfirmAccount.id);
+                  toast.success("تم حذف الحساب بنجاح");
+                  setDeleteConfirmAccount(null);
+                }}
+                className="flex-1 btn-primary bg-danger hover:bg-danger/90 font-extrabold py-2.5 rounded-xl shadow-md text-xs"
+              >
+                تأكيد الحذف النهائي
+              </button>
+              <button 
+                type="button"
+                onClick={() => setDeleteConfirmAccount(null)}
+                className="flex-1 btn-secondary py-2.5 rounded-xl text-xs font-bold"
+              >
+                إلغاء
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminModal>
 
       {/* Advanced Print Engine */}
       <AdvancedPrintEngine

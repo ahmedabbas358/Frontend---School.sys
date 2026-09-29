@@ -692,7 +692,7 @@ export function AdvancedPrintEngine({
     }
   }, [isOpen, paperOrientation, sidebarOpen]);
 
-  if (!isOpen) return null;
+  // Note: early return moved below all hooks to comply with Rules of Hooks
 
   // Column operations
   const toggleColumn = (colKey: string) => {
@@ -2129,7 +2129,7 @@ export function AdvancedPrintEngine({
                       <div className="w-full flex flex-col">
                         {previewData.map((row, idx) => (
                           <div key={idx} className="w-full print:break-after-page border-b-4 print:border-b-0 border-dashed border-primary/20 pb-12 mb-12 print:mb-0 print:pb-0 last:border-b-0 last:mb-0 last:pb-0 relative">
-                            {currentTemplateObj.renderDocument?.({ ...{ hiddenColumns, fontSize: "sm", stripeRows: true, extraEmptyRows, showHeader, showSignatures, customNote, customOptions, themePreset } }, [row])}
+                            {currentTemplateObj.renderDocument?.({ ...{ hiddenColumns, fontSize: "sm", stripeRows: true, extraEmptyRows, showHeader, showSignatures, customNote, customOptions, themePreset } } as any, [row])}
                           </div>
                         ))}
                       </div>
@@ -2160,6 +2160,199 @@ export function AdvancedPrintEngine({
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* STUDENT ID CARDS */}
+                    {currentTemplateObj?.type === "cards" && (
+                      <div
+                        className="w-full"
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, 1fr)",
+                          gap: "14px",
+                          padding: "4px 0",
+                        }}
+                      >
+                        {previewData.map((row, idx) => {
+                          const studentName = row.name || row.studentName || "—";
+                          const studentId = row.id || row.studentId || "—";
+                          const grade = row.grade || "—";
+                          const sectionName = row.sectionName || row.section || "";
+                          const initials = studentName
+                            .split(" ")
+                            .slice(0, 2)
+                            .map((n: string) => n[0])
+                            .join("");
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                background: "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%)",
+                                borderRadius: "12px",
+                                padding: "12px",
+                                color: "#ffffff",
+                                position: "relative",
+                                overflow: "hidden",
+                                pageBreakInside: "avoid",
+                                breakInside: "avoid",
+                                minHeight: "120px",
+                                boxShadow: "0 4px 15px rgba(30,58,138,0.3)",
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              {/* Decorative circle */}
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "-20px",
+                                  left: "-20px",
+                                  width: "90px",
+                                  height: "90px",
+                                  borderRadius: "50%",
+                                  background: "rgba(255,255,255,0.08)",
+                                  pointerEvents: "none",
+                                }}
+                              />
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  bottom: "-15px",
+                                  right: "-15px",
+                                  width: "70px",
+                                  height: "70px",
+                                  borderRadius: "50%",
+                                  background: "rgba(255,255,255,0.06)",
+                                  pointerEvents: "none",
+                                }}
+                              />
+
+                              {/* Top: school label */}
+                              <div
+                                style={{
+                                  fontSize: "7.5px",
+                                  fontWeight: "bold",
+                                  opacity: 0.85,
+                                  letterSpacing: "0.3px",
+                                  marginBottom: "6px",
+                                  textAlign: "center",
+                                  background: "rgba(255,255,255,0.12)",
+                                  borderRadius: "6px",
+                                  padding: "2px 6px",
+                                  position: "relative",
+                                  zIndex: 1,
+                                }}
+                              >
+                                {schoolName} — بطاقة هوية طالب
+                              </div>
+
+                              {/* Middle: avatar + info */}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  position: "relative",
+                                  zIndex: 1,
+                                }}
+                              >
+                                {/* Avatar */}
+                                <div
+                                  style={{
+                                    width: "46px",
+                                    height: "46px",
+                                    borderRadius: "50%",
+                                    background: "rgba(255,255,255,0.2)",
+                                    border: "2px solid rgba(255,255,255,0.5)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "14px",
+                                    fontWeight: "black",
+                                    color: "#fff",
+                                    flexShrink: 0,
+                                    letterSpacing: "0.5px",
+                                  }}
+                                >
+                                  {initials || "ط"}
+                                </div>
+
+                                {/* Student info */}
+                                <div style={{ flex: 1, overflow: "hidden" }}>
+                                  <div
+                                    style={{
+                                      fontSize: "10px",
+                                      fontWeight: "900",
+                                      lineHeight: 1.3,
+                                      marginBottom: "3px",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    }}
+                                  >
+                                    {studentName}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "7.5px",
+                                      opacity: 0.9,
+                                      fontWeight: "bold",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: "1.5px",
+                                    }}
+                                  >
+                                    <span>رقم القيد: <span style={{ fontFamily: "monospace", letterSpacing: "0.5px" }}>{studentId}</span></span>
+                                    <span>
+                                      {grade}
+                                      {sectionName ? ` — شعبة ${sectionName}` : ""}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* QR Code */}
+                                <div
+                                  style={{
+                                    background: "#fff",
+                                    borderRadius: "6px",
+                                    padding: "3px",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <QRCode
+                                    value={`STU:${studentId}`}
+                                    size={40}
+                                    fgColor="#1e3a8a"
+                                    bgColor="#ffffff"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Bottom strip */}
+                              <div
+                                style={{
+                                  marginTop: "8px",
+                                  paddingTop: "5px",
+                                  borderTop: "1px solid rgba(255,255,255,0.25)",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  position: "relative",
+                                  zIndex: 1,
+                                }}
+                              >
+                                <span style={{ fontSize: "6.5px", opacity: 0.75, fontWeight: "bold" }}>
+                                  العام الدراسي {new Date().getFullYear() - 1}/{new Date().getFullYear()}
+                                </span>
+                                <span style={{ fontSize: "6.5px", opacity: 0.75, fontWeight: "bold" }}>
+                                  نظام دارسي Pro
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -2565,6 +2758,7 @@ export function AdvancedPrintEngine({
     </div>
   );
 
+  if (!isOpen) return null;
   if (typeof document === "undefined") return null;
   return createPortal(modalContent, document.body);
 }

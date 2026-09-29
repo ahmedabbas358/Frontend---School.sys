@@ -4,7 +4,7 @@ import { AppShell, PageCard } from "@/components/app-shell";
 import { useGlobalStore, Student } from "@/contexts/GlobalStoreContext";
 import { EducationalStage, STAGE_LIST } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
-import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus, RefreshCw, Sun, Sunset, Sparkles, CheckCircle2, Check, MessageCircle, Award, Trophy, BarChart3, Edit3, TrendingUp, Star, Users, ArrowUpRight, ArrowDownRight, Compass, ShieldAlert, FileCheck, CheckCircle } from "lucide-react";
+import { CalendarDays, GraduationCap, Phone, User, HeartPulse, MapPin, ShieldCheck, Printer, LayoutGrid, AlertCircle, FileText, Download, X, Settings, Plus, CreditCard, BookOpen, Bus, RefreshCw, Sun, Sunset, Sparkles, CheckCircle2, Check, MessageCircle, Award, Trophy, BarChart3, Edit3, TrendingUp, Star, Users, ArrowUpRight, ArrowDownRight, Compass, ShieldAlert, FileCheck, CheckCircle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialTimeline } from "@/components/financial-components";
@@ -290,7 +290,8 @@ function StudentProfile() {
     allTextbookDistributions, transportSubscriptions, transportRoutes,
     addTransportSubscription, updateTransportSubscription, deleteTransportSubscription,
     distributeTextbook, removeDistribution, allInventoryItems,
-    allExams, allExamSubjects, allExamResults, allSubjects, updateSingleExamResult
+    allExams, allExamSubjects, allExamResults, allSubjects, updateSingleExamResult,
+    allGuardians
   } = useGlobalStore();
 
   const [isPrintOpen, setIsPrintOpen] = useState(false);
@@ -367,6 +368,54 @@ function StudentProfile() {
 
     return undefined;
   }, [id, allStudents, allStudentEnrollments, activeStageStudents]);
+
+  const matchedGuardian = useMemo(() => {
+    if (!student || !allGuardians) return null;
+    const activeGuardians = allGuardians.filter(g => !g.isDeleted);
+    // 1. Explicit link in student.guardians
+    if (student.guardians && student.guardians.length > 0) {
+      for (const gl of student.guardians) {
+        if (gl.id) {
+          const g = activeGuardians.find(item => item.id === gl.id);
+          if (g) return g;
+        }
+        if (gl.phone) {
+          const cleanP = gl.phone.replace(/\D/g, "");
+          if (cleanP.length >= 7) {
+            const g = activeGuardians.find(item => 
+              (item.phone && item.phone.replace(/\D/g, "") === cleanP) ||
+              (item.phoneSecond && item.phoneSecond.replace(/\D/g, "") === cleanP)
+            );
+            if (g) return g;
+          }
+        }
+      }
+    }
+    // 2. Direct STU-15K-xxxxx -> GRD-15K-xxxxx or student.guardianId
+    const directGid = (student as any).guardianId || (student.id.startsWith("STU-") ? student.id.replace("STU-", "GRD-") : "");
+    if (directGid) {
+      const g = activeGuardians.find(item => item.id === directGid);
+      if (g) return g;
+    }
+    // 3. Match clean phone
+    if (student.guardianPhone) {
+      const cleanP = student.guardianPhone.replace(/\D/g, "");
+      if (cleanP.length >= 7) {
+        const g = activeGuardians.find(item => 
+          (item.phone && item.phone.replace(/\D/g, "") === cleanP) ||
+          (item.phoneSecond && item.phoneSecond.replace(/\D/g, "") === cleanP)
+        );
+        if (g) return g;
+      }
+    }
+    // 4. Match exact name if only 1 exists
+    if (student.guardianName) {
+      const cleanName = student.guardianName.trim().toLowerCase();
+      const matches = activeGuardians.filter(item => item.name && item.name.trim().toLowerCase() === cleanName);
+      if (matches.length === 1) return matches[0];
+    }
+    return null;
+  }, [student, allGuardians]);
 
   const studentIds = useMemo(() => {
     if (!student) return new Set<string>();
@@ -1624,6 +1673,31 @@ function StudentProfile() {
                       <p className="font-bold tabular-nums" dir="ltr">{student.guardianPhone || "غير مسجل"}</p>
                     </div>
                   </div>
+
+                  {matchedGuardian ? (
+                    <Link
+                      to="/guardians/$id"
+                      params={{ id: matchedGuardian.id }}
+                      className="mt-2 flex items-center justify-between p-3 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary border border-primary/20 text-xs font-black transition-all group shadow-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span>فتح الملف العائلي والمالي لولي الأمر</span>
+                      </div>
+                      <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/guardians"
+                      className="mt-2 flex items-center justify-between p-2.5 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground text-xs font-bold transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        <span>دليل أولياء الأمور</span>
+                      </div>
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
                 </div>
               </PageCard>
 

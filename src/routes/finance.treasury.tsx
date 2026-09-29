@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
-import { Wallet, Plus, CheckCircle2, XCircle, Clock, ArrowRightLeft, ArrowDownRight, ArrowUpRight, FileText } from "lucide-react";
+import { Wallet, Plus, CheckCircle2, XCircle, Clock, ArrowRightLeft, ArrowDownRight, ArrowUpRight, FileText, Calculator, AlertCircle, Coins, DollarSign, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FinanceNavTabs } from "@/components/finance/finance-nav";
 const uuidv4 = () => Math.random().toString(36).substr(2, 9);
 
 export const Route = createFileRoute("/finance/treasury")({
@@ -17,7 +19,27 @@ function FinanceTreasury() {
   const [selectedTreasury, setSelectedTreasury] = useState<string | null>(null);
   
   const [openSessionModal, setOpenSessionModal] = useState<boolean>(false);
+  const [openingBalanceInput, setOpeningBalanceInput] = useState<number | string>("");
   const [closeSessionModalData, setCloseSessionModalData] = useState<{ sessionId: string, expectedBalance: number } | null>(null);
+  const [actualBalanceInput, setActualBalanceInput] = useState<number | string>("");
+  const [showDenominations, setShowDenominations] = useState(false);
+  const [denominations, setDenominations] = useState<Record<number, number>>({
+    500: 0,
+    200: 0,
+    100: 0,
+    50: 0,
+    20: 0,
+    10: 0,
+    5: 0,
+    1: 0,
+  });
+
+  const updateDenomination = (denom: number, count: number) => {
+    const updated = { ...denominations, [denom]: Math.max(0, count) };
+    setDenominations(updated);
+    const sum = Object.entries(updated).reduce((acc, [d, c]) => acc + Number(d) * c, 0);
+    setActualBalanceInput(sum);
+  };
 
   const [receiptModal, setReceiptModal] = useState<{ sessionId: string, treasuryId: string } | null>(null);
   const [expenseModal, setExpenseModal] = useState<{ sessionId: string, treasuryId: string } | null>(null);
@@ -148,6 +170,7 @@ function FinanceTreasury() {
       }
     >
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        <FinanceNavTabs activeTab="treasury" />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Treasuries List */}
@@ -213,10 +236,15 @@ function FinanceTreasury() {
                             </div>
                           </div>
                           <button 
-                            onClick={() => setCloseSessionModalData({ sessionId: activeSession.id, expectedBalance: currentCalculatedBalance })}
-                            className="bg-danger/10 text-danger hover:bg-danger hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+                            onClick={() => {
+                              setCloseSessionModalData({ sessionId: activeSession.id, expectedBalance: currentCalculatedBalance });
+                              setActualBalanceInput(currentCalculatedBalance);
+                              setShowDenominations(false);
+                              setDenominations({ 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0, 5: 0, 1: 0 });
+                            }}
+                            className="bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-4 py-2 rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5"
                           >
-                            إنهاء وإغلاق الجلسة
+                            <CheckCircle2 className="w-4 h-4" /> إنهاء وإغلاق الجلسة ومطابقة النقدية
                           </button>
                         </div>
 
@@ -344,271 +372,387 @@ function FinanceTreasury() {
 
       {/* Modals */}
       {/* Open Session Modal */}
-      {openSessionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="bg-card/98 dark:bg-card/95 w-full max-w-md rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-4 border-b border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-                  <Wallet className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-foreground">فتح جلسة نقدية جديدة</h3>
-                  <p className="text-xs text-muted-foreground">تسجيل رصيد بداية العهدة لفتح الصندوق</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setOpenSessionModal(false)} 
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              >
-                <XCircle className="w-4 h-4" />
-              </button>
+      <AdminModal
+        isOpen={openSessionModal}
+        onClose={() => setOpenSessionModal(false)}
+        title="فتح وردية / جلسة نقدية جديدة"
+        description="تسجيل رصيد بداية العهدة لفتح الصندوق والمباشرة بالعمليات"
+        icon={Wallet}
+        tone="primary"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleOpenSession} className="space-y-4">
+          <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/70 flex items-center justify-between text-xs">
+            <div>
+              <span className="text-muted-foreground block font-bold">الصندوق المستهدف:</span>
+              <span className="font-extrabold text-foreground text-sm">
+                {allTreasuries.find(t => t.id === selectedTreasury)?.name || "الصندوق الرئيسي"}
+              </span>
             </div>
-            <form onSubmit={handleOpenSession} className="space-y-4 pt-4">
-              <div>
-                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">رصيد الفتح الفعلي ({currency}) <span className="text-destructive">*</span></label>
-                <input 
-                  type="number" 
-                  name="openingBalance" 
-                  required 
-                  min="0" 
-                  defaultValue={allTreasuries.find(t => t.id === selectedTreasury)?.balance || 0} 
-                  className="w-full h-12 rounded-xl border border-input bg-background/80 px-4 text-xl font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
-                />
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">قم بعدّ النقدية الموجودة فعلياً في الصندوق الآن لتسجيل رصيد بداية المدة للجلسة.</p>
-              </div>
-              <div className="pt-4 flex gap-2.5 border-t border-border/60">
-                <button type="submit" className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground font-extrabold text-xs shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all glow-primary">
-                  تأكيد وفتح الجلسة
-                </button>
-                <button type="button" onClick={() => setOpenSessionModal(false)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
-                  إلغاء
-                </button>
-              </div>
-            </form>
+            <div className="text-left font-mono">
+              <span className="text-muted-foreground block text-[10px]">الرصيد الدفتري المسجل:</span>
+              <span className="font-black text-primary text-sm">
+                {(allTreasuries.find(t => t.id === selectedTreasury)?.balance || 0).toLocaleString()} {currency}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Close Session Modal */}
-      {closeSessionModalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="bg-card/98 dark:bg-card/95 w-full max-w-md rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-4 border-b border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-destructive/10 text-destructive">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-destructive">إغلاق الجلسة ومطابقة النقدية</h3>
-                  <p className="text-xs text-muted-foreground">جرد ومطابقة الدرج الفعلي مع الرصيد الدفتري</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setCloseSessionModalData(null)} 
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1.5">
+              رصيد الفتح الفعلي بالدرج ({currency}) <span className="text-destructive">*</span>
+            </label>
+            <div className="relative">
+              <DollarSign className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input 
+                type="number" 
+                name="openingBalance" 
+                required 
+                min="0" 
+                value={openingBalanceInput}
+                onChange={(e) => setOpeningBalanceInput(e.target.value)}
+                placeholder="0.00"
+                className="w-full h-12 rounded-xl border border-input bg-background/80 pr-10 pl-4 text-xl font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+              />
+            </div>
+            
+            {/* Presets */}
+            <div className="flex items-center gap-1.5 mt-2 text-[11px]">
+              <span className="text-muted-foreground">خيارات سريعة:</span>
+              <button
+                type="button"
+                onClick={() => setOpeningBalanceInput(allTreasuries.find(t => t.id === selectedTreasury)?.balance || 0)}
+                className="px-2 py-0.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold transition-all"
               >
-                <XCircle className="w-4 h-4" />
+                نفس الرصيد الدفتري
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpeningBalanceInput(0)}
+                className="px-2 py-0.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold transition-all"
+              >
+                درج فارغ (0)
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpeningBalanceInput(500)}
+                className="px-2 py-0.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold transition-all"
+              >
+                عهدة 500
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpeningBalanceInput(1000)}
+                className="px-2 py-0.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold transition-all"
+              >
+                عهدة 1,000
               </button>
             </div>
-            <form onSubmit={handleCloseSession} className="space-y-4 pt-4">
-              <div className="p-4 bg-muted/40 dark:bg-muted/15 rounded-2xl flex justify-between items-center border border-border/60">
-                <span className="text-xs font-bold text-muted-foreground">الرصيد الدفتري المتوقع:</span>
-                <span className="font-black text-xl tabular-nums text-foreground">{closeSessionModalData.expectedBalance.toLocaleString()} {currency}</span>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">الرصيد الفعلي (الموجود بالدرج) ({currency}) <span className="text-destructive">*</span></label>
-                <input 
-                  type="number" 
-                  name="actualClosingBalance" 
-                  required 
-                  min="0" 
-                  className="w-full h-12 rounded-xl border-2 border-primary/30 bg-background/90 px-4 text-2xl font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
-                />
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">أدخل المبلغ الموجود فعلياً بعد عدّه لمطابقته مع النظام وكشف أي عجز أو فائض.</p>
-              </div>
-              <div className="pt-4 flex gap-2.5 border-t border-border/60">
-                <button type="submit" className="flex-1 h-11 rounded-xl bg-destructive text-destructive-foreground font-extrabold text-xs shadow-md hover:bg-destructive/90 active:scale-[0.98] transition-all">
-                  تأكيد وإغلاق الجلسة
-                </button>
-                <button type="button" onClick={() => setCloseSessionModalData(null)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
-                  رجوع
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+
+          <div className="pt-4 flex gap-2.5 border-t border-border/70">
+            <button type="button" onClick={() => setOpenSessionModal(false)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
+              إلغاء
+            </button>
+            <button type="submit" className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground font-extrabold text-xs shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all glow-primary flex items-center justify-center gap-2">
+              <Wallet className="w-4 h-4" /> تأكيد وفتح الجلسة
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+
+      {/* Close Session Modal with Denomination Counter & Live Difference */}
+      <AdminModal
+        isOpen={!!closeSessionModalData}
+        onClose={() => setCloseSessionModalData(null)}
+        title="جرد وإغلاق الجلسة ومطابقة النقدية"
+        description="جرد محتويات الدرج الفعلي ومقارنته بالرصيد الدفتري المسجل للنظام"
+        icon={CheckCircle2}
+        tone="danger"
+        maxWidth="xl"
+      >
+        {closeSessionModalData && (
+          <form onSubmit={handleCloseSession} className="space-y-4">
+            {/* Expected vs Actual Summary Card */}
+            <div className="grid grid-cols-2 gap-3 p-4 bg-muted/30 rounded-2xl border border-border/70">
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-muted-foreground">الرصيد الدفتري المتوقع:</span>
+                <div className="font-black text-xl tabular-nums text-foreground">
+                  {closeSessionModalData.expectedBalance.toLocaleString()} {currency}
+                </div>
+              </div>
+              <div className="space-y-1 text-left">
+                <span className="text-xs font-bold text-muted-foreground">المبلغ الفعلي المدخل:</span>
+                <div className="font-black text-xl tabular-nums text-primary">
+                  {(Number(actualBalanceInput) || 0).toLocaleString()} {currency}
+                </div>
+              </div>
+            </div>
+
+            {/* Live Match / Discrepancy Status */}
+            {(() => {
+              const actual = Number(actualBalanceInput) || 0;
+              const expected = closeSessionModalData.expectedBalance;
+              const diff = actual - expected;
+
+              if (diff === 0) {
+                return (
+                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <span>مطابقة تامة ومثالية (لا يوجد أي عجز أو فائض)</span>
+                    </div>
+                    <Badge className="bg-emerald-600 text-white font-mono">0 {currency}</Badge>
+                  </div>
+                );
+              } else if (diff > 0) {
+                return (
+                  <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ArrowDownRight className="w-4 h-4 text-blue-500" />
+                      <span>يوجد فائض نقدي بالدرج عن الرصيد المسجل:</span>
+                    </div>
+                    <Badge className="bg-blue-600 text-white font-mono">+{diff.toLocaleString()} {currency}</Badge>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-500" />
+                      <span>تنبيه: يوجد عجز نقدي في الدرج بمقدار:</span>
+                    </div>
+                    <Badge className="bg-rose-600 text-white font-mono">{diff.toLocaleString()} {currency}</Badge>
+                  </div>
+                );
+              }
+            })()}
+
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-xs font-bold text-foreground">
+                  الرصيد الفعلي الموجود بالدرج ({currency}) <span className="text-destructive">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowDenominations(!showDenominations)}
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  {showDenominations ? "إخفاء حاسبة الفئات" : "استخدام حاسبة الفئات النقدية"}
+                </button>
+              </div>
+              <input 
+                type="number" 
+                name="actualClosingBalance" 
+                required 
+                min="0" 
+                value={actualBalanceInput}
+                onChange={(e) => setActualBalanceInput(e.target.value)}
+                className="w-full h-12 rounded-xl border-2 border-primary/30 bg-background/90 px-4 text-2xl font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+              />
+            </div>
+
+            {/* Denominations Calculator Grid */}
+            {showDenominations && (
+              <div className="p-4 rounded-2xl bg-muted/40 border border-border/80 space-y-3 animate-in fade-in duration-200">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold text-foreground flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-amber-500" /> عدّ فئات النقد الورقي والمعدني:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDenominations({ 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0, 5: 0, 1: 0 });
+                      setActualBalanceInput(0);
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-destructive underline"
+                  >
+                    تصفير العداد
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  {[500, 200, 100, 50, 20, 10, 5, 1].map((denom) => (
+                    <div key={denom} className="p-2 rounded-xl bg-background border border-border/60 text-center space-y-1">
+                      <div className="font-bold text-[11px] text-muted-foreground">فئة {denom} ر.س</div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={denominations[denom] || ""}
+                        placeholder="0"
+                        onChange={(e) => updateDenomination(denom, Number(e.target.value) || 0)}
+                        className="h-8 w-full text-center font-black tabular-nums text-foreground border border-input rounded-lg text-xs outline-none focus:border-primary"
+                      />
+                      <div className="text-[10px] text-primary font-mono font-bold">
+                        = {((denominations[denom] || 0) * denom).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-4 flex gap-2.5 border-t border-border/70">
+              <button type="button" onClick={() => setCloseSessionModalData(null)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
+                رجوع
+              </button>
+              <button type="submit" className="flex-1 h-11 rounded-xl bg-gradient-to-r from-destructive to-rose-600 text-white font-extrabold text-xs shadow-md hover:from-destructive/90 hover:to-rose-600/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4" /> تأكيد الإغلاق وترحيل المطابقة
+              </button>
+            </div>
+          </form>
+        )}
+      </AdminModal>
 
       {/* Receipt Modal */}
-      {receiptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="bg-card/98 dark:bg-card/95 w-full max-w-lg rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-4 border-b border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-success/10 text-success">
-                  <ArrowDownRight className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-foreground">إصدار سند قبض عام</h3>
-                  <p className="text-xs text-muted-foreground">توريد مبالغ نقدية أو بنكية إضافية لحساب الصندوق</p>
-                </div>
+      <AdminModal
+        isOpen={!!receiptModal}
+        onClose={() => setReceiptModal(null)}
+        title="إصدار سند قبض وإيداع نقدي"
+        description="توريد مبالغ نقدية إضافية لحساب الجلسة المفتوحة"
+        icon={ArrowDownRight}
+        tone="success"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleAddReceipt} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3.5">
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-bold text-foreground mb-1.5">المبلغ ({currency}) <span className="text-destructive">*</span></label>
+              <div className="relative">
+                <DollarSign className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input 
+                  type="number" 
+                  name="amount" 
+                  required 
+                  min="1" 
+                  placeholder="0.00"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 pr-10 pl-3.5 text-sm font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+                />
               </div>
-              <button 
-                onClick={() => setReceiptModal(null)} 
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              >
-                <XCircle className="w-4 h-4" />
-              </button>
             </div>
-            <form onSubmit={handleAddReceipt} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">المبلغ ({currency}) <span className="text-destructive">*</span></label>
-                  <input 
-                    type="number" 
-                    name="amount" 
-                    required 
-                    min="1" 
-                    placeholder="0.00"
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-sm font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">طريقة الدفع <span className="text-destructive">*</span></label>
-                  <select name="method" required className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer">
-                    <option value="cash">نقدي (كاش)</option>
-                    <option value="card">بطاقة / شبكة</option>
-                    <option value="bank_transfer">تحويل بنكي</option>
-                    <option value="cheque">شيك مصرفي</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">البيان / ملاحظات <span className="text-destructive">*</span></label>
-                  <input 
-                    type="text" 
-                    name="notes" 
-                    required 
-                    placeholder="مثال: إيرادات متفرقة، بيع زي مدرسي..." 
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">رقم المرجع (اختياري)</label>
-                  <input 
-                    type="text" 
-                    name="referenceNo" 
-                    placeholder="رقم إيصال أو عملية بنكية" 
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
-                  />
-                </div>
-              </div>
-              <div className="pt-4 flex gap-2.5 border-t border-border/60">
-                <button type="submit" className="flex-1 h-11 rounded-xl bg-success text-white font-extrabold text-xs shadow-md hover:bg-success/90 active:scale-[0.98] transition-all">
-                  حفظ وطباعة
-                </button>
-                <button type="button" onClick={() => setReceiptModal(null)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
-                  إلغاء
-                </button>
-              </div>
-            </form>
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-bold text-foreground mb-1.5">طريقة الدفع <span className="text-destructive">*</span></label>
+              <select name="method" required className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer">
+                <option value="cash">نقدي (كاش بالدرج)</option>
+                <option value="card">بطاقة / مدى</option>
+                <option value="bank_transfer">تحويل بنكي</option>
+                <option value="cheque">شيك مصرفي</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-foreground mb-1.5">البيان ومصدر الإيراد <span className="text-destructive">*</span></label>
+              <input 
+                type="text" 
+                name="notes" 
+                required 
+                placeholder="مثال: إيرادات بوفيه، بيع كتب، توريد عهدة إضافية..." 
+                className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-foreground mb-1.5">رقم المرجع (اختياري)</label>
+              <input 
+                type="text" 
+                name="referenceNo" 
+                placeholder="رقم إيصال أو عملية بنكية" 
+                className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
+              />
+            </div>
           </div>
-        </div>
-      )}
+          <div className="pt-4 flex gap-2.5 border-t border-border/70">
+            <button type="button" onClick={() => setReceiptModal(null)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
+              إلغاء
+            </button>
+            <button type="submit" className="flex-1 h-11 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-xs shadow-md hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              <ArrowDownRight className="w-4 h-4" /> حفظ وتوريد النقدية
+            </button>
+          </div>
+        </form>
+      </AdminModal>
 
       {/* Expense Modal */}
-      {expenseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="bg-card/98 dark:bg-card/95 w-full max-w-lg rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-4 border-b border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-destructive/10 text-destructive">
-                  <ArrowUpRight className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-foreground">إصدار سند صرف نقدي</h3>
-                  <p className="text-xs text-muted-foreground">صرف مبلغ مالي لمستفيد مع خصمه من رصيد الجلسة</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setExpenseModal(null)} 
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              >
-                <XCircle className="w-4 h-4" />
-              </button>
+      <AdminModal
+        isOpen={!!expenseModal}
+        onClose={() => setExpenseModal(null)}
+        title="إصدار سند صرف نقدي فوري"
+        description="صرف مبلغ مالي لمستفيد مع خصمه المباشر من رصيد الجلسة"
+        icon={ArrowUpRight}
+        tone="danger"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleAddExpense} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3.5">
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-foreground mb-1.5">عنوان وبند المصروف <span className="text-destructive">*</span></label>
+              <input 
+                type="text" 
+                name="title" 
+                required 
+                placeholder="مثال: صيانة طارئة، مشتريات ضيافة، أدوات نظافة..." 
+                className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
+              />
             </div>
-            <form onSubmit={handleAddExpense} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">عنوان المصروف <span className="text-destructive">*</span></label>
-                  <input 
-                    type="text" 
-                    name="title" 
-                    required 
-                    placeholder="مثال: صيانة كهرباء، مشتريات بوفيه..." 
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">المبلغ ({currency}) <span className="text-destructive">*</span></label>
-                  <input 
-                    type="number" 
-                    name="amount" 
-                    required 
-                    min="1" 
-                    placeholder="0.00"
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-sm font-black tabular-nums text-destructive outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">التصنيف <span className="text-destructive">*</span></label>
-                  <select name="categoryId" required className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer">
-                    {allExpenseCategories?.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">المستفيد <span className="text-destructive">*</span></label>
-                  <input 
-                    type="text" 
-                    name="beneficiary" 
-                    required 
-                    placeholder="اسم المستلم / الشركة" 
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">طريقة الدفع <span className="text-destructive">*</span></label>
-                  <select name="method" required className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer">
-                    <option value="cash">نقدي (كاش)</option>
-                    <option value="card">بطاقة / شبكة</option>
-                    <option value="bank_transfer">تحويل بنكي</option>
-                    <option value="cheque">شيك مصرفي</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">رقم المرجع وملاحظات (اختياري)</label>
-                  <input 
-                    type="text" 
-                    name="notes" 
-                    placeholder="تفاصيل إضافية أو رقم الفاتورة..." 
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
-                  />
-                </div>
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-bold text-foreground mb-1.5">المبلغ المصروف ({currency}) <span className="text-destructive">*</span></label>
+              <div className="relative">
+                <DollarSign className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input 
+                  type="number" 
+                  name="amount" 
+                  required 
+                  min="1" 
+                  placeholder="0.00"
+                  className="w-full h-11 rounded-xl border border-input bg-background/80 pr-10 pl-3.5 text-sm font-black tabular-nums text-destructive outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+                />
               </div>
-              <div className="pt-4 flex gap-2.5 border-t border-border/60">
-                <button type="submit" className="flex-1 h-11 rounded-xl bg-destructive text-destructive-foreground font-extrabold text-xs shadow-md hover:bg-destructive/90 active:scale-[0.98] transition-all">
-                  اعتماد وصرف
-                </button>
-                <button type="button" onClick={() => setExpenseModal(null)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
-                  إلغاء
-                </button>
-              </div>
-            </form>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-bold text-foreground mb-1.5">التصنيف المالي <span className="text-destructive">*</span></label>
+              <select name="categoryId" required className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer">
+                {allExpenseCategories?.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-bold text-foreground mb-1.5">المستفيد / المستلم <span className="text-destructive">*</span></label>
+              <input 
+                type="text" 
+                name="beneficiary" 
+                required 
+                placeholder="اسم الفني أو الشركة المستلمة" 
+                className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
+              />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-xs font-bold text-foreground mb-1.5">طريقة الدفع <span className="text-destructive">*</span></label>
+              <select name="method" required className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer">
+                <option value="cash">نقدي (كاش من الدرج)</option>
+                <option value="card">بطاقة / مدى</option>
+                <option value="bank_transfer">تحويل بنكي</option>
+                <option value="cheque">شيك مصرفي</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-foreground mb-1.5">رقم المرجع وملاحظات (اختياري)</label>
+              <input 
+                type="text" 
+                name="notes" 
+                placeholder="تفاصيل إضافية أو رقم الفاتورة المرفقة..." 
+                className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60" 
+              />
+            </div>
           </div>
-        </div>
-      )}
+          <div className="pt-4 flex gap-2.5 border-t border-border/70">
+            <button type="button" onClick={() => setExpenseModal(null)} className="h-11 px-5 rounded-xl border border-input bg-background/80 hover:bg-accent text-xs font-semibold active:scale-[0.98] transition-all">
+              إلغاء
+            </button>
+            <button type="submit" className="flex-1 h-11 rounded-xl bg-destructive text-destructive-foreground font-extrabold text-xs shadow-md hover:bg-destructive/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              <ArrowUpRight className="w-4 h-4" /> اعتماد وصرف المبلغ
+            </button>
+          </div>
+        </form>
+      </AdminModal>
 
     </AppShell>
   );

@@ -5,6 +5,8 @@ import { useGlobalStore, ExamResult, ExamSubject, Exam, ExamGradePolicy } from "
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
 import { BatchCertificatesModal } from "@/components/batch-certificates-modal";
+import { ExamsNavTabs } from "@/components/exams/exams-nav";
+import { BlankGradeSheetModal } from "@/components/exams/blank-grade-sheet-modal";
 import { 
   Search, 
   Save, 
@@ -94,6 +96,15 @@ function ExamGradesPage() {
     grade?: string;
     sectionId?: string;
     studentIds?: string[];
+  }>({});
+
+  // Blank Grade Sheet Modal (كشف رصد درجات يدوي للمعلم)
+  const [isBlankSheetModalOpen, setIsBlankSheetModalOpen] = useState(false);
+  const [blankSheetConfig, setBlankSheetConfig] = useState<{
+    examId?: string;
+    grade?: string;
+    sectionId?: string;
+    subjectId?: string;
   }>({});
 
   // --------------------------------------------------------------------------
@@ -252,9 +263,11 @@ function ExamGradesPage() {
   const handleQuickApproveAll = () => {
     if (!selectedExamSubject || studentsInSection.length === 0) return;
     const enrollmentIds = new Set(studentsInSection.map(s => s.enrollment.id));
-    approveExamResults("approved", "المشرف الأكاديمي", {
-      targetExamSubjectIds: new Set([selectedExamSubject.id]),
-      targetEnrollmentIds: enrollmentIds
+    approveExamResults({
+      status: "approved",
+      approvedBy: "المشرف الأكاديمي",
+      examSubjectId: selectedExamSubject.id,
+      sectionId: filterSectionId
     });
     setStudentResults(prev => {
       const updated = { ...prev };
@@ -321,7 +334,7 @@ function ExamGradesPage() {
     if (!rosterGrade) return [];
     const gradeSections = activeStageSections.filter(s => normalizeGrade(s.grade) === normalizeGrade(rosterGrade));
     const targetSectionIds = rosterSectionId === "all" ? new Set(gradeSections.map(s => s.id)) : new Set([rosterSectionId]);
-    const enrollments = allStudentEnrollments.filter(e => e.academicYearId === currentAcademicYearId && targetSectionIds.has(e.sectionId));
+    const enrollments = allStudentEnrollments.filter(e => e.academicYearId === currentAcademicYearId && e.sectionId && targetSectionIds.has(e.sectionId));
     
     return enrollments.map(enr => {
       const student = activeStageStudents.find(s => s.id === enr.studentId);
@@ -393,7 +406,7 @@ function ExamGradesPage() {
   const [policyGrade, setPolicyGrade] = useState<string>("all");
 
   // Core Policy Parameters
-  const [calculationMode, setCalculationMode] = useState<"raw" | "weighted" | "equal_average" | "custom_scale">("weighted");
+  const [calculationMode, setCalculationMode] = useState<"raw" | "weighted" | "equal_average" | "average" | "custom_scale">("weighted");
   const [targetScale, setTargetScale] = useState<number>(100);
   const [minPassPct, setMinPassPct] = useState<number>(50);
   const [aggregationStrategy, setAggregationStrategy] = useState<"cumulative_sum" | "final_plus_coursework" | "best_attempt" | "drop_lowest">("cumulative_sum");
@@ -557,7 +570,7 @@ function ExamGradesPage() {
     saveExamGradePolicy({
       examId: policyExamId,
       grade: policyGrade,
-      calculationMode,
+      calculationMode: calculationMode === "equal_average" ? "average" : calculationMode,
       targetScale,
       minPassPct,
       aggregationStrategy,
@@ -593,7 +606,7 @@ function ExamGradesPage() {
     const gradeSections = activeStageSections.filter(s => targetGrades.some(g => normalizeGrade(g) === normalizeGrade(s.grade)));
     const sectionIds = rulesSectionFilter === "all" ? new Set(gradeSections.map(s => s.id)) : new Set([rulesSectionFilter]);
 
-    const enrollments = allStudentEnrollments.filter(e => e.academicYearId === currentAcademicYearId && sectionIds.has(e.sectionId));
+    const enrollments = allStudentEnrollments.filter(e => e.academicYearId === currentAcademicYearId && e.sectionId && sectionIds.has(e.sectionId));
     
     // 2. Included exams
     const activeExams = activeStageExams.filter(e => !excludedExamIds.has(e.id));
@@ -833,56 +846,27 @@ function ExamGradesPage() {
   return (
     <AppShell>
       <div className="space-y-6 pb-20">
-        {/* TOP SYSTEM BAR & TITLE */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                <GraduationCap className="w-3.5 h-3.5" />
-                {stageArabicName}
-              </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                <CheckCircle2 className="w-3 h-3" />
-                النظام نشط ومحدث
-              </span>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              رصد الدرجات وكشوف الحصر اليدوي والشهادات
-            </h1>
-            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              إدخال درجات الفترات، استخراج كشوف الرصد الشامل، احتساب المحصلة التراكمية، واستوديو تخصيص القواعد والأوزان
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <button
-              onClick={() => {
-                setCertModalConfig({
-                  examId: filterExamId || activeStageExams[0]?.id,
-                  grade: filterGrade || stageGrades[0],
-                  sectionId: filterSectionId !== "all" ? filterSectionId : undefined,
-                });
-                setIsCertModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Award className="w-4 h-4" />
-              طباعة الشهادات وكشوف الرصد
-            </button>
-
-            <button
-              onClick={() => setActiveTab("rules")}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                activeTab === "rules"
-                  ? "bg-primary text-white shadow-md shadow-primary/25"
-                  : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
-              }`}
-            >
-              <Sliders className="w-4 h-4" />
-              استوديو قواعد ونسب الدرجات
-            </button>
-          </div>
-        </div>
+        {/* Unified Module Navigation */}
+        <ExamsNavTabs 
+          activeTab="grades" 
+          onOpenBlankSheet={() => {
+            setBlankSheetConfig({
+              examId: filterExamId || activeStageExams[0]?.id,
+              grade: filterGrade || stageGrades[0],
+              sectionId: filterSectionId !== "all" ? filterSectionId : undefined,
+              subjectId: filterSubjectId || undefined,
+            });
+            setIsBlankSheetModalOpen(true);
+          }}
+          onOpenBatchCertificates={() => {
+            setCertModalConfig({
+              examId: filterExamId || activeStageExams[0]?.id,
+              grade: filterGrade || stageGrades[0],
+              sectionId: filterSectionId !== "all" ? filterSectionId : undefined,
+            });
+            setIsCertModalOpen(true);
+          }}
+        />
 
         {/* TABS NAVIGATION */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto no-scrollbar">
@@ -1064,6 +1048,24 @@ function ExamGradesPage() {
 
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
+                    type="button"
+                    onClick={() => {
+                      setBlankSheetConfig({
+                        examId: filterExamId,
+                        grade: filterGrade,
+                        sectionId: filterSectionId !== "all" ? filterSectionId : undefined,
+                        subjectId: filterSubjectId,
+                      });
+                      setIsBlankSheetModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                    title="طباعة كشف رصد ورقي فارغ أو مسودة لتسليمه لمعلم المادة"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>كشف رصد يدوي (للمعلم)</span>
+                  </button>
+
+                  <button
                     onClick={handleAutoFillFullMarks}
                     className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition-colors"
                   >
@@ -1242,7 +1244,24 @@ function ExamGradesPage() {
                   </select>
                 </div>
 
-                <div className="flex items-end">
+                <div className="flex items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBlankSheetConfig({
+                        examId: rosterExamId,
+                        grade: rosterGrade,
+                        sectionId: rosterSectionId !== "all" ? rosterSectionId : undefined,
+                      });
+                      setIsBlankSheetModalOpen(true);
+                    }}
+                    className="py-2.5 px-3 rounded-xl font-bold text-xs border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                    title="كشف رصد يدوي فارغ للمعلم"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                    <span>كشف رصد يدوي</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setCertModalConfig({
@@ -1252,7 +1271,7 @@ function ExamGradesPage() {
                       });
                       setIsCertModalOpen(true);
                     }}
-                    className="w-full py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Award className="w-4 h-4" />
                     إصدار شهادات الصف المحددة
@@ -2553,6 +2572,16 @@ function ExamGradesPage() {
         grade={certModalConfig.grade}
         sectionId={certModalConfig.sectionId}
         preSelectedStudentIds={certModalConfig.studentIds}
+      />
+
+      {/* BLANK GRADE SHEET MODAL (كشف رصد درجات يدوي للمعلم) */}
+      <BlankGradeSheetModal
+        isOpen={isBlankSheetModalOpen}
+        onClose={() => setIsBlankSheetModalOpen(false)}
+        initialExamId={blankSheetConfig.examId}
+        initialGrade={blankSheetConfig.grade}
+        initialSectionId={blankSheetConfig.sectionId}
+        initialSubjectId={blankSheetConfig.subjectId}
       />
     </AppShell>
   );

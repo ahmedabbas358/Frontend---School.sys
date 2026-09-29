@@ -1,15 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell, PageCard } from "@/components/app-shell";
+import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { MapPin, Plus, Printer, Edit, Trash2, Users, Search, Filter, Bus, X } from "lucide-react";
+import { 
+  MapPin, 
+  Plus, 
+  Printer, 
+  Edit, 
+  Trash2, 
+  Users, 
+  Search, 
+  Filter, 
+  Bus, 
+  X, 
+  FileSpreadsheet,
+  Phone,
+  CheckCircle2,
+  DollarSign
+} from "lucide-react";
 import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { useGlobalStore, TransportRoute } from "@/contexts/GlobalStoreContext";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/transport/routes")({
+  head: () => ({ meta: [{ title: "مسارات النقل المدرسي والحافلات | منصة مدارس" }] }),
   component: TransportRoutes,
 });
 
@@ -32,18 +49,31 @@ const routeSchema = z.object({
 type RouteForm = z.infer<typeof routeSchema>;
 
 function TransportRoutes() {
-  const { transportRoutes, transportSubscriptions, allStudents, allSections, addTransportRoute, updateTransportRoute, deleteTransportRoute, currency } = useGlobalStore();
+  const { 
+    transportRoutes, 
+    transportSubscriptions, 
+    allStudents, 
+    allSections, 
+    addTransportRoute, 
+    updateTransportRoute, 
+    deleteTransportRoute, 
+    addActivityLog,
+    currency 
+  } = useGlobalStore();
   
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingRouteId, setViewingRouteId] = useState<string | null>(null);
+  const [deleteConfirmRoute, setDeleteConfirmRoute] = useState<TransportRoute | null>(null);
+
   const [q, setQ] = useState("");
   const [routeFilter, setRouteFilter] = useState("");
   const [subscriberQ, setSubscriberQ] = useState("");
   const [subscriberDirection, setSubscriberDirection] = useState("all");
 
   const viewingRoute = transportRoutes.find(r => r.id === viewingRouteId);
+
   const subscribedStudents = useMemo(() => {
     if (!viewingRouteId) return [];
     const subs = transportSubscriptions.filter(s => s.routeId === viewingRouteId);
@@ -57,7 +87,7 @@ function TransportRoutes() {
         studentSection: section ? `شعبة ${section.name}` : "بدون شعبة",
         guardianName: student?.guardianName || "-",
         studentPhone: student?.guardianPhone || ""
-      }
+      };
     }).filter(row => {
       if (subscriberDirection !== "all" && row.direction !== subscriberDirection) return false;
       if (subscriberQ && !row.studentName.includes(subscriberQ) && !row.guardianName.includes(subscriberQ) && !row.studentGrade.includes(subscriberQ)) return false;
@@ -66,10 +96,11 @@ function TransportRoutes() {
   }, [viewingRouteId, transportSubscriptions, allStudents, allSections, subscriberQ, subscriberDirection]);
 
   const routeStats = useMemo(() => {
+    const totalRoutes = transportRoutes.length;
     const totalCapacity = transportRoutes.reduce((sum, route) => sum + (route.capacity || 0), 0);
     const activeSubs = transportSubscriptions.filter(sub => sub.status === "active").length;
     const monthlyRevenue = transportSubscriptions.filter(sub => sub.status === "active").reduce((sum, sub) => sum + (sub.fee || 0), 0);
-    return { totalCapacity, activeSubs, monthlyRevenue };
+    return { totalRoutes, totalCapacity, activeSubs, monthlyRevenue };
   }, [transportRoutes, transportSubscriptions]);
 
   const filteredRoutes = useMemo(() => {
@@ -132,247 +163,401 @@ function TransportRoutes() {
   const onSubmit = (data: RouteForm) => {
     if (editingId) {
       updateTransportRoute(editingId, data as TransportRoute);
+      addActivityLog({
+        action: "update",
+        category: "facilities",
+        details: `تعديل بيانات مسار الحافلة: ${data.name} (${editingId})`,
+        targetId: editingId,
+        timestamp: new Date().toISOString(),
+      });
+      toast.success("تم تحديث بيانات مسار النقل بنجاح");
     } else {
-      addTransportRoute({ ...data, id: data.id || `RT-${Date.now()}` } as TransportRoute);
+      const newId = data.id || `RT-${Date.now()}`;
+      addTransportRoute({ ...data, id: newId } as TransportRoute);
+      addActivityLog({
+        action: "create",
+        category: "facilities",
+        details: `إضافة مسار نقل جديد: ${data.name} (السائق: ${data.driverName})`,
+        targetId: newId,
+        timestamp: new Date().toISOString(),
+      });
+      toast.success("تمت إضافة مسار النقل المدرسي بنجاح");
     }
     setIsModalOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (!deleteConfirmRoute) return;
+    deleteTransportRoute(deleteConfirmRoute.id);
+    addActivityLog({
+      action: "delete",
+      category: "facilities",
+      details: `حذف مسار النقل: ${deleteConfirmRoute.name} (${deleteConfirmRoute.id})`,
+      targetId: deleteConfirmRoute.id,
+      timestamp: new Date().toISOString(),
+    });
+    toast.success(`تم حذف المسار ${deleteConfirmRoute.name} بنجاح`);
+    setDeleteConfirmRoute(null);
+  };
+
+  // CSV Export
+  const exportRoutesCsv = () => {
+    const headers = ["رقم المسار", "اسم المسار", "الوجهة", "السائق", "هاتف السائق", "رقم اللوحة", "السعة", "المشتركون", "الرسوم"];
+    const rows = filteredRoutes.map(rt => {
+      const subsCount = transportSubscriptions.filter(sub => sub.routeId === rt.id && sub.status === "active").length;
+      return [
+        `"${rt.id}"`,
+        `"${rt.name}"`,
+        `"${rt.destination || ''}"`,
+        `"${rt.driverName}"`,
+        `"${rt.driverPhone}"`,
+        `"${rt.vehiclePlate}"`,
+        rt.capacity || 0,
+        subsCount,
+        `"${rt.feeAmount} ${currency}"`
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `دليل_مسارات_النقل_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("تم تصدير ملف إكسل لمسارات النقل بنجاح");
   };
 
   return (
     <AppShell
       breadcrumb={[
         { label: "الرئيسية", to: "/" },
-        { label: "النقل المدرسي" },
-        { label: "مسارات الحافلات" },
+        { label: "المرافق والخدمات" },
+        { label: "مسارات النقل المدرسي" },
       ]}
       actions={
-        <div className="flex gap-2">
-          <button 
-            onClick={openAddModal}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportRoutesCsv}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-2xs"
           >
-            <Plus className="h-4 w-4" /> مسار جديد
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> تصدير CSV
           </button>
           <button 
             onClick={() => setIsPrintOpen(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm font-bold text-foreground hover:bg-accent hover:text-accent-foreground"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-2xs"
           >
-            <Printer className="h-4 w-4" /> طباعة المسارات
+            <Printer className="h-4 w-4 text-primary" /> طباعة المسارات
+          </button>
+          <button 
+            onClick={openAddModal}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+          >
+            <Plus className="h-4 w-4" /> مسار جديد
           </button>
         </div>
       }
     >
-      <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-bold text-muted-foreground">المشتركون النشطون</p>
-            <p className="mt-1 text-2xl font-black text-primary">{routeStats.activeSubs}</p>
+      <div className="space-y-6">
+        {/* Metric KPI Cards */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted-foreground">إجمالي مسارات الحافلات</span>
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary grid place-items-center">
+                <Bus className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-2 text-2xl font-black tabular-nums">{routeStats.totalRoutes}</div>
+            <div className="text-[11px] font-bold text-muted-foreground mt-0.5">تغطي كافة المناطق المحيطة</div>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-bold text-muted-foreground">إجمالي السعة</p>
-            <p className="mt-1 text-2xl font-black">{routeStats.totalCapacity}</p>
+
+          <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted-foreground">الطلاب المشتركون</span>
+              <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 grid place-items-center">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-2 text-2xl font-black text-emerald-600 tabular-nums">{routeStats.activeSubs}</div>
+            <div className="text-[11px] font-bold text-muted-foreground mt-0.5">اشتراك نشط بالحافلات</div>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <p className="text-xs font-bold text-muted-foreground">إيراد النقل المتوقع</p>
-            <p className="mt-1 text-2xl font-black text-success">{routeStats.monthlyRevenue.toLocaleString()} {currency}</p>
+
+          <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted-foreground">الطاقة الاستيعابية للأسطول</span>
+              <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-600 grid place-items-center">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-2 text-2xl font-black text-amber-600 tabular-nums">{routeStats.totalCapacity}</div>
+            <div className="text-[11px] font-bold text-muted-foreground mt-0.5">مقعد متاح عبر الحافلات</div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted-foreground">إيراد اشتراكات النقل</span>
+              <div className="h-9 w-9 rounded-xl bg-purple-500/10 text-purple-600 grid place-items-center">
+                <DollarSign className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-2 text-2xl font-black text-purple-600 tabular-nums">
+              {routeStats.monthlyRevenue.toLocaleString()} <span className="text-xs">{currency}</span>
+            </div>
+            <div className="text-[11px] font-bold text-muted-foreground mt-0.5">تحصيلات الرسوم المقررة</div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2">
-            <Filter className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold text-primary">إدارة المسارات حسب الوجهة والسائق</span>
-          </div>
-          <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+        {/* Search Bar */}
+        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-2xs">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
-                onChange={event => setQ(event.target.value)}
-                placeholder="بحث بالمسار، الوجهة، السائق، أو اللوحة..."
-                className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="البحث باسم المسار، الحي، السائق، أو رقم اللوحة..."
+                className="h-10 w-full rounded-xl border border-border/80 bg-background/80 ps-9 pe-3 text-xs font-bold outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
               />
             </div>
-            <select value={routeFilter} onChange={event => setRouteFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm font-bold">
-              <option value="">كل المسارات</option>
-              {transportRoutes.map(route => <option key={route.id} value={route.id}>{route.name}</option>)}
-            </select>
+
+            <div>
+              <select
+                value={routeFilter}
+                onChange={(e) => setRouteFilter(e.target.value)}
+                className="h-10 w-full rounded-xl border border-border/80 bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 cursor-pointer"
+              >
+                <option value="">جميع المسارات المسجلة</option>
+                {transportRoutes.map(rt => (
+                  <option key={rt.id} value={rt.id}>{rt.name} - {rt.destination || rt.vehiclePlate}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        <PageCard title="المسارات الحالية">
-        <DataTable rows={filteredRoutes}
-          columns={[
-            { header: "رقم المسار", key: "id", cell: (r: any) => r.id  },
-            { header: "اسم المسار/ الوجهة", key: "name", cell: (r: any) => (
-              <div>
-                <div className="font-bold text-primary">{r.name}</div>
-                <div className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> {r.destination || "وجهة غير محددة"}</div>
-              </div>
-            )},
-            { header: "السائق", key: "السائق", cell: (row: any) => (
-                <div>
-                  <div className="font-bold">{row.driverName}</div>
-                  <div className="text-xs text-muted-foreground">{row.driverPhone}</div>
-                </div>
-              ) 
-            },
-            { header: "المشرف", key: "supervisor", cell: (r: any) => (
-              <div>
-                <div className="font-bold">{r.supervisorName || "-"}</div>
-                <div className="text-xs text-muted-foreground">{r.supervisorPhone || ""}</div>
-              </div>
-            )},
-            { header: "المركبة", key: "vehiclePlate", cell: (r: any) => <span className="font-bold">{r.vehiclePlate}</span> },
-            { header: "عدد المحطات", key: "عدد المحطات", cell: (row: any) => `${row.stops} محطات` },
-            { header: "التكلفة", key: "التكلفة", cell: (row: any) => (
-                <div className="text-primary font-bold">
-                  {row.feeAmount.toLocaleString()} {currency}
-                  <span className="text-xs text-muted-foreground block font-normal">
-                    {row.feeMode === 'monthly' ? 'شهرياً' : row.feeMode === 'term' ? 'نصف سنوي' : 'سنوياً'}
-                  </span>
-                </div>
-              ) 
-            },
-            { header: "المشتركين", key: "subscribers", cell: (row: any) => {
-                const subsCount = transportSubscriptions.filter(s => s.routeId === row.id).length;
-                const capacity = row.capacity || 0;
-                const percentage = capacity > 0 ? Math.round((subsCount / capacity) * 100) : 0;
-                return (
-                  <button onClick={() => { setViewingRouteId(row.id); setSubscriberQ(""); setSubscriberDirection("all"); }} className="min-w-32 text-right text-primary font-bold hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">
-                    <span className="flex items-center gap-2"><Users className="h-4 w-4" /> {subsCount} طالب</span>
-                    {capacity > 0 && <span className="mt-1 block text-xs text-muted-foreground">{percentage}% من السعة</span>}
-                  </button>
-                );
-              } 
-            },
-            { header: "إعدادات", key: "إعدادات", cell: (row: any) => (
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => openEditModal(row)}
-                    className="p-1.5 text-muted-foreground hover:text-primary rounded-md hover:bg-accent"
-                    title="تعديل"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if(confirm("هل أنت متأكد من حذف هذا المسار؟")) {
-                        deleteTransportRoute(row.id);
-                      }
-                    }}
-                    className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10"
-                    title="حذف"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ) 
-            },
-          ]}
-        />
+        {/* Routes Table */}
+        <PageCard>
+          <div className="mb-4 flex items-center justify-between border-b border-border/60 pb-4">
+            <div className="flex items-center gap-2">
+              <Bus className="h-5 w-5 text-primary" />
+              <h2 className="text-base font-black text-foreground">دليل مسارات الحافلات والأسطول المدرسي ({filteredRoutes.length})</h2>
+            </div>
+          </div>
+
+          <DataTable
+            rows={filteredRoutes}
+            columns={[
+              { 
+                key: "id", 
+                header: "رمز المسار", 
+                cell: (r) => <span className="font-mono text-xs font-bold text-muted-foreground">{r.id}</span> 
+              },
+              { 
+                key: "name", 
+                header: "اسم المسار / الوجهة", 
+                cell: (r) => (
+                  <div>
+                    <div className="font-black text-sm text-foreground flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
+                      <span>{r.name}</span>
+                    </div>
+                    {r.destination && <div className="text-[11px] text-muted-foreground font-medium mt-0.5">{r.destination}</div>}
+                  </div>
+                ) 
+              },
+              { 
+                key: "driver", 
+                header: "السائق والمركبة", 
+                cell: (r) => (
+                  <div className="space-y-0.5">
+                    <div className="font-bold text-foreground text-xs">{r.driverName}</div>
+                    <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-1" dir="ltr">
+                      <Phone className="h-3 w-3 text-muted-foreground" /> {r.driverPhone}
+                    </div>
+                    <div className="text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded w-fit">لوحة: {r.vehiclePlate}</div>
+                  </div>
+                ) 
+              },
+              { 
+                key: "capacity", 
+                header: "السعة والمحطات", 
+                cell: (r) => (
+                  <div className="text-xs">
+                    <div className="font-bold">{r.capacity || "-"} مقعد</div>
+                    <div className="text-muted-foreground text-[11px]">{r.stops || 0} محطات وقوف</div>
+                  </div>
+                ) 
+              },
+              { 
+                key: "feeAmount", 
+                header: "الرسوم", 
+                cell: (r) => (
+                  <div className="text-xs">
+                    <span className="font-black text-primary tabular-nums">{r.feeAmount.toLocaleString()} {currency}</span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      {r.feeMode === 'monthly' ? 'شهرياً' : r.feeMode === 'term' ? 'فصلياً' : 'سنوياً'}
+                    </span>
+                  </div>
+                ) 
+              },
+              { 
+                key: "subscribers", 
+                header: "المشتركون", 
+                cell: (row: any) => {
+                  const subsCount = transportSubscriptions.filter(sub => sub.routeId === row.id && sub.status === "active").length;
+                  const capacity = row.capacity || 0;
+                  const percentage = capacity > 0 ? Math.round((subsCount / capacity) * 100) : 0;
+                  return (
+                    <button 
+                      onClick={() => { setViewingRouteId(row.id); setSubscriberQ(""); setSubscriberDirection("all"); }} 
+                      className="min-w-32 text-right text-primary font-bold hover:bg-primary/10 px-3 py-1.5 rounded-xl transition-colors"
+                      title="عرض قائمة الطلاب المشتركين"
+                    >
+                      <span className="flex items-center gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> {subsCount} طالب</span>
+                      {capacity > 0 && <span className="mt-0.5 block text-[10px] text-muted-foreground tabular-nums">{percentage}% من سعة الحافلة</span>}
+                    </button>
+                  );
+                } 
+              },
+              { 
+                header: "", 
+                key: "actions", 
+                cell: (row: any) => (
+                  <div className="flex items-center justify-end gap-1">
+                    <button 
+                      onClick={() => openEditModal(row)}
+                      className="p-1.5 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors"
+                      title="تعديل بيانات المسار"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => setDeleteConfirmRoute(row)}
+                      className="p-1.5 text-muted-foreground hover:text-danger rounded-lg hover:bg-danger/10 transition-colors"
+                      title="حذف المسار"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) 
+              },
+            ]}
+            empty="لا توجد مسارات حافلات مسجلة تطابق البحث."
+          />
         </PageCard>
       </div>
 
+      {/* ADD / EDIT ROUTE MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
-          <div className="w-full max-w-3xl modal-card-luxury overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-primary/10 shrink-0">
-              <h2 className="text-xl font-black flex items-center gap-2.5 text-primary">
-                <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+          <div className="w-full max-w-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/10 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
                   <Bus className="h-5 w-5" />
                 </div>
-                {editingId ? "تعديل بيانات المسار والترحيل" : "إضافة مسار ترحيل جديد"}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+                <div>
+                  <h2 className="text-lg font-black text-foreground">
+                    {editingId ? "تعديل بيانات مسار النقل" : "إضافة مسار ترحيل وحافلة جديدة"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">تحديد خط السير، بيانات السائق، السعة الاستيعابية، والتكلفة</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 overflow-y-auto custom-scrollbar-modal">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">رقم المسار</label>
-                  <input {...register("id")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" placeholder="RT-XX" readOnly={!!editingId} />
+                  <label className="text-xs font-bold text-muted-foreground">كود المسار</label>
+                  <input {...register("id")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" placeholder="RT-XX" readOnly={!!editingId} />
                 </div>
                 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">اسم المسار / المنطقة <span className="text-danger">*</span></label>
-                  <input {...register("name")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                  <label className="text-xs font-bold text-muted-foreground">اسم المسار / المنطقة <span className="text-destructive">*</span></label>
+                  <input {...register("name")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" placeholder="مثال: مسار الحي الدبلوماسي" />
+                  {errors.name && <p className="text-xs text-destructive font-bold">{errors.name.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">الوجهة / الحي</label>
-                  <input {...register("destination")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" placeholder="مثال: الحي الشرقي، السوق، المحطة الشمالية" />
+                  <label className="text-xs font-bold text-muted-foreground">الوجهة الرئيسية / الأحياء المشمولة</label>
+                  <input {...register("destination")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" placeholder="مثال: الحي الشرقي، السوق، المحطة الشمالية" />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">اسم السائق <span className="text-danger">*</span></label>
-                  <input {...register("driverName")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
-                  {errors.driverName && <p className="text-xs text-destructive">{errors.driverName.message}</p>}
+                  <label className="text-xs font-bold text-muted-foreground">اسم السائق المعتمد <span className="text-destructive">*</span></label>
+                  <input {...register("driverName")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
+                  {errors.driverName && <p className="text-xs text-destructive font-bold">{errors.driverName.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">رقم هاتف السائق <span className="text-danger">*</span></label>
-                  <input {...register("driverPhone")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" dir="ltr" />
-                  {errors.driverPhone && <p className="text-xs text-destructive">{errors.driverPhone.message}</p>}
+                  <label className="text-xs font-bold text-muted-foreground">رقم هاتف السائق <span className="text-destructive">*</span></label>
+                  <input {...register("driverPhone")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" dir="ltr" />
+                  {errors.driverPhone && <p className="text-xs text-destructive font-bold">{errors.driverPhone.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">مشرف المسار</label>
-                  <input {...register("supervisorName")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
+                  <label className="text-xs font-bold text-muted-foreground">مشرف المسار (اختياري)</label>
+                  <input {...register("supervisorName")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">هاتف المشرف</label>
-                  <input {...register("supervisorPhone")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" dir="ltr" />
+                  <label className="text-xs font-bold text-muted-foreground">هاتف المشرف</label>
+                  <input {...register("supervisorPhone")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" dir="ltr" />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">المركبة / رقم اللوحة <span className="text-danger">*</span></label>
-                  <input {...register("vehiclePlate")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" />
-                  {errors.vehiclePlate && <p className="text-xs text-destructive">{errors.vehiclePlate.message}</p>}
+                  <label className="text-xs font-bold text-muted-foreground">رقم لوحة المركبة <span className="text-destructive">*</span></label>
+                  <input {...register("vehiclePlate")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" />
+                  {errors.vehiclePlate && <p className="text-xs text-destructive font-bold">{errors.vehiclePlate.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">عدد المحطات</label>
-                  <input type="number" {...register("stops")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" />
-                  {errors.stops && <p className="text-xs text-destructive">{errors.stops.message}</p>}
+                  <label className="text-xs font-bold text-muted-foreground">عدد محطات التوقف</label>
+                  <input type="number" {...register("stops")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" />
+                  {errors.stops && <p className="text-xs text-destructive font-bold">{errors.stops.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">سعة المركبة</label>
-                  <input type="number" {...register("capacity")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" />
+                  <label className="text-xs font-bold text-muted-foreground">سعة المقاعد بالحافلة</label>
+                  <input type="number" {...register("capacity")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">التكلفة ({currency}) <span className="text-danger">*</span></label>
-                  <input type="number" {...register("feeAmount")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" />
-                  {errors.feeAmount && <p className="text-xs text-destructive">{errors.feeAmount.message}</p>}
+                  <label className="text-xs font-bold text-muted-foreground">رسوم الاشتراك الكامل ({currency}) <span className="text-destructive">*</span></label>
+                  <input type="number" {...register("feeAmount")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" />
+                  {errors.feeAmount && <p className="text-xs text-destructive font-bold">{errors.feeAmount.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">دورة الدفع</label>
-                  <select {...register("feeMode")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer">
+                  <label className="text-xs font-bold text-muted-foreground">دورة الفوترة</label>
+                  <select {...register("feeMode")} className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer">
                     <option value="monthly">شهرياً</option>
-                    <option value="term">نصف سنوي (فصلي)</option>
+                    <option value="term">فصلياً (نصف سنوي)</option>
                     <option value="annual">سنوياً</option>
                   </select>
                 </div>
 
-                <div className="col-span-2 space-y-1.5">
-                  <label className="text-xs font-extrabold text-foreground">ملاحظات تشغيلية</label>
-                  <textarea {...register("notes")} rows={3} className="w-full rounded-xl border border-border/80 bg-background/80 p-3.5 text-sm font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 resize-none" placeholder="نقاط تجمع، تعليمات السائق، أيام التشغيل..." />
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground">ملاحظات تشغيلية</label>
+                  <textarea {...register("notes")} rows={2} className="w-full rounded-xl border border-border/80 bg-background/80 p-3 text-xs font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 resize-none" placeholder="نقاط التجمع، أوقات الانطلاق، ملاحظات السلامة..." />
                 </div>
               </div>
 
-              <div className="pt-3 flex justify-end gap-3 border-t border-border/50 shrink-0">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold text-muted-foreground hover:bg-accent border border-border/80 transition-colors active:scale-[0.98]">
+              <div className="pt-4 flex justify-end gap-2.5 border-t border-border/50 shrink-0">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 text-xs font-bold text-muted-foreground hover:bg-accent border border-border/80 transition-colors">
                   إلغاء
                 </button>
-                <button type="submit" className="rounded-xl bg-primary px-8 py-2.5 text-sm font-extrabold text-primary-foreground hover:bg-primary/90 shadow-md transition-all active:scale-[0.98]">
-                  حفظ البيانات
+                <button type="submit" className="rounded-xl bg-primary px-7 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-[0.98]">
+                  حفظ مسار النقل
                 </button>
               </div>
             </form>
@@ -380,45 +565,49 @@ function TransportRoutes() {
         </div>
       )}
 
-      {/* Viewing Subscribers Modal */}
+      {/* VIEWING SUBSCRIBERS MODAL */}
       {viewingRouteId && viewingRoute && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
-          <div className="w-full max-w-5xl modal-card-luxury max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-border/50 flex justify-between items-start bg-primary/10 shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+          <div className="w-full max-w-4xl modal-card-luxury my-8 overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border border-border/80 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border/50 flex justify-between items-start bg-gradient-to-r from-card via-card/95 to-primary/10 shrink-0">
               <div>
-                <h2 className="text-xl font-black flex items-center gap-2 text-primary">
-                  <Bus className="h-5 w-5" /> قائمة الطلاب المشتركين - {viewingRoute.name}
+                <h2 className="text-lg font-black flex items-center gap-2 text-foreground">
+                  <Bus className="h-5 w-5 text-primary" /> قائمة الطلاب المشتركين - {viewingRoute.name}
                 </h2>
-                <p className="mt-1 text-xs font-bold text-muted-foreground">{viewingRoute.destination || "وجهة غير محددة"} • لوحة المركبة: {viewingRoute.vehiclePlate}</p>
+                <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                  {viewingRoute.destination || "وجهة عامة"} • لوحة الحافلة: {viewingRoute.vehiclePlate} • السائق: {viewingRoute.driverName}
+                </p>
               </div>
-              <button onClick={() => setViewingRouteId(null)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
+              <button onClick={() => setViewingRouteId(null)} className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="p-6 pb-2 grid gap-3 md:grid-cols-4 shrink-0">
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 text-center">
-                <p className="text-xs font-bold text-muted-foreground">المشتركون</p>
-                <p className="text-2xl font-black tabular-nums">{subscribedStudents.length}</p>
+
+            <div className="p-4 grid gap-3 sm:grid-cols-4 shrink-0 bg-muted/20 border-b border-border/60">
+              <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
+                <p className="text-[11px] font-bold text-muted-foreground">المشتركون الحاليون</p>
+                <p className="text-xl font-black text-primary tabular-nums">{subscribedStudents.length}</p>
               </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 text-center">
-                <p className="text-xs font-bold text-muted-foreground">السعة</p>
-                <p className="text-2xl font-black tabular-nums">{viewingRoute.capacity || "-"}</p>
+              <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
+                <p className="text-[11px] font-bold text-muted-foreground">السعة الإجمالية</p>
+                <p className="text-xl font-black tabular-nums">{viewingRoute.capacity || "-"}</p>
               </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 text-center">
-                <p className="text-xs font-bold text-muted-foreground">رسوم المسار</p>
-                <p className="text-2xl font-black text-primary tabular-nums">{viewingRoute.feeAmount.toLocaleString()} {currency}</p>
+              <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
+                <p className="text-[11px] font-bold text-muted-foreground">رسوم الاشتراك</p>
+                <p className="text-xl font-black text-emerald-600 tabular-nums">{viewingRoute.feeAmount.toLocaleString()} {currency}</p>
               </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 text-center">
-                <p className="text-xs font-bold text-muted-foreground">المحطات</p>
-                <p className="text-2xl font-black tabular-nums">{viewingRoute.stops}</p>
+              <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
+                <p className="text-[11px] font-bold text-muted-foreground">المحطات</p>
+                <p className="text-xl font-black tabular-nums">{viewingRoute.stops}</p>
               </div>
             </div>
-            <div className="px-6 py-3 grid gap-3 md:grid-cols-[1fr_180px] shrink-0">
+
+            <div className="p-4 grid gap-3 sm:grid-cols-[1fr_180px] shrink-0">
               <div className="relative">
-                <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input value={subscriberQ} onChange={event => setSubscriberQ(event.target.value)} placeholder="بحث بالطالب أو ولي الأمر أو الفصل..." className="h-11 w-full rounded-xl border border-border/80 bg-background/80 ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input value={subscriberQ} onChange={e => setSubscriberQ(e.target.value)} placeholder="بحث بالاسم أو ولي الأمر أو الصف..." className="h-10 w-full rounded-xl border border-border/80 bg-background/80 ps-9 pe-3 text-xs font-bold outline-none focus:border-primary focus:ring-4 focus:ring-primary/15" />
               </div>
-              <select value={subscriberDirection} onChange={event => setSubscriberDirection(event.target.value)} className="h-11 rounded-xl border border-border/80 bg-background/80 px-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer">
+              <select value={subscriberDirection} onChange={e => setSubscriberDirection(e.target.value)} className="h-10 rounded-xl border border-border/80 bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 cursor-pointer">
                 <option value="all">كل الاتجاهات</option>
                 <option value="round-trip">ذهاب وعودة</option>
                 <option value="going">ذهاب فقط</option>
@@ -426,33 +615,97 @@ function TransportRoutes() {
               </select>
             </div>
             
-            <div className="overflow-auto flex-1 px-6 pb-6 custom-scrollbar-modal">
+            <div className="overflow-auto flex-1 px-4 pb-4 custom-scrollbar-modal">
               {subscribedStudents.length > 0 ? (
                 <div className="rounded-2xl border border-border/60 overflow-hidden">
                   <DataTable
                     rows={subscribedStudents}
                     columns={[
-                      { key: "studentName", header: "اسم الطالب", cell: (r: any) => <span className="font-bold">{r.studentName}</span> },
-                      { key: "studentGrade", header: "الفصل", cell: (r: any) => `${r.studentGrade} / ${r.studentSection}` },
-                      { key: "guardianName", header: "ولي الأمر", cell: (r: any) => r.guardianName },
-                      { key: "direction", header: "نوع الاشتراك", cell: (r: any) => r.direction === 'round-trip' ? 'ذهاب وعودة' : r.direction === 'going' ? 'ذهاب فقط' : 'عودة فقط' },
-                      { key: "fee", header: "الرسوم", cell: (r: any) => `${r.fee.toLocaleString()} ${currency}` },
-                      { key: "studentPhone", header: "رقم التواصل", cell: (r: any) => <span dir="ltr">{r.studentPhone}</span> },
+                      { key: "studentName", header: "اسم الطالب", cell: (r: any) => <span className="font-bold text-foreground text-xs">{r.studentName}</span> },
+                      { key: "studentGrade", header: "الصف والشعبة", cell: (r: any) => <span className="text-xs text-muted-foreground">{r.studentGrade} / {r.studentSection}</span> },
+                      { key: "guardianName", header: "ولي الأمر", cell: (r: any) => <span className="text-xs">{r.guardianName}</span> },
+                      { key: "direction", header: "نوع النقل", cell: (r: any) => <Badge tone={r.direction === 'round-trip' ? 'primary' : 'warning'}>{r.direction === 'round-trip' ? 'ذهاب وعودة' : r.direction === 'going' ? 'ذهاب فقط' : 'عودة فقط'}</Badge> },
+                      { key: "fee", header: "الرسوم", cell: (r: any) => <span className="font-black text-xs tabular-nums text-primary">{r.fee.toLocaleString()} {currency}</span> },
+                      { key: "studentPhone", header: "رقم التواصل", cell: (r: any) => <span className="font-mono text-xs" dir="ltr">{r.studentPhone}</span> },
                     ]}
                   />
                 </div>
               ) : (
                 <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/60">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p className="font-bold text-sm">لا يوجد طلاب مشتركين في هذا المسار حالياً.</p>
+                  <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                  <p className="font-bold text-xs">لا يوجد طلاب مطابقين للبحث في هذا المسار حالياً.</p>
                 </div>
               )}
             </div>
 
-            <div className="p-5 border-t border-border/50 flex justify-end gap-2 shrink-0 bg-muted/10">
-              <button onClick={() => setViewingRouteId(null)} className="rounded-xl px-6 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]">
+            <div className="p-4 border-t border-border/50 flex justify-end gap-2 shrink-0 bg-muted/10">
+              <button onClick={() => setViewingRouteId(null)} className="rounded-xl px-5 py-2 text-xs font-bold border border-border/80 hover:bg-accent transition-colors">
                 إغلاق
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmRoute && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-destructive/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center shadow-inner border border-destructive/20">
+                  <Trash2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-foreground">تأكيد حذف مسار النقل</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">إلغاء المسار من شبكة حافلات المدرسة</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmRoute(null)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm font-bold text-foreground">
+                هل أنت متأكد من رغبتك في حذف مسار الحافلة التالي؟
+              </p>
+
+              <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">اسم المسار:</span>
+                  <span className="font-bold text-foreground">{deleteConfirmRoute.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">السائق:</span>
+                  <span className="font-bold text-foreground">{deleteConfirmRoute.driverName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">رقم المركبة:</span>
+                  <span className="font-bold text-foreground">{deleteConfirmRoute.vehiclePlate}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmRoute(null)}
+                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+                >
+                  تراجع
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
+                >
+                  تأكيد الحذف
+                </button>
+              </div>
             </div>
           </div>
         </div>

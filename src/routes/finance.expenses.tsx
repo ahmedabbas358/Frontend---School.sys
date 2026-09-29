@@ -1,26 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { Plus, TrendingDown, Search, Filter, Printer, Trash2, X, FileText, CreditCard, CheckCircle2, ShieldAlert, ArrowUpRight, DollarSign } from "lucide-react";
+import { Plus, TrendingDown, Search, Filter, Printer, Trash2, X, FileText, CreditCard, CheckCircle2, ShieldAlert, ArrowUpRight, DollarSign, Download, AlertTriangle } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { FinancialCard, SmartAlert, FilterBar } from "@/components/financial-components";
 import { useGlobalStore, Expense } from "@/contexts/GlobalStoreContext";
 import { useWorkflowEngine } from "@/engines/finance/useWorkflowEngine";
 import { toast } from "sonner";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FinanceNavTabs } from "@/components/finance/finance-nav";
 
 export const Route = createFileRoute("/finance/expenses")({
   component: FinanceExpenses,
 });
 
 function FinanceExpenses() {
-  const { currency, allExpenses, allExpenseCategories, allStaff, addExpense, deleteExpense } = useGlobalStore();
+  const { currency, allExpenses, allExpenseCategories, allStaff, addExpense, deleteExpense, allCashSessions, allTreasuries, allBankAccounts } = useGlobalStore();
   const { transitionExpenseStatus } = useWorkflowEngine();
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedExpenseVoucher, setSelectedExpenseVoucher] = useState<any | null>(null);
+  const [deleteConfirmExpense, setDeleteConfirmExpense] = useState<Expense | null>(null);
+
+  const [baseAmount, setBaseAmount] = useState<number | string>("");
+  const [includeVat, setIncludeVat] = useState(false);
 
   const [newExpense, setNewExpense] = useState<Partial<Expense>>({
     title: "",
@@ -35,16 +42,39 @@ function FinanceExpenses() {
 
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newExpense.title || !newExpense.amount || !newExpense.categoryId || !newExpense.beneficiary) {
+    const numBase = Number(baseAmount) || 0;
+    const finalAmount = includeVat ? Math.round(numBase * 1.15) : numBase;
+
+    if (!newExpense.title || !finalAmount || !newExpense.categoryId || !newExpense.beneficiary) {
       toast.error("يرجى تعبئة جميع الحقول الإلزامية");
       return;
     }
-    addExpense(newExpense as Expense);
-    toast.success("تم تسجيل طلب المصروف بنجاح وسند الدفع");
+
+    const openSession = allCashSessions.find(s => s.status === 'open');
+    const voucherId = `EXP-${Date.now().toString().slice(-6)}`;
+    const expenseToSave = {
+      ...newExpense,
+      amount: finalAmount,
+      sessionId: newExpense.method === "cash" && openSession ? openSession.id : undefined,
+    };
+
+    addExpense(expenseToSave as Expense);
+    setSelectedExpenseVoucher({
+      ...expenseToSave,
+      id: voucherId,
+      baseAmount: numBase,
+      vatAmount: includeVat ? Math.round(numBase * 0.15) : 0,
+      includeVat,
+      date: newExpense.date || new Date().toISOString().split('T')[0],
+    });
+
+    toast.success("تم تسجيل طلب المصروف وسند الصرف بنجاح");
     setIsModalOpen(false);
     setNewExpense({
       title: "", amount: 0, date: new Date().toISOString().split('T')[0], categoryId: "", beneficiary: "", method: "bank_transfer", notes: "", status: "submitted"
     });
+    setBaseAmount("");
+    setIncludeVat(false);
   };
 
   const getCategoryName = (id: string) => allExpenseCategories.find(c => c.id === id)?.name || "غير مصنف";
@@ -117,6 +147,46 @@ function FinanceExpenses() {
     methodLabel: getMethodLabel(exp.method)
   }));
 
+  const handleExportCSV = () => {
+    if (filtered.length === 0) {
+      toast.error("لا توجد بيانات لتصديرها");
+      return;
+    }
+
+    const headers = [
+      "رقم السند",
+      "التاريخ",
+      "بيان المصروف",
+      "التصنيف",
+      "المستفيد",
+      "المبلغ",
+      "طريقة الدفع",
+      "الحالة"
+    ];
+
+    const rows = filtered.map((e: any) => [
+      e.id,
+      e.date ? e.date.split("T")[0] : "",
+      `"${e.title?.replace(/"/g, '""') || ''}"`,
+      `"${getCategoryName(e.categoryId)}"`,
+      `"${e.beneficiary?.replace(/"/g, '""') || ''}"`,
+      e.amount || 0,
+      `"${getMethodLabel(e.method)}"`,
+      `"${e.status || ''}"`
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `تقرير_المصروفات_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("تم تصدير تقرير المصروفات بنجاح");
+  };
+
   return (
     <AppShell
       breadcrumb={[
@@ -125,7 +195,13 @@ function FinanceExpenses() {
         { label: "المصروفات التشغيلية والالتزامات" },
       ]}
       actions={
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border px-3.5 text-xs font-bold hover:bg-accent shadow-sm"
+          >
+            <Download className="h-4 w-4 text-primary" /> تصدير CSV
+          </button>
           <button
             onClick={() => setIsPrintOpen(true)}
             className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border px-3.5 text-xs font-extrabold hover:bg-accent shadow-sm"
@@ -142,6 +218,7 @@ function FinanceExpenses() {
       }
     >
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        <FinanceNavTabs activeTab="expenses" />
         
         <SmartAlert 
           type="info"
@@ -243,6 +320,13 @@ function FinanceExpenses() {
               { key: "status", header: "الحالة", cell: (r: any) => getStatusBadge(r.status || "submitted") },
               { key: "actions", header: "إجراءات", cell: (r: any) => (
                   <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setSelectedExpenseVoucher(r)}
+                      className="text-xs font-bold text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-all"
+                      title="معاينة وطباعة سند الصرف"
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
                     {r.status !== "paid" && (
                       <button 
                         onClick={() => {
@@ -255,10 +339,7 @@ function FinanceExpenses() {
                       </button>
                     )}
                     <button 
-                      onClick={() => {
-                        deleteExpense(r.id);
-                        toast.success("تم حذف المصروف بنجاح");
-                      }}
+                      onClick={() => setDeleteConfirmExpense(r)}
                       className="text-xs font-bold text-danger hover:bg-danger/10 p-1.5 rounded-lg transition-all"
                       title="حذف المصروف"
                     >
@@ -276,109 +357,271 @@ function FinanceExpenses() {
         </div>
       </div>
 
-      {/* --- Add Expense Modal --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8">
-            <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-2xl bg-danger/15 text-danger flex items-center justify-center shadow-inner border border-danger/20">
-                  <TrendingDown className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">تسجيل طلب مصروف ونفقة جديدة</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">تسجيل سند صرف جديد وربطه بالمركز المالي</p>
-                </div>
+      {/* --- Add Expense Modal with VAT & Session Awareness --- */}
+      <AdminModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="تسجيل طلب ومصروف نفقة جديد"
+        description="تسجيل سند صرف مالي وقيده في الحسابات والخزينة"
+        icon={TrendingDown}
+        tone="danger"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleAddExpense} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-foreground">بيان ووصف المصروف <span className="text-destructive">*</span></label>
+            <input 
+              type="text" 
+              required 
+              placeholder="مثال: شراء أحبار ومستلزمات مكتبية للإدارة" 
+              value={newExpense.title}
+              onChange={e => setNewExpense(prev => ({ ...prev, title: e.target.value }))}
+              className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-foreground">المبلغ الأساسي ({currency}) <span className="text-destructive">*</span></label>
+              <div className="relative">
+                <DollarSign className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input 
+                  type="number" 
+                  required 
+                  min="1" 
+                  placeholder="0.00" 
+                  value={baseAmount}
+                  onChange={e => setBaseAmount(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-input bg-background/80 pr-10 pl-3.5 text-sm font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-foreground">تصنيف المصروف <span className="text-destructive">*</span></label>
+              <select 
+                required
+                value={newExpense.categoryId}
+                onChange={e => setNewExpense(prev => ({ ...prev, categoryId: e.target.value }))}
+                className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
               >
-                ✕
-              </button>
+                <option value="">-- اختر التصنيف --</option>
+                {allExpenseCategories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* VAT Checkbox & Live Calculation */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/70">
+              <input
+                type="checkbox"
+                id="vat-check"
+                checked={includeVat}
+                onChange={(e) => setIncludeVat(e.target.checked)}
+                className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
+              />
+              <label htmlFor="vat-check" className="text-xs font-bold text-foreground cursor-pointer flex-1">
+                خاضع لضريبة القيمة المضافة (15% VAT)
+              </label>
+              {includeVat && Number(baseAmount) > 0 && (
+                <Badge tone="primary" className="text-[10px] border-primary/30 text-primary">
+                  + {Math.round(Number(baseAmount) * 0.15).toLocaleString()} {currency} ضريبة
+                </Badge>
+              )}
             </div>
 
-            <form onSubmit={handleAddExpense} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-muted-foreground">بيان ووصف المصروف <span className="text-danger">*</span></label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="مثال: شراء أحبار ومستلزمات مكتبية" 
-                  value={newExpense.title}
-                  onChange={e => setNewExpense(prev => ({ ...prev, title: e.target.value }))}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15" 
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-muted-foreground">المبلغ المطلوب ({currency}) <span className="text-danger">*</span></label>
-                  <input 
-                    type="number" 
-                    required 
-                    min="1" 
-                    placeholder="أدخل المبلغ..." 
-                    value={newExpense.amount || ""}
-                    onChange={e => setNewExpense(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-base font-black text-danger shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15" 
-                  />
+            {includeVat && Number(baseAmount) > 0 && (
+              <div className="grid grid-cols-3 gap-2 p-3 bg-primary/5 rounded-xl border border-primary/20 text-center text-xs font-mono">
+                <div>
+                  <span className="block text-[10px] font-sans text-muted-foreground">الأساسي</span>
+                  <span className="font-bold text-foreground">{Number(baseAmount).toLocaleString()} {currency}</span>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-muted-foreground">تصنيف المصروف <span className="text-danger">*</span></label>
-                  <select 
-                    required
-                    value={newExpense.categoryId}
-                    onChange={e => setNewExpense(prev => ({ ...prev, categoryId: e.target.value }))}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-xs font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15 cursor-pointer"
-                  >
-                    <option value="">-- اختر التصنيف --</option>
-                    {allExpenseCategories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                <div>
+                  <span className="block text-[10px] font-sans text-muted-foreground">الضريبة 15%</span>
+                  <span className="font-bold text-primary">{Math.round(Number(baseAmount) * 0.15).toLocaleString()} {currency}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-sans text-muted-foreground">الإجمالي النهائي</span>
+                  <span className="font-black text-destructive">{Math.round(Number(baseAmount) * 1.15).toLocaleString()} {currency}</span>
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-muted-foreground">المستفيد / المورد / الموظف <span className="text-danger">*</span></label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="اسم الشركة أو الموظف المستلم..." 
-                  value={newExpense.beneficiary}
-                  onChange={e => setNewExpense(prev => ({ ...prev, beneficiary: e.target.value }))}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15" 
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-muted-foreground">طريقة الدفع وسداد الصندوق</label>
-                <select 
-                  value={newExpense.method}
-                  onChange={e => setNewExpense(prev => ({ ...prev, method: e.target.value as any }))}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/15 cursor-pointer"
-                >
-                  <option value="bank_transfer">تحويل بنكي</option>
-                  <option value="cash">نقدي (كاش الخزينة)</option>
-                  <option value="card">بطاقة دفع</option>
-                  <option value="cheque">شيك مصرفي</option>
-                </select>
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]">
-                  إلغاء
-                </button>
-                <button type="submit" className="rounded-xl bg-danger px-6 py-2.5 text-sm font-bold text-white hover:bg-danger/90 transition-all shadow-md shadow-danger/20 active:scale-[0.98]">
-                  حفظ وتسجيل المصروف
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-foreground">المستفيد / المورد / الموظف المستلم <span className="text-destructive">*</span></label>
+            <input 
+              type="text" 
+              required 
+              placeholder="اسم الشركة أو الفني أو الموظف المستلم..." 
+              value={newExpense.beneficiary}
+              onChange={e => setNewExpense(prev => ({ ...prev, beneficiary: e.target.value }))}
+              className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-foreground">طريقة الدفع وسداد الصندوق <span className="text-destructive">*</span></label>
+            <select 
+              value={newExpense.method}
+              onChange={e => setNewExpense(prev => ({ ...prev, method: e.target.value as any }))}
+              className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+            >
+              <option value="cash">نقدي (كاش من درج الخزينة)</option>
+              <option value="bank_transfer">تحويل بنكي من حساب المدرسة</option>
+              <option value="card">بطاقة دفع / مدى</option>
+              <option value="cheque">شيك مصرفي</option>
+            </select>
+          </div>
+
+          {newExpense.method === "cash" && (
+            (() => {
+              const openSession = allCashSessions.find(s => s.status === 'open');
+              return (
+                <div className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+                  openSession 
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                    : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${openSession ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                    <span className="font-semibold">
+                      {openSession 
+                        ? `جلسة كاشير نشطة: ${(openSession as any).cashierName || (openSession as any).openedBy || openSession.userId || "أمين الخزينة"} (سيتم خصم المصروف من عهدتها مباشرة)`
+                        : "تنبيه: لا توجد جلسة صندوق مفتوحة حالياً، سيتم قيد المصروف في الخزينة العامة"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-foreground">ملاحظات ورقم الفاتورة المرفقة</label>
+            <input 
+              type="text" 
+              placeholder="رقم الفاتورة الضريبية أو أي تفاصيل..." 
+              value={newExpense.notes}
+              onChange={e => setNewExpense(prev => ({ ...prev, notes: e.target.value }))}
+              className="h-10 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all" 
+            />
+          </div>
+
+          <div className="pt-4 border-t border-border/70 flex justify-end gap-2.5">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 h-11 text-xs font-semibold border border-input bg-background/80 hover:bg-accent transition-all active:scale-[0.98]">
+              إلغاء
+            </button>
+            <button type="submit" className="rounded-xl bg-destructive px-6 h-11 text-xs font-extrabold text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md active:scale-[0.98] flex items-center gap-2">
+              <TrendingDown className="w-4 h-4" /> حفظ واعتماد سند الصرف
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+
+      {/* --- Official Printable Expense Voucher Modal --- */}
+      <AdminModal
+        isOpen={!!selectedExpenseVoucher}
+        onClose={() => setSelectedExpenseVoucher(null)}
+        title="معاينة سند صرف مالي رسمي"
+        description="جاهز للطباعة والتوثيق المالي في الأرشيف"
+        icon={FileText}
+        tone="danger"
+        maxWidth="2xl"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] text-muted-foreground font-mono">سند صرف صادر آلياً من الإدارة المالية</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="h-9 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 shadow hover:bg-primary/90 transition-all"
+              >
+                <Printer className="w-3.5 h-3.5" /> طباعة
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedExpenseVoucher(null)}
+                className="h-9 px-5 rounded-xl border border-input bg-background hover:bg-accent text-xs font-semibold transition-all"
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        }
+      >
+        {selectedExpenseVoucher && (
+          <div className="space-y-5 bg-card">
+            {/* School Header */}
+            <div className="flex justify-between items-center pb-4 border-b-2 border-destructive/20">
+              <div className="text-right">
+                <h2 className="text-sm font-black text-foreground">مجموعة مدارس الأفق النموذجية الأهلية</h2>
+                <p className="text-[11px] text-muted-foreground">الإدارة المالية - قسم المصروفات والعهد</p>
+                <p className="text-[10px] text-muted-foreground">الرقم الضريبي: 310294857200003</p>
+              </div>
+              <div className="text-center">
+                <div className="border-2 border-destructive/40 rounded-2xl px-4 py-1.5 bg-destructive/5">
+                  <span className="text-xs font-black text-destructive">سند صرف مالي معتمد</span>
+                  <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{selectedExpenseVoucher.id}</div>
+                </div>
+              </div>
+              <div className="text-left font-mono text-[11px] text-muted-foreground">
+                <div>التاريخ: {selectedExpenseVoucher.date ? selectedExpenseVoucher.date.split("T")[0] : "-"}</div>
+                <div>الوقت: {new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+            </div>
+
+            {/* Voucher Main Content Table */}
+            <div className="rounded-2xl border border-border/80 overflow-hidden divide-y divide-border/60 text-xs">
+              <div className="flex items-center p-3 bg-muted/20">
+                <span className="w-32 font-bold text-muted-foreground">يصرف إلى المكرم:</span>
+                <span className="font-black text-foreground text-sm flex-1">{selectedExpenseVoucher.beneficiary}</span>
+              </div>
+              <div className="flex items-center p-3">
+                <span className="w-32 font-bold text-muted-foreground">مبلغ وقدره:</span>
+                <span className="font-mono font-black text-destructive text-base flex-1">
+                  {selectedExpenseVoucher.amount.toLocaleString()} {currency}
+                </span>
+                <Badge tone="neutral" className="text-[10px]">{getMethodLabel(selectedExpenseVoucher.method)}</Badge>
+              </div>
+              <div className="flex items-center p-3 bg-muted/20">
+                <span className="w-32 font-bold text-muted-foreground">وذلك عن بيان:</span>
+                <span className="font-semibold text-foreground flex-1">{selectedExpenseVoucher.title}</span>
+                <Badge tone="info" className="text-[10px]">{getCategoryName(selectedExpenseVoucher.categoryId)}</Badge>
+              </div>
+              {selectedExpenseVoucher.notes && (
+                <div className="flex items-center p-3">
+                  <span className="w-32 font-bold text-muted-foreground">ملاحظات ومرجع:</span>
+                  <span className="text-muted-foreground flex-1">{selectedExpenseVoucher.notes}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Signatures & Seal Area */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-dashed border-border/80 text-center text-xs">
+              <div className="space-y-4">
+                <span className="text-muted-foreground font-semibold">إعداد المحاسب المسؤول</span>
+                <div className="h-10 border-b border-border/80 flex items-end justify-center pb-1 text-[10px] text-muted-foreground/60">
+                  أمين الصندوق والخزينة
+                </div>
+              </div>
+              <div className="space-y-4">
+                <span className="text-muted-foreground font-semibold">اعتماد المدير المالي / المدير</span>
+                <div className="h-10 border-b border-border/80 flex items-end justify-center pb-1 text-[10px] text-muted-foreground/60">
+                  يعتمد للصرف
+                </div>
+              </div>
+              <div className="space-y-4">
+                <span className="text-muted-foreground font-semibold">توقيع المستلم للنفقة</span>
+                <div className="h-10 border-b border-border/80 flex items-end justify-center pb-1 text-[10px] text-muted-foreground/60">
+                  {selectedExpenseVoucher.beneficiary}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </AdminModal>
 
       {/* --- Advanced Print Engine --- */}
       <AdvancedPrintEngine
@@ -388,6 +631,62 @@ function FinanceExpenses() {
         data={printData}
         templates={printTemplates}
       />
+
+      {/* --- Delete Confirmation Luxury Modal --- */}
+      <AdminModal
+        isOpen={!!deleteConfirmExpense}
+        onClose={() => setDeleteConfirmExpense(null)}
+        title="تأكيد حذف سند المصروف"
+        description="هل أنت متأكد من رغبتك في حذف سند المصروف التالي؟ لا يمكن التراجع عن هذا الإجراء."
+        icon={AlertTriangle}
+        tone="danger"
+        maxWidth="md"
+        footer={
+          <div className="flex gap-3 w-full">
+            <button 
+              type="button"
+              onClick={() => {
+                if (deleteConfirmExpense) {
+                  deleteExpense(deleteConfirmExpense.id);
+                  toast.success("تم حذف سند المصروف بنجاح");
+                  setDeleteConfirmExpense(null);
+                }
+              }}
+              className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 font-extrabold py-2.5 rounded-xl shadow-md text-xs transition-all active:scale-[0.98]"
+            >
+              تأكيد الحذف
+            </button>
+            <button 
+              type="button"
+              onClick={() => setDeleteConfirmExpense(null)}
+              className="flex-1 border border-input bg-background hover:bg-accent py-2.5 rounded-xl text-xs font-bold transition-all"
+            >
+              إلغاء
+            </button>
+          </div>
+        }
+      >
+        {deleteConfirmExpense && (
+          <div className="p-3.5 bg-muted/40 rounded-xl border border-border/70 text-xs space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground font-bold">رقم السند:</span>
+              <span className="font-mono font-bold text-foreground">{deleteConfirmExpense.id}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground font-bold">البيان:</span>
+              <span className="font-extrabold text-foreground">{deleteConfirmExpense.title}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground font-bold">المستفيد:</span>
+              <span className="font-bold text-foreground">{deleteConfirmExpense.beneficiary}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground font-bold">المبلغ:</span>
+              <span className="font-black text-danger tabular-nums text-sm">{deleteConfirmExpense.amount.toLocaleString()} {currency}</span>
+            </div>
+          </div>
+        )}
+      </AdminModal>
 
     </AppShell>
   );

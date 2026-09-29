@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { AppShell, PageCard } from "@/components/app-shell";
 import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
 import { useGlobalStore, Exam, ExamSubject } from "@/contexts/GlobalStoreContext";
+import { ExamsNavTabs } from "@/components/exams/exams-nav";
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
 import { 
@@ -22,13 +23,20 @@ import {
   Info,
   Calendar,
   Eye,
+  EyeOff,
   FileText,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  GraduationCap,
+  Layers3,
+  Users,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { LuxurySelect, LuxurySelectOption } from "@/components/ui/luxury-select";
 
 export const Route = createFileRoute("/exams/")({
   component: ExamsPlanningPage,
@@ -85,33 +93,31 @@ function ExamsPlanningPage() {
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الاختبارات", to: "/exams" }, { label: "الجدولة والتخطيط" }]}>
       <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
+        {/* Unified Module Navigation */}
+        <ExamsNavTabs activeTab="schedule" />
+
         {/* Navigation Tabs and Quick Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-2">
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
-            <button 
-              onClick={() => setActiveTab("periods")}
-              className={`pb-2 px-3 font-bold text-sm sm:text-base transition-all border-b-2 flex items-center gap-2 shrink-0 ${activeTab === "periods" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <CalendarDays className="w-4 h-4" /> فترات الاختبارات
-            </button>
-            <button 
-              onClick={() => setActiveTab("registry")}
-              className={`pb-2 px-3 font-bold text-sm sm:text-base transition-all border-b-2 flex items-center gap-2 shrink-0 ${activeTab === "registry" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Layers className="w-4 h-4" /> سجل جداول الفصول والشعب
-            </button>
-            <button 
-              onClick={() => setActiveTab("schedule")}
-              className={`pb-2 px-3 font-bold text-sm sm:text-base transition-all border-b-2 flex items-center gap-2 shrink-0 ${activeTab === "schedule" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Clock className="w-4 h-4" /> جدولة المواد والقاعات
-            </button>
-            <button 
-              onClick={() => setActiveTab("timetable")}
-              className={`pb-2 px-3 font-bold text-sm sm:text-base transition-all border-b-2 flex items-center gap-2 shrink-0 ${activeTab === "timetable" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <Printer className="w-4 h-4" /> جداول الطباعة المخصصة
-            </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-1.5 rounded-2xl bg-muted/40 border border-border/60 shadow-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: "periods", label: "فترات الاختبارات", icon: CalendarDays },
+              { id: "registry", label: "سجل جداول الفصول والشعب", icon: Layers },
+              { id: "schedule", label: "جدولة المواد والقاعات", icon: Clock },
+              { id: "timetable", label: "جداول الطباعة المخصصة", icon: Printer },
+            ].map(t => (
+              <button 
+                key={t.id}
+                onClick={() => setActiveTab(t.id as any)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all ${
+                  activeTab === t.id 
+                    ? "bg-card text-foreground shadow-xs border border-border/80" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                }`}
+              >
+                <t.icon className={`w-4 h-4 ${activeTab === t.id ? "text-primary" : "text-muted-foreground"}`} />
+                <span>{t.label}</span>
+              </button>
+            ))}
           </div>
 
           <button
@@ -122,10 +128,10 @@ function ExamsPlanningPage() {
                 toast.success("تم توليد واستعادة جداول الاختبارات النموذجية بنجاح!");
               }
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary font-black text-xs hover:bg-primary/20 transition-all shadow-sm shrink-0 self-start sm:self-auto active:scale-[0.98]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary font-black text-xs hover:bg-primary/20 transition-all shadow-sm shrink-0 active:scale-[0.98]"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>توليد الجداول والبيانات النموذجية</span>
+            <span>توليد الجداول النموذجية</span>
           </button>
         </div>
 
@@ -740,32 +746,54 @@ function ClassTimetablesRegistryView({ onSelectClassForSchedule, onSelectClassFo
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Period Selector */}
-          <select 
-            value={selectedExamId} 
-            onChange={e => setSelectedExamId(e.target.value)} 
-            className="h-10 rounded-xl border border-border/70 bg-background px-3 font-black text-xs min-w-[200px]"
-          >
-            {(activeStageExams || []).map(ex => <option key={ex.id} value={ex.id}>{ex.name} ({ex.term})</option>)}
-          </select>
+          <div className="min-w-[210px]">
+            <LuxurySelect 
+              value={selectedExamId} 
+              onChange={val => setSelectedExamId(val)} 
+              icon={CalendarDays}
+              options={(activeStageExams || []).map(ex => ({
+                value: ex.id,
+                label: ex.name,
+                sublabel: ex.term
+              }))}
+            />
+          </div>
+
+          {/* Grade Filter */}
+          <div className="min-w-[160px]">
+            <LuxurySelect 
+              value={selectedGradeFilter} 
+              onChange={val => setSelectedGradeFilter(val)} 
+              icon={GraduationCap}
+              options={[
+                { value: "", label: "جميع الصفوف" },
+                ...stageGrades.map(g => ({ value: g, label: g }))
+              ]}
+            />
+          </div>
 
           {/* Batch Print Buttons */}
-          <button
-            onClick={() => { setBatchPrintMode("student"); setIsBatchPrintOpen(true); }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground font-black text-xs hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98]"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>طباعة جداول الطلاب للجميع</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setBatchPrintMode("student"); setIsBatchPrintOpen(true); }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-xs hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98]"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>طباعة جداول الطلاب</span>
+            </button>
 
-          <button
-            onClick={() => { setBatchPrintMode("admin"); setIsBatchPrintOpen(true); }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border/80 bg-background font-bold text-xs hover:bg-accent transition-all shadow-sm active:scale-[0.98]"
-          >
-            <Printer className="w-3.5 h-3.5 text-primary" />
-            <span>طباعة كشوف اللجان (إداري)</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => { setBatchPrintMode("admin"); setIsBatchPrintOpen(true); }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-border/80 bg-background font-bold text-xs hover:bg-accent transition-all shadow-sm active:scale-[0.98]"
+            >
+              <Printer className="w-3.5 h-3.5 text-primary" />
+              <span>كشوف اللجان (إداري)</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1090,32 +1118,38 @@ function ExamSubjectsScheduleView({ initialGradeFilter = "", initialSectionFilte
       >
         {/* Filters */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
-          <div>
-            <label className="text-xs font-bold text-muted-foreground ml-2 block mb-1">فترة الاختبار:</label>
-            <select 
+          <div className="min-w-[220px]">
+            <LuxurySelect 
               value={selectedExamId} 
-              onChange={e => setSelectedExamId(e.target.value)} 
-              className="h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs min-w-[200px]"
-            >
-              <option value="">كل فترات الاختبارات</option>
-              {(activeStageExams || []).map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
-            </select>
+              onChange={val => setSelectedExamId(val)} 
+              icon={CalendarDays}
+              label="فترة الاختبار"
+              options={[
+                { value: "", label: "كل فترات الاختبارات" },
+                ...(activeStageExams || []).map(ex => ({
+                  value: ex.id,
+                  label: ex.name,
+                  sublabel: ex.term
+                }))
+              ]}
+            />
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-muted-foreground ml-2 block mb-1">تصفية حسب الصف:</label>
-            <select 
+          <div className="min-w-[180px]">
+            <LuxurySelect 
               value={selectedGradeFilter} 
-              onChange={e => setSelectedGradeFilter(e.target.value)} 
-              className="h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs min-w-[160px]"
-            >
-              <option value="">كل الصفوف</option>
-              {stageGrades.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+              onChange={val => setSelectedGradeFilter(val)} 
+              icon={GraduationCap}
+              label="تصفية حسب الصف"
+              options={[
+                { value: "", label: "كل الصفوف" },
+                ...stageGrades.map(g => ({ value: g, label: g }))
+              ]}
+            />
           </div>
 
-          <div className="mr-auto self-end text-xs text-muted-foreground font-bold">
-            عدد المواد المجدولة: <span className="text-foreground font-black">{filteredSubjects.length}</span>
+          <div className="mr-auto self-end text-xs text-muted-foreground font-bold pb-1">
+            عدد المواد المجدولة: <span className="text-foreground font-black text-xs px-2.5 py-1 rounded-xl bg-primary/10 text-primary border border-primary/20">{filteredSubjects.length}</span>
           </div>
         </div>
 
@@ -1551,6 +1585,8 @@ function ExamTimetableView({
   const [selectedGrade, setSelectedGrade] = useState<string>(initialGrade || stageGrades[0] || "");
   const [selectedSectionId, setSelectedSectionId] = useState<string>(initialSectionId || "");
   const [timetableMode, setTimetableMode] = useState<"student" | "admin">(initialMode);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [showRealisticPreview, setShowRealisticPreview] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
 
   const currentExam = useMemo(() => {
@@ -1558,7 +1594,7 @@ function ExamTimetableView({
   }, [activeStageExams, selectedExamId]);
 
   const sectionsForGrade = useMemo(() => {
-    return (activeStageSections || []).filter(s => s.grade === selectedGrade);
+    return (activeStageSections || []).filter(s => s.grade === selectedGrade || normalizeGrade(s.grade) === normalizeGrade(selectedGrade));
   }, [activeStageSections, selectedGrade]);
 
   const timetableItems = useMemo(() => {
@@ -1749,206 +1785,234 @@ function ExamTimetableView({
   return (
     <div className="space-y-6">
       <PageCard
-        title="جدول الامتحانات المطبوع (جانب طلابي وجانب إداري)"
-        description="معاينة وإصدار جداول الامتحانات الرسمية سواء الموجهة للطلاب وأولياء الأمور أو كشوفات اللجان والمراقبين الإدارية"
+        title="جدول الامتحانات المعتمد والمطبوع"
+        description="معاينة وإصدار الجداول الرسمية المعتمدة للطلاب وأولياء الأمور أو كشوف لجان الكنترول والمراقبين الإدارية"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode Switcher: Table vs Cards */}
+            <div className="flex items-center p-1 rounded-xl bg-muted/60 border border-border/70">
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                  viewMode === "table"
+                    ? "bg-card text-primary shadow-xs border border-border/60"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="عرض الجدول التنفيذي"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">جدول تنفيذي</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("cards")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                  viewMode === "cards"
+                    ? "bg-card text-primary shadow-xs border border-border/60"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="عرض البطاقات"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">بطاقات</span>
+              </button>
+            </div>
+
+            {/* Toggle Realistic Sheet Preview */}
+            <button
+              type="button"
+              onClick={() => setShowRealisticPreview(prev => !prev)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-black transition-all active:scale-[0.98] ${
+                showRealisticPreview
+                  ? "bg-primary/15 border-primary/40 text-primary"
+                  : "bg-background border-border/80 text-foreground hover:bg-muted"
+              }`}
+            >
+              {showRealisticPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span>{showRealisticPreview ? "إخفاء الورقة الرسمية" : "معاينة الورقة الرسمية"}</span>
+            </button>
+
+            {/* Print Button */}
             <button 
+              type="button"
               onClick={() => setIsPrintOpen(true)}
               disabled={timetableItems.length === 0}
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-extrabold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors shadow-sm text-xs disabled:opacity-50"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-extrabold px-4 py-2 rounded-xl hover:bg-primary/90 transition-all shadow-sm text-xs disabled:opacity-50 active:scale-[0.98]"
             >
-              <Printer className="w-4 h-4" /> طباعة {timetableMode === "student" ? "جدول الطلاب" : "كشف اللجان الإداري"}
+              <Printer className="w-4 h-4" />
+              <span>طباعة {timetableMode === "student" ? "جدول الطلاب" : "كشف اللجان"}</span>
             </button>
           </div>
         }
       >
-        {/* Mode Switcher Tabs */}
-        <div className="flex gap-2 p-1 bg-muted/40 rounded-xl border border-border/50 max-w-md mb-5">
-          <button
-            onClick={() => setTimetableMode("student")}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-black transition-all ${timetableMode === "student" ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            جدول الطلاب وأولياء الأمور
-          </button>
-          <button
-            onClick={() => setTimetableMode("admin")}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-black transition-all ${timetableMode === "admin" ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            كشف اللجان والمراقبين (إداري)
-          </button>
-        </div>
-
-        {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-4 mb-6 pb-4 border-b border-border/50">
-          <div>
-            <label className="text-xs font-bold text-muted-foreground ml-2 block mb-1">فترة الاختبار:</label>
-            <select 
-              value={selectedExamId} 
-              onChange={e => setSelectedExamId(e.target.value)} 
-              className="h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs min-w-[220px]"
+        {/* Audience Segmented Switcher & Stats */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-border/60">
+          <div className="inline-flex p-1 bg-muted/50 rounded-2xl border border-border/60 shadow-xs max-w-md">
+            <button
+              type="button"
+              onClick={() => setTimetableMode("student")}
+              className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-black transition-all ${
+                timetableMode === "student" 
+                  ? "bg-card text-primary shadow-xs border border-border/70" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+              }`}
             >
-              {(activeStageExams || []).map(ex => <option key={ex.id} value={ex.id}>{ex.name} ({ex.term})</option>)}
-            </select>
+              <Users className="w-4 h-4" />
+              <span>جدول الطلاب وأولياء الأمور</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTimetableMode("admin")}
+              className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-black transition-all ${
+                timetableMode === "admin" 
+                  ? "bg-card text-primary shadow-xs border border-border/70" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>كشف اللجان والمراقبين (إداري)</span>
+            </button>
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-muted-foreground ml-2 block mb-1">الصف الدراسي:</label>
-            <select 
-              value={selectedGrade} 
-              onChange={e => { setSelectedGrade(e.target.value); setSelectedSectionId(""); }} 
-              className="h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs min-w-[160px]"
-            >
-              {stageGrades.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-muted-foreground ml-2 block mb-1">الشعبة (اختياري):</label>
-            <select 
-              value={selectedSectionId} 
-              onChange={e => setSelectedSectionId(e.target.value)} 
-              className="h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs min-w-[150px]"
-            >
-              <option value="">جميع الشعب</option>
-              {sectionsForGrade.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
-            </select>
-          </div>
-
-          <div className="mr-auto self-end">
-            <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
               {timetableItems.length} مواد مجدولة
             </span>
+            {timetableItems.length > 0 && (
+              <span className="text-xs font-bold text-muted-foreground tabular-nums">
+                من {timetableItems[0]?.date} إلى {timetableItems[timetableItems.length - 1]?.date}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Timetable Card Display */}
+        {/* Filter Controls with LuxurySelect */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 p-4 rounded-2xl bg-muted/20 border border-border/50">
+          <div>
+            <LuxurySelect
+              label="فترة الاختبار"
+              icon={CalendarDays}
+              value={selectedExamId}
+              onChange={val => setSelectedExamId(val)}
+              options={(activeStageExams || []).map(ex => ({
+                value: ex.id,
+                label: ex.name,
+                sublabel: ex.term,
+                badge: ex.status === "ongoing" ? "جارٍ" : ex.status === "upcoming" ? "قادم" : undefined,
+                badgeTone: ex.status === "ongoing" ? "warning" : "primary"
+              }))}
+            />
+          </div>
+
+          <div>
+            <LuxurySelect
+              label="الصف الدراسي"
+              icon={GraduationCap}
+              value={selectedGrade}
+              onChange={val => {
+                setSelectedGrade(val);
+                setSelectedSectionId("");
+              }}
+              options={stageGrades.map(g => ({
+                value: g,
+                label: g
+              }))}
+            />
+          </div>
+
+          <div>
+            <LuxurySelect
+              label="الشعبة (اختياري)"
+              icon={Layers3}
+              value={selectedSectionId}
+              onChange={val => setSelectedSectionId(val)}
+              options={[
+                { value: "", label: "جميع الشعب" },
+                ...sectionsForGrade.map(s => ({
+                  value: s.id,
+                  label: `شعبة ${s.name}`
+                }))
+              ]}
+            />
+          </div>
+        </div>
+
+        {/* Timetable Display */}
         {timetableItems.length === 0 ? (
-          <div className="py-16 text-center text-muted-foreground space-y-3">
+          <div className="py-16 text-center text-muted-foreground space-y-3 border-2 border-dashed border-border/60 rounded-3xl p-6 bg-muted/10">
             <Calendar className="w-12 h-12 mx-auto opacity-30 text-primary" />
             <p className="font-bold text-sm">لا توجد مواد مجدولة لهذا الصف في فترة الاختبار المحددة.</p>
             <p className="text-xs">يمكنك الانتقال لتبويب "جدولة المواد والقاعات" لإضافة مواعيد المواد لهذا الصف.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {timetableItems.map((item, idx) => {
-                const sub = activeStageSubjects.find(s => s.id === item.subjectId);
-                const startTime = item.startTime || "08:00";
-                const dur = item.duration || 90;
-                const endTime = calculateEndTime(startTime, dur);
-                const dayName = getArabicDayName(item.date);
-                const secName = item.sectionId ? activeStageSections.find(s => s.id === item.sectionId)?.name : "جميع الشعب";
-
-                return (
-                  <div key={item.id} className="p-4 rounded-2xl border border-border/60 bg-card/60 shadow-sm hover:border-primary/40 transition-all space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">
-                        {dayName}
-                      </span>
-                      <span className="text-xs font-bold text-muted-foreground tabular-nums" dir="ltr">
-                        {item.date}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h4 className="text-base font-black text-foreground">{sub?.name || item.subjectId}</h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">الصف: {item.grade} • شعبة: {secName}</p>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/40 grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-muted-foreground block text-[10px] font-bold">التوقيت:</span>
-                        <span className="font-bold tabular-nums" dir="ltr">{startTime} - {endTime} ({dur} د)</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block text-[10px] font-bold">القاعة / اللجنة:</span>
-                        <span className="font-bold">{item.room || "قاعة عامة"}</span>
-                      </div>
-                    </div>
-
-                    {timetableMode === "admin" && (
-                      <div className="pt-2 border-t border-border/40 text-xs">
-                        <span className="text-muted-foreground block text-[10px] font-bold">المراقب المكلف:</span>
-                        <span className="font-bold text-primary">{item.invigilator || "المشرف الأكاديمي المناوب"}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            {/* Live In-Page Realistic Paper Sheet Preview */}
-            <div className="pt-6 border-t border-border/60 space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-foreground flex items-center gap-2">
-                  <Printer className="w-4 h-4 text-primary" />
-                  <span>معاينة الورقة المطبوعة الفعلية ({timetableMode === "student" ? "نسخة الطلاب وأولياء الأمور" : "كشف اللجان والمراقبين للإدارة"})</span>
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setIsPrintOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground font-black text-xs hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98]"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>فتح نافذة الطباعة / تصدير PDF</span>
-                </button>
-              </div>
-
-              {/* Realistic Paper Container */}
-              <div className="p-8 border-2 border-border/80 rounded-3xl bg-background shadow-lg max-w-4xl mx-auto space-y-6 text-foreground" dir="rtl">
-                {/* Header */}
-                <div className="text-center border-b-2 border-primary/40 pb-4 space-y-1.5">
-                  <div className="flex justify-between items-center text-xs font-bold text-muted-foreground pb-1">
-                    <span>المملكة العربية السعودية • وزارة التعليم</span>
-                    <span>مجمع مدارس المستقبل الأهلية النموذجية</span>
-                  </div>
-                  <h2 className="text-2xl font-black text-primary tracking-wide">
-                    {timetableMode === "student" ? "جدول اختبارات الفصل الدراسي المعتمد" : "كشف لجان الامتحانات وتوزيع الملاحظين والمراقبين"}
-                  </h2>
-                  <p className="text-sm font-bold text-foreground">
-                    فترة: <span className="text-primary font-black">{currentExam?.name || "اختبارات الفصل الدراسي"}</span> • الصف: <span className="text-primary font-black">{selectedGrade}</span> {selectedSectionId ? `(شعبة ${sectionsForGrade.find(s => s.id === selectedSectionId)?.name})` : "(جميع الشعب)"}
-                  </p>
-                </div>
-
-                {/* Table */}
-                <table className="w-full border-collapse border border-foreground/30 text-xs">
+          <div className="space-y-6">
+            {viewMode === "table" ? (
+              /* Executive Table View */
+              <div className="overflow-x-auto rounded-2xl border border-border/70 shadow-xs bg-card/60">
+                <table className="w-full border-collapse text-xs">
                   <thead>
-                    <tr className="bg-muted/70 text-foreground">
-                      <th className="border border-foreground/30 p-2.5 text-center font-black">اليوم</th>
-                      <th className="border border-foreground/30 p-2.5 text-center font-black">التاريخ</th>
-                      <th className="border border-foreground/30 p-2.5 text-right font-black">المادة الدراسية</th>
-                      <th className="border border-foreground/30 p-2.5 text-center font-black">وقت البدء</th>
-                      <th className="border border-foreground/30 p-2.5 text-center font-black">وقت الانتهاء</th>
-                      <th className="border border-foreground/30 p-2.5 text-center font-black">المدة</th>
-                      <th className="border border-foreground/30 p-2.5 text-center font-black">القاعة / اللجنة</th>
+                    <tr className="bg-muted/70 border-b border-border/80 text-foreground">
+                      <th className="py-3 px-4 text-center font-black">اليوم والتاريخ</th>
+                      <th className="py-3 px-4 text-right font-black">المادة الدراسية</th>
+                      <th className="py-3 px-4 text-center font-black">الصف / الشعبة</th>
+                      <th className="py-3 px-4 text-center font-black">التوقيت والمدة</th>
+                      <th className="py-3 px-4 text-center font-black">القاعة / اللجنة</th>
                       {timetableMode === "admin" && (
                         <>
-                          <th className="border border-foreground/30 p-2.5 text-right font-black">المراقب المكلف</th>
-                          <th className="border border-foreground/30 p-2.5 text-center font-black w-24">توقيع الاستلام</th>
+                          <th className="py-3 px-4 text-right font-black">المراقب المكلف</th>
+                          <th className="py-3 px-4 text-center font-black">توقيع الاستلام</th>
                         </>
                       )}
                     </tr>
                   </thead>
-                  <tbody>
-                    {timetableItems.map((item, idx) => {
+                  <tbody className="divide-y divide-border/50">
+                    {timetableItems.map((item) => {
                       const sub = activeStageSubjects.find(s => s.id === item.subjectId);
                       const start = item.startTime || "08:00";
                       const dur = item.duration || 90;
                       const end = calculateEndTime(start, dur);
                       const dayName = getArabicDayName(item.date);
+                      const secName = item.sectionId ? activeStageSections.find(s => s.id === item.sectionId)?.name : "جميع الشعب";
+
                       return (
-                        <tr key={item.id} className={idx % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                          <td className="border border-foreground/30 p-2.5 text-center font-bold">{dayName}</td>
-                          <td className="border border-foreground/30 p-2.5 text-center tabular-nums" dir="ltr">{item.date}</td>
-                          <td className="border border-foreground/30 p-2.5 font-black text-foreground">{sub?.name || item.subjectId}</td>
-                          <td className="border border-foreground/30 p-2.5 text-center tabular-nums font-bold" dir="ltr">{start}</td>
-                          <td className="border border-foreground/30 p-2.5 text-center tabular-nums font-bold" dir="ltr">{end}</td>
-                          <td className="border border-foreground/30 p-2.5 text-center tabular-nums">{dur} دقيقة</td>
-                          <td className="border border-foreground/30 p-2.5 text-center font-black">{item.room || "قاعة عامة"}</td>
+                        <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-black text-xs">
+                              {dayName}
+                            </span>
+                            <span className="block text-[11px] font-bold text-muted-foreground tabular-nums mt-1" dir="ltr">
+                              {item.date}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
+                              <span className="font-black text-foreground text-sm">{sub?.name || item.subjectId}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="font-extrabold text-foreground block">{item.grade}</span>
+                            <span className="text-[11px] text-muted-foreground">شعبة {secName}</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="font-bold tabular-nums text-foreground block text-xs" dir="ltr">{start} - {end}</span>
+                            <span className="text-[10px] text-muted-foreground font-semibold">({dur} دقيقة)</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-secondary text-secondary-foreground font-bold text-xs">
+                              <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                              <span>{item.room || "قاعة عامة"}</span>
+                            </span>
+                          </td>
                           {timetableMode === "admin" && (
                             <>
-                              <td className="border border-foreground/30 p-2.5 font-bold text-primary">{item.invigilator || "مشرف اللجنة المناوب"}</td>
-                              <td className="border border-foreground/30 p-2.5 text-center text-[10px] text-muted-foreground">..................</td>
+                              <td className="py-3.5 px-4 font-bold text-primary text-xs">
+                                {item.invigilator || "المشرف الأكاديمي المناوب"}
+                              </td>
+                              <td className="py-3.5 px-4 text-center text-muted-foreground text-[10px]">
+                                <span className="inline-block w-24 border-b border-dashed border-border/80 pb-3"></span>
+                              </td>
                             </>
                           )}
                         </tr>
@@ -1956,40 +2020,176 @@ function ExamTimetableView({
                     })}
                   </tbody>
                 </table>
+              </div>
+            ) : (
+              /* Balanced Cards Grid */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {timetableItems.map((item) => {
+                  const sub = activeStageSubjects.find(s => s.id === item.subjectId);
+                  const startTime = item.startTime || "08:00";
+                  const dur = item.duration || 90;
+                  const endTime = calculateEndTime(startTime, dur);
+                  const dayName = getArabicDayName(item.date);
+                  const secName = item.sectionId ? activeStageSections.find(s => s.id === item.sectionId)?.name : "جميع الشعب";
 
-                {/* Footer Notes / Signatures */}
-                {timetableMode === "student" ? (
-                  <div className="p-4 border border-border/80 rounded-2xl bg-muted/20 text-xs space-y-1.5">
-                    <p className="font-black text-primary">توجيهات وضوابط أداء الاختبارات لأبنائنا الطلاب وأولياء الأمور:</p>
-                    <p className="text-muted-foreground">• الحضور إلى مقر المدرسة قبل موعد الاختبار بـ 15 دقيقة على الأقل، ولن يسمح بدخول المتأخرين بعد بدء الاختبار.</p>
-                    <p className="text-muted-foreground">• إحضار كافة الأدوات والقرطاسية المدرسية اللازمة للاختبار، ويمنع تبادل الأدوات داخل اللجان.</p>
-                    <p className="text-muted-foreground">• يمنع منعاً باتاً إدخال أجهزة الهواتف المحمولة أو الساعات الذكية إلى قاعات ولجان الاختبارات.</p>
-                    <p className="text-muted-foreground">• الالتزام بالهدوء التام والزي المدرسي المعتمد طوال فترة أداء الاختبارات.</p>
-                  </div>
-                ) : (
-                  <div className="p-4 border border-foreground/30 rounded-2xl bg-muted/20 text-xs space-y-1.5">
-                    <p className="font-black text-foreground">تعليمات تنظيم لجان الكنترول والمراقبة:</p>
-                    <p className="text-muted-foreground">• يستلم الملاحظ مظروف الأسئلة من غرفة الكنترول قبل موعد الاختبار بـ 20 دقيقة، مع التوقيع بالسجل الرسمي.</p>
-                    <p className="text-muted-foreground">• التأكد من مطابقة عدد أوراق الإجابة لعدد الطلاب الحاضرين وتدوين الغياب فوراً في محضر اللجنة.</p>
-                  </div>
-                )}
+                  return (
+                    <div key={item.id} className="p-4 rounded-2xl border border-border/70 bg-card/70 shadow-xs hover:border-primary/50 transition-all space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-primary/10 text-primary">
+                            {dayName}
+                          </span>
+                          <span className="text-xs font-bold text-muted-foreground tabular-nums" dir="ltr">
+                            {item.date}
+                          </span>
+                        </div>
 
-                <div className="grid grid-cols-3 pt-4 text-center text-xs font-black">
-                  <div>
-                    <p className="text-muted-foreground mb-6">{timetableMode === "student" ? "المرشد الطلابي" : "مسؤول تسليم اللجان"}</p>
-                    <p className="border-t border-dashed border-foreground/40 pt-1 w-36 mx-auto">التوقيع</p>
+                        <div>
+                          <h4 className="text-sm font-black text-foreground">{sub?.name || item.subjectId}</h4>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{item.grade} • شعبة {secName}</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-border/50 space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground block text-[10px] font-bold">التوقيت:</span>
+                            <span className="font-bold tabular-nums" dir="ltr">{startTime} - {endTime}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-[10px] font-bold">القاعة:</span>
+                            <span className="font-bold text-foreground truncate block">{item.room || "قاعة عامة"}</span>
+                          </div>
+                        </div>
+
+                        {timetableMode === "admin" && (
+                          <div className="pt-2 border-t border-border/40 text-xs">
+                            <span className="text-muted-foreground block text-[10px] font-bold">المراقب المكلف:</span>
+                            <span className="font-bold text-primary truncate block">{item.invigilator || "المشرف الأكاديمي المناوب"}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Collapsible Live In-Page Realistic Paper Sheet Preview */}
+            {showRealisticPreview && (
+              <div className="pt-6 border-t border-border/60 space-y-4 animate-in fade-in duration-300">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-foreground flex items-center gap-2">
+                    <Printer className="w-4 h-4 text-primary" />
+                    <span>معاينة الورقة المطبوعة الفعلية ({timetableMode === "student" ? "نسخة الطلاب وأولياء الأمور" : "كشف اللجان والمراقبين للإدارة"})</span>
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrintOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground font-black text-xs hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98]"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>فتح نافذة الطباعة / تصدير PDF</span>
+                  </button>
+                </div>
+
+                {/* Realistic Paper Container */}
+                <div className="p-8 border-2 border-border/80 rounded-3xl bg-background shadow-lg max-w-4xl mx-auto space-y-6 text-foreground" dir="rtl">
+                  {/* Header */}
+                  <div className="text-center border-b-2 border-primary/40 pb-4 space-y-1.5">
+                    <div className="flex justify-between items-center text-xs font-bold text-muted-foreground pb-1">
+                      <span>المملكة العربية السعودية • وزارة التعليم</span>
+                      <span>مجمع مدارس المستقبل الأهلية النموذجية</span>
+                    </div>
+                    <h2 className="text-2xl font-black text-primary tracking-wide">
+                      {timetableMode === "student" ? "جدول اختبارات الفصل الدراسي المعتمد" : "كشف لجان الامتحانات وتوزيع الملاحظين والمراقبين"}
+                    </h2>
+                    <p className="text-sm font-bold text-foreground">
+                      فترة: <span className="text-primary font-black">{currentExam?.name || "اختبارات الفصل الدراسي"}</span> • الصف: <span className="text-primary font-black">{selectedGrade}</span> {selectedSectionId ? `(شعبة ${sectionsForGrade.find(s => s.id === selectedSectionId)?.name})` : "(جميع الشعب)"}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground mb-6">رئيس لجنة الكنترول والاختبارات</p>
-                    <p className="border-t border-dashed border-foreground/40 pt-1 w-36 mx-auto">المراجعة والتدقيق</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground mb-6">مدير المدرسة والختم الرسمي</p>
-                    <p className="border-t border-dashed border-foreground/40 pt-1 w-36 mx-auto">الختم والاعتماد</p>
+
+                  {/* Table */}
+                  <table className="w-full border-collapse border border-foreground/30 text-xs">
+                    <thead>
+                      <tr className="bg-muted/70 text-foreground">
+                        <th className="border border-foreground/30 p-2.5 text-center font-black">اليوم</th>
+                        <th className="border border-foreground/30 p-2.5 text-center font-black">التاريخ</th>
+                        <th className="border border-foreground/30 p-2.5 text-right font-black">المادة الدراسية</th>
+                        <th className="border border-foreground/30 p-2.5 text-center font-black">وقت البدء</th>
+                        <th className="border border-foreground/30 p-2.5 text-center font-black">وقت الانتهاء</th>
+                        <th className="border border-foreground/30 p-2.5 text-center font-black">المدة</th>
+                        <th className="border border-foreground/30 p-2.5 text-center font-black">القاعة / اللجنة</th>
+                        {timetableMode === "admin" && (
+                          <>
+                            <th className="border border-foreground/30 p-2.5 text-right font-black">المراقب المكلف</th>
+                            <th className="border border-foreground/30 p-2.5 text-center font-black w-24">توقيع الاستلام</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timetableItems.map((item, idx) => {
+                        const sub = activeStageSubjects.find(s => s.id === item.subjectId);
+                        const start = item.startTime || "08:00";
+                        const dur = item.duration || 90;
+                        const end = calculateEndTime(start, dur);
+                        const dayName = getArabicDayName(item.date);
+                        return (
+                          <tr key={item.id} className={idx % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                            <td className="border border-foreground/30 p-2.5 text-center font-bold">{dayName}</td>
+                            <td className="border border-foreground/30 p-2.5 text-center tabular-nums" dir="ltr">{item.date}</td>
+                            <td className="border border-foreground/30 p-2.5 font-black text-foreground">{sub?.name || item.subjectId}</td>
+                            <td className="border border-foreground/30 p-2.5 text-center tabular-nums font-bold" dir="ltr">{start}</td>
+                            <td className="border border-foreground/30 p-2.5 text-center tabular-nums font-bold" dir="ltr">{end}</td>
+                            <td className="border border-foreground/30 p-2.5 text-center tabular-nums">{dur} دقيقة</td>
+                            <td className="border border-foreground/30 p-2.5 text-center font-black">{item.room || "قاعة عامة"}</td>
+                            {timetableMode === "admin" && (
+                              <>
+                                <td className="border border-foreground/30 p-2.5 font-bold text-primary">{item.invigilator || "مشرف اللجنة المناوب"}</td>
+                                <td className="border border-foreground/30 p-2.5 text-center text-[10px] text-muted-foreground">..................</td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+
+                  {/* Footer Notes / Signatures */}
+                  {timetableMode === "student" ? (
+                    <div className="p-4 border border-border/80 rounded-2xl bg-muted/20 text-xs space-y-1.5">
+                      <p className="font-black text-primary">توجيهات وضوابط أداء الاختبارات لأبنائنا الطلاب وأولياء الأمور:</p>
+                      <p className="text-muted-foreground">• الحضور إلى مقر المدرسة قبل موعد الاختبار بـ 15 دقيقة على الأقل، ولن يسمح بدخول المتأخرين بعد بدء الاختبار.</p>
+                      <p className="text-muted-foreground">• إحضار كافة الأدوات والقرطاسية المدرسية اللازمة للاختبار، ويمنع تبادل الأدوات داخل اللجان.</p>
+                      <p className="text-muted-foreground">• يمنع منعاً باتاً إدخال أجهزة الهواتف المحمولة أو الساعات الذكية إلى قاعات ولجان الاختبارات.</p>
+                      <p className="text-muted-foreground">• الالتزام بالهدوء التام والزي المدرسي المعتمد طوال فترة أداء الاختبارات.</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 border border-foreground/30 rounded-2xl bg-muted/20 text-xs space-y-1.5">
+                      <p className="font-black text-foreground">تعليمات تنظيم لجان الكنترول والمراقبة:</p>
+                      <p className="text-muted-foreground">• يستلم الملاحظ مظروف الأسئلة من غرفة الكنترول قبل موعد الاختبار بـ 20 دقيقة، مع التوقيع بالسجل الرسمي.</p>
+                      <p className="text-muted-foreground">• التأكد من مطابقة عدد أوراق الإجابة لعدد الطلاب الحاضرين وتدوين الغياب فوراً في محضر اللجنة.</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 pt-4 text-center text-xs font-black">
+                    <div>
+                      <p className="text-muted-foreground mb-6">{timetableMode === "student" ? "المرشد الطلابي" : "مسؤول تسليم اللجان"}</p>
+                      <p className="border-t border-dashed border-foreground/40 pt-1 w-36 mx-auto">التوقيع</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground mb-6">رئيس لجنة الكنترول والاختبارات</p>
+                      <p className="border-t border-dashed border-foreground/40 pt-1 w-36 mx-auto">المراجعة والتدقيق</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground mb-6">مدير المدرسة والختم الرسمي</p>
+                      <p className="border-t border-dashed border-foreground/40 pt-1 w-36 mx-auto">الختم والاعتماد</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </PageCard>

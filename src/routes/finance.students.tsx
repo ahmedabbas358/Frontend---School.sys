@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FinanceNavTabs } from "@/components/finance/finance-nav";
 import { useGlobalStore, TransportSubscription } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { usePaymentEngine } from "@/engines/finance/usePaymentEngine";
 import { getGradesForStage } from "@/lib/school-structure";
-import { Search, Filter, Printer, CheckCircle2, AlertTriangle, Users, Wallet, CreditCard, ChevronDown, Plus, X, Bus, Phone, User, Building, Layers, DollarSign, Send, ArrowRight, ShieldAlert } from "lucide-react";
+import { Search, Filter, Printer, CheckCircle2, AlertTriangle, Users, Wallet, CreditCard, ChevronDown, Plus, X, Bus, Phone, User, Building, Layers, DollarSign, Send, ArrowRight, ShieldAlert, Receipt, Download, GraduationCap } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
@@ -29,7 +31,11 @@ function FinanceStudents() {
     transportSubscriptions,
     addTransportSubscription,
     allFeeStructures,
-    allDiscounts
+    allDiscounts,
+    allTreasuries,
+    allBankAccounts,
+    allCashSessions,
+    currentAcademicYearId
   } = useGlobalStore();
 
   const { receiveLumpSumPayment } = usePaymentEngine();
@@ -43,10 +49,17 @@ function FinanceStudents() {
 
   // Modals state
   const [statementModalData, setStatementModalData] = useState<any | null>(null);
-  const [paymentModalData, setPaymentModalData] = useState<{ studentId: string, studentName: string } | null>(null);
+  const [statementFilter, setStatementFilter] = useState<"all" | "unpaid" | "paid">("all");
+  const [paymentModalData, setPaymentModalData] = useState<{ studentId: string, studentName: string, totalDue?: number } | null>(null);
+  const [printedReceipt, setPrintedReceipt] = useState<any | null>(null);
+  const [printStatementData, setPrintStatementData] = useState<any | null>(null);
   const [chargeModalData, setChargeModalData] = useState<{ studentId: string, studentName: string } | null>(null);
   const [transportModalData, setTransportModalData] = useState<{ studentId: string, studentName: string } | null>(null);
   const [isBulkBillingOpen, setIsBulkBillingOpen] = useState(false);
+  const [bulkBillingGrade, setBulkBillingGrade] = useState("");
+  const [bulkBillingSectionId, setBulkBillingSectionId] = useState("");
+  const [bulkBillingScope, setBulkBillingScope] = useState<"all" | "grade" | "section">("all");
+  const [bulkBillingAmount, setBulkBillingAmount] = useState<number>(0);
   const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
 
   // Grades available for current educational stage
@@ -175,19 +188,55 @@ function FinanceStudents() {
     const amount = Number(formData.get("amount"));
     const method = formData.get("method") as "cash" | "bank_transfer" | "card" | "cheque";
     const notes = formData.get("notes") as string;
+    const accountId = formData.get("accountId") as string;
     
+    // Check if cash and get active session
+    const activeSession = (allCashSessions || []).find(s => s.status === "open");
+    const destinationAccountId = accountId || (method === "cash" ? "gl-treasury-main" : "ACC-102");
+
     try {
       receiveLumpSumPayment(
         paymentModalData.studentId, 
         amount, 
         method, 
-        "gl-treasury-main"
+        destinationAccountId,
+        method === "cash" ? activeSession?.id : undefined,
+        notes
       );
       toast.success(`تم تسجيل سند القبض بقيمة ${amount.toLocaleString()} ${currency} للطالب ${paymentModalData.studentName} بنجاح`);
+
+      // Set up receipt voucher for immediate viewing / printing
+      const recId = `REC-${Math.floor(10000 + Math.random() * 90000)}`;
+      setPrintedReceipt({
+        id: recId,
+        studentName: paymentModalData.studentName,
+        studentId: paymentModalData.studentId,
+        amount,
+        method,
+        notes: notes || "سداد رسوم دراسية",
+        date: new Date().toISOString().split("T")[0],
+        academicYear: currentAcademicYearId || "1446-1447هـ",
+        stageLabel: getStageLabel(stage),
+        cashier: activeSession?.openedBy || "أمين الصندوق"
+      });
+
     } catch (err: any) {
       toast.error(err.message || "حدث خطأ أثناء تسجيل السند");
     }
     setPaymentModalData(null);
+  };
+
+  const handleShareWhatsApp = (st: any) => {
+    const rawPhone = st.guardianObj?.phone || "";
+    const phone = rawPhone.replace(/\D/g, "");
+    if (!phone) {
+      toast.error("لا يوجد رقم هاتف مسجل لولي الأمر");
+      return;
+    }
+    const text = encodeURIComponent(
+      `السلام عليكم ورحمة الله وبركاته\nالسيد ولي أمر الطالب: ${st.name}\nنود تذكيركم بأن الرصيد المتبقي للرسوم المدرسية هو (${st.totalDue.toLocaleString()} ${currency}).\nشاكرين لكم اهتمامكم وتعاونكم الدائم.\n- إدارة الشؤون المالية - ${getStageLabel(stage)}`
+    );
+    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
   };
 
   const handleAddCharge = (e: React.FormEvent<HTMLFormElement>) => {
@@ -307,6 +356,56 @@ function FinanceStudents() {
     }
   ];
 
+  const handleExportCSV = () => {
+    if (studentFinancials.length === 0) {
+      toast.error("لا توجد بيانات طلاب لتصديرها");
+      return;
+    }
+
+    const headers = [
+      "رقم الطالب",
+      "اسم الطالب",
+      "الهوية الوطنية",
+      "المرحلة",
+      "الصف",
+      "الشعبة",
+      "ولي الأمر",
+      "هاتف ولي الأمر",
+      "إجمالي الرسوم",
+      "المحصل",
+      "المتبقي (المتأخرات)",
+      "حالة السداد",
+      "اشتراك الترحيل"
+    ];
+
+    const rows = studentFinancials.map((s: any) => [
+      s.id,
+      `"${s.name?.replace(/"/g, '""') || ''}"`,
+      `"${s.nationalId || ''}"`,
+      `"${getStageLabel(s.stage)}"`,
+      `"${s.grade || ''}"`,
+      `"${s.sectionObj?.name || s.sectionName || ''}"`,
+      `"${s.guardianObj?.name?.replace(/"/g, '""') || ''}"`,
+      `"${s.guardianObj?.phone || ''}"`,
+      s.totalFees || 0,
+      s.totalPaid || 0,
+      s.totalDue || 0,
+      s.totalDue <= 0 ? "مسدد بالكامل" : "عليه متأخرات",
+      s.transportSub ? `مشترك (${s.transportRoute?.name || ''})` : "غير مشترك"
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `سجل_المالية_الطلابية_${getStageLabel(stage)}_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("تم تصدير كشف المالية الطلابية بنجاح");
+  };
+
   return (
     <AppShell
       breadcrumb={[
@@ -316,6 +415,12 @@ function FinanceStudents() {
       ]}
       actions={
         <div className="flex items-center gap-2">
+          <button 
+            onClick={handleExportCSV}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border/80 text-foreground px-3.5 text-xs font-bold shadow-sm hover:bg-accent transition-all shrink-0 whitespace-nowrap"
+          >
+            <Download className="h-4 w-4 text-primary" /> تصدير CSV
+          </button>
           <button 
             onClick={() => setIsBulkBillingOpen(true)}
             className="inline-flex h-9 items-center gap-2 rounded-xl bg-emerald-600 text-white px-3.5 text-xs font-extrabold shadow-sm hover:bg-emerald-700 transition-all shrink-0 whitespace-nowrap"
@@ -332,6 +437,8 @@ function FinanceStudents() {
       }
     >
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        {/* Navigation Tabs */}
+        <FinanceNavTabs activeTab="students" />
         
         {/* Top Financial Command KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -547,8 +654,8 @@ function FinanceStudents() {
                 cell: (r: any) => (
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <button 
-                      onClick={() => setPaymentModalData({ studentId: r.id, studentName: r.name })}
-                      className="text-xs font-extrabold bg-emerald-500/10 text-emerald-600 hover:bg-emerald-600 hover:text-white px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 shrink-0"
+                      onClick={() => setPaymentModalData({ studentId: r.id, studentName: r.name, totalDue: r.totalDue })}
+                      className="text-xs font-extrabold bg-emerald-500/10 text-emerald-600 hover:bg-emerald-600 hover:text-white px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 shrink-0 cursor-pointer"
                       title="تسجيل دفعة سريعة (سند قبض)"
                     >
                       <CreditCard className="w-3.5 h-3.5" /> قبض
@@ -580,60 +687,56 @@ function FinanceStudents() {
       </div>
 
       {/* --- Student 360 Statement Ledger Modal --- */}
-      {statementModalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
-          <div className="w-full max-w-4xl modal-card-luxury overflow-hidden flex flex-col max-h-[90vh]">
-            
-            {/* Modal Header */}
-            <div className="p-6 border-b border-border/50 flex justify-between items-start bg-muted/20 shrink-0 relative">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 text-primary rounded-2xl">
-                  <Wallet className="w-7 h-7" />
-                </div>
-                <div>
-                  <h3 className="font-black text-xl flex items-center gap-2">
-                    كشف حساب الطالب: {statementModalData.name}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground font-bold mt-1">
-                    <span>الصف: {statementModalData.grade}</span>
-                    <span>•</span>
-                    <span>شعبة {statementModalData.sectionObj?.name || statementModalData.sectionName || "عام"}</span>
-                    {statementModalData.roomObj && (
-                      <>
-                        <span>•</span>
-                        <span className="text-emerald-600">القاعة: {statementModalData.roomObj.name}</span>
-                      </>
-                    )}
-                    {statementModalData.guardianObj && (
-                      <>
-                        <span>•</span>
-                        <span>ولي الأمر: {statementModalData.guardianObj.name} ({statementModalData.guardianObj.phone})</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <button onClick={() => setStatementModalData(null)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
+      <AdminModal
+        isOpen={Boolean(statementModalData)}
+        onClose={() => setStatementModalData(null)}
+        title={statementModalData ? `كشف حساب الطالب: ${statementModalData.name}` : "كشف حساب الطالب"}
+        description={statementModalData ? `${statementModalData.grade} • شعبة ${statementModalData.sectionObj?.name || statementModalData.sectionName || "عام"}${statementModalData.guardianObj ? ` • ولي الأمر: ${statementModalData.guardianObj.name} (${statementModalData.guardianObj.phone})` : ""}` : undefined}
+        icon={GraduationCap}
+        tone="primary"
+        maxWidth="4xl"
+      >
+        {statementModalData && (
+          <div className="space-y-4">
             {/* Action Bar */}
-            <div className="p-4 flex flex-wrap gap-2 shrink-0 border-b border-border/50 bg-background/50 justify-between items-center">
-              <div className="flex gap-2">
-                <button onClick={() => setChargeModalData({ studentId: statementModalData.id, studentName: statementModalData.name })} className="btn-secondary text-xs h-9 font-bold rounded-xl active:scale-[0.98]">
-                  <Plus className="w-4 h-4 ml-1 text-primary"/> إضافة رسم خاص
+            <div className="flex flex-wrap gap-2 justify-between items-center bg-muted/30 p-3 rounded-2xl border border-border/50">
+              <div className="flex flex-wrap items-center gap-2">
+                <button 
+                  onClick={() => setPaymentModalData({ studentId: statementModalData.id, studentName: statementModalData.name, totalDue: statementModalData.totalDue })} 
+                  className="btn-primary text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl active:scale-[0.98] shadow-sm flex items-center gap-1 cursor-pointer px-3"
+                >
+                  <CreditCard className="w-4 h-4"/> تسجيل دفعة (سند قبض)
                 </button>
-                <button onClick={() => setPaymentModalData({ studentId: statementModalData.id, studentName: statementModalData.name })} className="btn-primary text-xs h-9 bg-success hover:bg-success/90 font-bold rounded-xl active:scale-[0.98]">
-                  <CreditCard className="w-4 h-4 ml-1"/> تسجيل دفعة (سند قبض)
+                <button 
+                  onClick={() => setChargeModalData({ studentId: statementModalData.id, studentName: statementModalData.name })} 
+                  className="btn-secondary text-xs h-9 font-bold rounded-xl active:scale-[0.98] flex items-center gap-1 cursor-pointer px-3 border border-border"
+                >
+                  <Plus className="w-4 h-4 text-primary"/> إضافة رسم خاص
                 </button>
-                <button onClick={() => setTransportModalData({ studentId: statementModalData.id, studentName: statementModalData.name })} className="btn-secondary text-xs h-9 font-bold border-amber-500/40 hover:bg-amber-500/10 text-amber-600 rounded-xl active:scale-[0.98]">
-                  <Bus className="w-4 h-4 ml-1 text-amber-600"/> {statementModalData.transportSub ? "تعديل الترحيل" : "إضافة ترحيل"}
+                <button 
+                  onClick={() => setTransportModalData({ studentId: statementModalData.id, studentName: statementModalData.name })} 
+                  className="btn-secondary text-xs h-9 font-bold border-amber-500/40 hover:bg-amber-500/10 text-amber-600 rounded-xl active:scale-[0.98] flex items-center gap-1 cursor-pointer px-3 border"
+                >
+                  <Bus className="w-4 h-4"/> {statementModalData.transportSub ? "تعديل الترحيل" : "إضافة ترحيل"}
+                </button>
+                <button 
+                  onClick={() => setPrintStatementData(statementModalData)}
+                  className="btn-secondary text-xs h-9 font-bold border-blue-500/40 hover:bg-blue-500/10 text-blue-600 rounded-xl active:scale-[0.98] flex items-center gap-1 cursor-pointer px-3 border"
+                  title="معاينة وطباعة كشف حساب معتمد ومختوم للطالب"
+                >
+                  <Printer className="w-4 h-4"/> طباعة الكشف المعتمد
+                </button>
+                <button 
+                  onClick={() => handleShareWhatsApp(statementModalData)}
+                  className="btn-secondary text-xs h-9 font-bold border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-600 rounded-xl active:scale-[0.98] flex items-center gap-1 cursor-pointer px-3 border"
+                  title="إرسال رسالة تذكير بالرصيد المتبقي عبر تطبيق واتساب لولي الأمر"
+                >
+                  واتساب لولي الأمر
                 </button>
               </div>
 
               {/* Financial Balance Summary */}
-              <div className="flex items-center gap-4 bg-muted/40 px-3.5 py-1.5 rounded-xl border border-border/50 text-xs">
+              <div className="flex items-center gap-4 bg-background px-3.5 py-1.5 rounded-xl border border-border/50 text-xs">
                 <div>
                   <span className="text-muted-foreground font-bold">المحصل: </span>
                   <span className="font-extrabold text-success tabular-nums">{statementModalData.totalPaid.toLocaleString()} {currency}</span>
@@ -646,8 +749,44 @@ function FinanceStudents() {
               </div>
             </div>
 
+            {/* Filter Pills for Statement Invoices */}
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/50 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStatementFilter("all")}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    statementFilter === "all" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  جميع المطالبات ({statementModalData.invoices?.length || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatementFilter("unpaid")}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    statementFilter === "unpaid" ? "bg-amber-500 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  المستحقة / غير المسددة ({statementModalData.invoices?.filter((i: any) => (i.netAmount - (i.paidAmount || 0)) > 0).length || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatementFilter("paid")}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    statementFilter === "paid" ? "bg-emerald-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  المسددة بالكامل ({statementModalData.invoices?.filter((i: any) => (i.netAmount - (i.paidAmount || 0)) <= 0).length || 0})
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground font-bold">
+                تاريخ الكشف: {new Date().toLocaleDateString('ar-EG')}
+              </p>
+            </div>
+
             {/* Invoices & Ledger Table */}
-            <div className="p-6 overflow-y-auto custom-scrollbar-modal">
+            <div>
               {statementModalData.invoices.length === 0 ? (
                 <div className="text-center py-12 text-sm text-muted-foreground font-bold bg-muted/20 rounded-2xl border border-dashed border-border/60">
                   لا توجد فواتير أو مستحقات مالية مسجلة لهذا الطالب حتى الآن.
@@ -658,7 +797,7 @@ function FinanceStudents() {
                     <thead className="bg-muted/50 border-b border-border/60 text-muted-foreground">
                       <tr>
                         <th className="px-4 py-3 text-start">رقم الفاتورة</th>
-                        <th className="px-4 py-3 text-start">البيان</th>
+                        <th className="px-4 py-3 text-start">البيان والتفاصيل</th>
                         <th className="px-4 py-3 text-start">تاريخ الاستحقاق</th>
                         <th className="px-4 py-3 text-start">المبلغ الإجمالي</th>
                         <th className="px-4 py-3 text-start">المسدد</th>
@@ -667,19 +806,26 @@ function FinanceStudents() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
-                      {statementModalData.invoices.map((inv: any) => {
-                        const paid = inv.paidAmount || 0;
-                        const due = inv.netAmount - paid;
+                      {(statementModalData.invoices || []).map((inv: any) => {
+                        const net = inv.netAmount ?? inv.amount ?? 0;
+                        const due = net - (inv.paid || 0);
                         return (
-                          <tr key={inv.id} className="hover:bg-muted/20 transition-colors">
-                            <td className="px-4 py-3.5 text-muted-foreground font-mono">{inv.id}</td>
-                            <td className="px-4 py-3.5 font-bold text-foreground">{inv.title}</td>
-                            <td className="px-4 py-3.5 text-muted-foreground font-mono">{inv.dueDate}</td>
-                            <td className="px-4 py-3.5 font-black tabular-nums">{inv.netAmount.toLocaleString()}</td>
-                            <td className="px-4 py-3.5 text-success font-black tabular-nums">{paid.toLocaleString()}</td>
-                            <td className="px-4 py-3.5 text-danger font-black tabular-nums">{due > 0 ? due.toLocaleString() : '-'}</td>
-                            <td className="px-4 py-3.5">
-                              {inv.status === "paid" ? <Badge tone="success">مسدد</Badge> : inv.status === "partial" ? <Badge tone="warning">جزئي</Badge> : <Badge tone="neutral">مستحق</Badge>}
+                          <tr key={inv.id} className="hover:bg-accent/20 transition-colors">
+                            <td className="px-4 py-3 font-mono text-xs">{inv.issueDate || inv.dueDate || "-"}</td>
+                            <td className="px-4 py-3 font-bold">{inv.title}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{inv.amount?.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-orange-500">{inv.discountAmount ? inv.discountAmount.toLocaleString() : "-"}</td>
+                            <td className="px-4 py-3 font-bold">{net?.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-emerald-600 font-bold">{inv.paid > 0 ? inv.paid.toLocaleString() : "-"}</td>
+                            <td className="px-4 py-3 text-rose-600 font-black">{due > 0 ? due.toLocaleString() : "-"}</td>
+                            <td className="px-4 py-3">
+                              {inv.status === "paid" ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">مسدد</span>
+                              ) : inv.status === "partial" ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-600 border border-amber-500/20">جزئي</span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-600 border border-rose-500/20">مستحق</span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -690,196 +836,543 @@ function FinanceStudents() {
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* --- Quick Record Payment Modal (سند قبض كاشير) --- */}
-      {paymentModalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
-          <div className="w-full max-w-md modal-card-luxury overflow-hidden">
-            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-success/10">
-              <h3 className="font-black text-lg flex items-center gap-2.5 text-success">
-                <div className="h-8 w-8 rounded-xl bg-success/15 text-success flex items-center justify-center">
-                  <CreditCard className="w-4 h-4" />
+        )}
+      </AdminModal>
+         {/* --- Quick Record Payment Modal (سند قبض كاشير متطور) --- */}
+      <AdminModal
+        isOpen={Boolean(paymentModalData)}
+        onClose={() => setPaymentModalData(null)}
+        title="تسجيل سند قبض وتحصيل مالي"
+        description="توريد النقدية وتوثيق السند في حساب الطالب والصندوق"
+        icon={CreditCard}
+        tone="success"
+        maxWidth="lg"
+      >
+        {paymentModalData && (
+          <form onSubmit={handleRecordPayment} className="space-y-4">
+            {/* Student Info & Balance Strip */}
+            <div className="p-3.5 bg-muted/30 rounded-2xl border border-border/60 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] text-muted-foreground font-bold block">اسم الطالب</span>
+                <span className="font-black text-sm text-foreground">{paymentModalData.studentName}</span>
+              </div>
+              {paymentModalData.totalDue !== undefined && (
+                <div className="text-left">
+                  <span className="text-[11px] text-muted-foreground font-bold block">الرصيد المتبقي المطلوب</span>
+                  <span className="font-black text-sm text-danger tabular-nums">
+                    {paymentModalData.totalDue.toLocaleString()} {currency}
+                  </span>
                 </div>
-                تسجيل دفعة وسند قبض جديد
-              </h3>
-              <button onClick={() => setPaymentModalData(null)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
-                <X className="w-4 h-4" />
-              </button>
+              )}
             </div>
-            <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">اسم الطالب</label>
-                <div className="p-3 bg-muted/40 rounded-xl font-black text-sm border border-border/50">{paymentModalData.studentName}</div>
+
+            {/* Amount Input with Quick Shortcuts */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-extrabold text-foreground">
+                  المبلغ المحصل ({currency}) <span className="text-danger">*</span>
+                </label>
+                {paymentModalData.totalDue !== undefined && paymentModalData.totalDue > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        const input = (e.currentTarget.closest("form")?.querySelector("input[name='amount']") as HTMLInputElement);
+                        if (input) input.value = String(paymentModalData.totalDue);
+                      }}
+                      className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                    >
+                      كامل المبلغ ({paymentModalData.totalDue})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        const input = (e.currentTarget.closest("form")?.querySelector("input[name='amount']") as HTMLInputElement);
+                        if (input) input.value = String(Math.round((paymentModalData.totalDue || 0) / 2));
+                      }}
+                      className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                    >
+                      50%
+                    </button>
+                  </div>
+                )}
               </div>
+              <input 
+                type="number" 
+                name="amount" 
+                required 
+                min="1" 
+                defaultValue={paymentModalData.totalDue && paymentModalData.totalDue > 0 ? paymentModalData.totalDue : ""}
+                placeholder="أدخل المبلغ..." 
+                className="h-12 w-full px-4 bg-background border border-emerald-500/40 rounded-xl font-black text-xl text-emerald-600 tabular-nums shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15" 
+              />
+            </div>
+
+            {/* Payment Method & Target Account Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">المبلغ المحصل ({currency}) <span className="text-danger">*</span></label>
-                <input type="number" name="amount" required min="1" placeholder="أدخل المبلغ..." className="h-12 w-full px-4 bg-background/80 border border-success/40 rounded-xl font-black text-xl text-success tabular-nums shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15" />
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">طريقة الدفع وسداد الخزينة</label>
-                <select name="method" required className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15">
-                  <option value="cash">نقداً (كاش - الخزينة الرئيسية)</option>
-                  <option value="bank_transfer">تحويل بنكي (بنك الخرطوم)</option>
-                  <option value="card">بطاقة دفع إلكتروني (مدى/فيزا)</option>
+                <label className="block text-xs font-extrabold text-foreground mb-1.5">طريقة الدفع</label>
+                <select 
+                  name="method" 
+                  required 
+                  className="h-11 w-full px-3.5 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 cursor-pointer"
+                >
+                  <option value="cash">نقداً (كاش - الخزينة والصندوق)</option>
+                  <option value="bank_transfer">تحويل بنكي مباشر</option>
+                  <option value="card">بطاقة دفع إلكتروني (شبكة / مدى / فيزا)</option>
                   <option value="cheque">شيك مصرفي معتمد</option>
                 </select>
               </div>
+
               <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">ملاحظات / رقم الحوالة أو الشيك</label>
-                <input type="text" name="notes" placeholder="ملاحظات إضافية..." className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl text-sm font-medium shadow-sm transition-all focus:border-success focus:outline-none focus:ring-4 focus:ring-success/15" />
+                <label className="block text-xs font-extrabold text-foreground mb-1.5">حساب التوريد / الصندوق</label>
+                <select 
+                  name="accountId" 
+                  className="h-11 w-full px-3.5 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 cursor-pointer"
+                >
+                  <option value="gl-treasury-main">
+                    الخزينة الرئيسية {(allCashSessions || []).some(s => s.status === 'open') ? "• الجلسة مفتوحة ✅" : "• مغلقة ⚠️"}
+                  </option>
+                  {(allBankAccounts || []).map(b => (
+                    <option key={b.id} value={b.accountId}>{b.bankName} - {b.accountNumber.slice(-4)}</option>
+                  ))}
+                </select>
               </div>
-              <div className="pt-3 flex gap-3 border-t border-border/50">
-                <button type="submit" className="flex-1 bg-success text-white font-extrabold py-2.5 rounded-xl shadow-md hover:bg-success/90 transition-all text-sm active:scale-[0.98]">تأكيد وطباعة السند</button>
-                <button type="button" onClick={() => setPaymentModalData(null)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-[0.98]">إلغاء</button>
-              </div>
-            </form>
+            </div>
+
+            {/* Notes / Reference */}
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">البيان / ملاحظات السند أو رقم الحوالة</label>
+              <input 
+                type="text" 
+                name="notes" 
+                placeholder="سداد القسط الدراسي / رقم العملية..." 
+                defaultValue="سداد رسوم دراسية"
+                className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl text-xs font-medium shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15" 
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="pt-3 flex gap-3 border-t border-border/50">
+              <button 
+                type="submit" 
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl shadow-md transition-all text-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" /> حفظ وإصدار سند القبض
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setPaymentModalData(null)} 
+                className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-xs font-bold transition-colors active:scale-[0.98] cursor-pointer"
+              >
+                إلغاء
+              </button>
+            </div>
+          </form>
+        )}
+      </AdminModal>
+
+      {/* --- Single Official Receipt Voucher Modal (سند قبض رسمي معتمد) --- */}
+      <AdminModal
+        isOpen={Boolean(printedReceipt)}
+        onClose={() => setPrintedReceipt(null)}
+        title="سند قبض مالي رسمي"
+        description="تم تسجيل العملية وقيدها بالحسابات بنجاح"
+        icon={Receipt}
+        tone="success"
+        maxWidth="lg"
+        footer={
+          <div className="flex gap-3 w-full">
+            <button 
+              onClick={() => { window.print(); setPrintedReceipt(null); }}
+              className="flex-1 h-11 bg-primary text-primary-foreground rounded-xl font-black flex items-center justify-center gap-2 hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md text-xs cursor-pointer"
+            >
+              <Printer className="w-4 h-4" /> طباعة السند فوراً
+            </button>
+            <button 
+              onClick={() => setPrintedReceipt(null)} 
+              className="h-11 border border-border/80 hover:bg-accent px-6 rounded-xl font-bold text-xs active:scale-[0.98] transition-all cursor-pointer"
+            >
+              إغلاق
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        {printedReceipt && (
+          <div className="p-5 bg-background rounded-2xl border border-border/70 space-y-3 font-semibold text-xs shadow-inner">
+            <div className="text-center pb-3 border-b border-dashed border-border/60">
+              <p className="text-[11px] text-muted-foreground font-bold">المملكة العربية السعودية • وزارة التعليم • الإدارة العامة للتعليم الأهلي</p>
+              <h4 className="font-black text-base text-foreground mt-0.5">مجمع مدارس المستقبل الأهلية النموذجية</h4>
+              <div className="mt-1 flex items-center justify-center gap-3 text-[11px] font-mono font-bold text-muted-foreground">
+                <span>رقم السند: <strong className="text-primary font-black">{printedReceipt.id}</strong></span>
+                <span>•</span>
+                <span>التاريخ: {printedReceipt.date}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-bold">استلمنا من الطالب:</span>
+                <span className="font-black text-foreground">{printedReceipt.studentName}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-bold">المبلغ المحصل:</span>
+                <span className="font-black text-emerald-600 tabular-nums text-base">{printedReceipt.amount.toLocaleString()} {currency}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-bold">طريقة الدفع:</span>
+                <span className="font-bold text-foreground">
+                  {printedReceipt.method === 'cash' ? 'نقدي (الخزينة والصندوق)' : printedReceipt.method === 'bank_transfer' ? 'حوالة مصرفية' : 'بطاقة مدى / شبكة'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-bold">وذلك عن:</span>
+                <span className="font-bold text-foreground">{printedReceipt.notes}</span>
+              </div>
+            </div>
+
+            {/* Signatures Strip */}
+            <div className="grid grid-cols-2 pt-4 text-center text-[10px] font-bold text-muted-foreground">
+              <div>
+                <p className="mb-4">المحاسب / الكاشير: {printedReceipt.cashier}</p>
+                <p className="border-t border-dashed border-border/60 pt-1 w-28 mx-auto">التوقيع</p>
+              </div>
+              <div>
+                <p className="mb-4">الختم المالي المعتمد</p>
+                <p className="border-t border-dashed border-border/60 pt-1 w-28 mx-auto">الاعتماد والختم</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </AdminModal>
+
+      {/* --- Official Printable Student Statement Modal (كشف الحساب المعتمد) --- */}
+      <AdminModal
+        isOpen={Boolean(printStatementData)}
+        onClose={() => setPrintStatementData(null)}
+        title="معاينة كشف الحساب المعتمد للطباعة"
+        description="كشف حساب مالي رسمي ومختوم للطالب"
+        icon={Printer}
+        tone="primary"
+        maxWidth="3xl"
+        footer={
+          <div className="flex justify-end gap-2.5 w-full">
+            <button 
+              onClick={() => { window.print(); setPrintStatementData(null); }}
+              className="btn-primary text-xs h-10 px-6 font-black flex items-center gap-2 cursor-pointer shadow-md bg-primary text-primary-foreground rounded-xl"
+            >
+              <Printer className="w-4 h-4" /> طباعة الكشف فوراً
+            </button>
+            <button 
+              onClick={() => setPrintStatementData(null)}
+              className="btn-secondary text-xs h-10 px-5 font-bold cursor-pointer border border-border rounded-xl"
+            >
+              إغلاق
+            </button>
+          </div>
+        }
+      >
+        {printStatementData && (
+          <div className="space-y-4 font-sans text-xs bg-background p-2">
+            {/* Paper Header */}
+            <div className="text-center pb-4 border-b-2 border-border/70">
+              <p className="text-[11px] text-muted-foreground font-bold">المملكة العربية السعودية • وزارة التعليم • الإدارة العامة للتعليم الأهلي</p>
+              <h2 className="text-xl font-black text-foreground mt-1">مجمع مدارس المستقبل الأهلية النموذجية</h2>
+              <h3 className="text-sm font-black text-primary mt-1">كشف حساب مالي رسمي للطالب</h3>
+            </div>
+
+            {/* Student Metadata Card */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/50 text-xs">
+              <div>اسم الطالب: <strong className="block text-foreground mt-0.5">{printStatementData.name}</strong></div>
+              <div>الصف الدراسي: <strong className="block text-foreground mt-0.5">{printStatementData.grade}</strong></div>
+              <div>الشعبة: <strong className="block text-foreground mt-0.5">{printStatementData.sectionObj?.name || printStatementData.sectionName || "عام"}</strong></div>
+              <div>تاريخ الطباعة: <strong className="block text-foreground mt-0.5">{new Date().toLocaleDateString('ar-EG')}</strong></div>
+            </div>
+
+            {/* Financial Balance Strip */}
+            <div className="grid grid-cols-3 gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/60 text-center">
+              <div>
+                <span className="text-muted-foreground font-bold text-[11px] block">إجمالي الرسوم المستحقة</span>
+                <span className="font-black text-sm text-foreground tabular-nums">{printStatementData.totalFees.toLocaleString()} {currency}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground font-bold text-[11px] block">إجمالي المسدد</span>
+                <span className="font-black text-sm text-emerald-600 tabular-nums">{printStatementData.totalPaid.toLocaleString()} {currency}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground font-bold text-[11px] block">الرصيد المتبقي</span>
+                <span className="font-black text-sm text-rose-600 tabular-nums">{printStatementData.totalDue.toLocaleString()} {currency}</span>
+              </div>
+            </div>
+
+            {/* Invoices List */}
+            <table className="w-full text-xs font-bold border border-border/60 rounded-xl overflow-hidden">
+              <thead className="bg-muted/50 border-b border-border/60">
+                <tr>
+                  <th className="p-2 text-start">رقم المطالبة</th>
+                  <th className="p-2 text-start">البيان</th>
+                  <th className="p-2 text-start">الاستحقاق</th>
+                  <th className="p-2 text-start">المبلغ</th>
+                  <th className="p-2 text-start">المسدد</th>
+                  <th className="p-2 text-start">المتبقي</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {(printStatementData.invoices || []).map((inv: any) => {
+                  const paid = inv.paidAmount || 0;
+                  const due = inv.netAmount - paid;
+                  return (
+                    <tr key={inv.id}>
+                      <td className="p-2 text-muted-foreground font-mono">{inv.id}</td>
+                      <td className="p-2">{inv.title}</td>
+                      <td className="p-2 text-muted-foreground font-mono">{inv.dueDate}</td>
+                      <td className="p-2 tabular-nums">{inv.netAmount.toLocaleString()}</td>
+                      <td className="p-2 text-emerald-600 tabular-nums">{paid.toLocaleString()}</td>
+                      <td className="p-2 text-rose-600 tabular-nums">{due > 0 ? due.toLocaleString() : '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Signatures */}
+            <div className="grid grid-cols-2 pt-6 text-center text-xs font-bold text-muted-foreground">
+              <div>
+                <p className="mb-6">المحاسب المالي ومسؤول التحصيل</p>
+                <p className="border-t border-dashed border-border/60 pt-1 w-36 mx-auto">التوقيع والتاريخ</p>
+              </div>
+              <div>
+                <p className="mb-6">مدير المدرسة والاعتماد الرسمي</p>
+                <p className="border-t border-dashed border-border/60 pt-1 w-36 mx-auto">الختم الرسمي</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </AdminModal>
 
       {/* --- Charge Single Student Modal --- */}
-      {chargeModalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
-          <div className="w-full max-w-md modal-card-luxury overflow-hidden">
-            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-primary/10">
-              <h3 className="font-black text-lg flex items-center gap-2.5 text-primary">
-                <div className="h-8 w-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
-                  <Plus className="w-4 h-4" />
-                </div>
-                إضافة رسوم خاصة بالطالب
-              </h3>
-              <button onClick={() => setChargeModalData(null)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
-                <X className="w-4 h-4" />
+      <AdminModal
+        isOpen={Boolean(chargeModalData)}
+        onClose={() => setChargeModalData(null)}
+        title="إضافة رسوم خاصة بالطالب"
+        description="إصدار مطالبة مالية مخصصة لحساب الطالب"
+        icon={Plus}
+        tone="primary"
+        maxWidth="md"
+      >
+        {chargeModalData && (
+          <form onSubmit={handleAddCharge} className="space-y-4">
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">اسم الطالب</label>
+              <div className="p-3 bg-muted/40 rounded-xl font-black text-sm border border-border/50">{chargeModalData.studentName}</div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">بيان ونوع الرسوم <span className="text-danger">*</span></label>
+              <select 
+                name="title" 
+                required 
+                className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+              >
+                <option value="رسوم دراسية إضافية">رسوم دراسية إضافية</option>
+                <option value="رسوم الزي المدرسي الرسمي">رسوم الزي المدرسي الرسمي</option>
+                <option value="رسوم الكتب والمقررات المدرسية">رسوم الكتب والمقررات المدرسية</option>
+                <option value="رسوم الأنشطة المدرسية والرحلات">رسوم الأنشطة المدرسية والرحلات</option>
+                <option value="رسوم إعادة قيد وتسجيل">رسوم إعادة قيد وتسجيل</option>
+                <option value="رسوم اختبارات وشهادات">رسوم اختبارات وشهادات</option>
+                <option value="رسوم خدمات طلابية">رسوم خدمات طلابية</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">المبلغ المطلوب ({currency}) <span className="text-danger">*</span></label>
+              <input 
+                type="number" 
+                name="amount" 
+                required 
+                min="1" 
+                placeholder="أدخل المبلغ..." 
+                className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-extrabold text-base shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" 
+              />
+            </div>
+
+            <div className="pt-3 flex gap-3 border-t border-border/50">
+              <button type="submit" className="flex-1 bg-primary text-primary-foreground font-extrabold py-2.5 rounded-xl shadow-md hover:bg-primary/90 transition-all text-xs active:scale-[0.98] cursor-pointer">
+                إصدار الفاتورة فوراً
+              </button>
+              <button type="button" onClick={() => setChargeModalData(null)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-xs font-bold transition-colors active:scale-[0.98] cursor-pointer">
+                إلغاء
               </button>
             </div>
-            <form onSubmit={handleAddCharge} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">اسم الطالب</label>
-                <div className="p-3 bg-muted/40 rounded-xl font-black text-sm border border-border/50">{chargeModalData.studentName}</div>
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">بيان ووصف الرسوم <span className="text-danger">*</span></label>
-                <input type="text" name="title" required placeholder="مثال: رسوم زي مدرسي أو أنشطة رحلة" className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50" />
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">المبلغ المطلوب ({currency}) <span className="text-danger">*</span></label>
-                <input type="number" name="amount" required min="1" placeholder="أدخل المبلغ..." className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-extrabold text-base shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 hover:border-primary/50 tabular-nums" />
-              </div>
-              <div className="pt-3 flex gap-3 border-t border-border/50">
-                <button type="submit" className="flex-1 bg-primary text-primary-foreground font-extrabold py-2.5 rounded-xl shadow-md hover:bg-primary/90 transition-all text-sm active:scale-[0.98]">إصدار الفاتورة</button>
-                <button type="button" onClick={() => setChargeModalData(null)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-[0.98]">إلغاء</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </form>
+        )}
+      </AdminModal>
 
       {/* --- Transport Subscription Modal (التراحيل) --- */}
-      {transportModalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
-          <div className="w-full max-w-md modal-card-luxury overflow-hidden">
-            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-amber-500/10">
-              <h3 className="font-black text-lg flex items-center gap-2.5 text-amber-600">
-                <div className="h-8 w-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center">
-                  <Bus className="w-4 h-4" />
-                </div>
-                ربط وإدارة التراحيـل والنقل المدرسي
-              </h3>
-              <button onClick={() => setTransportModalData(null)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
-                <X className="w-4 h-4" />
+      <AdminModal
+        isOpen={Boolean(transportModalData)}
+        onClose={() => setTransportModalData(null)}
+        title="ربط وإدارة التراحيـل والنقل المدرسي"
+        description="تخصيص خط حافلة وإصدار رسوم الترحيل"
+        icon={Bus}
+        tone="amber"
+        maxWidth="md"
+      >
+        {transportModalData && (
+          <form onSubmit={handleSubscribeTransport} className="space-y-4">
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">اسم الطالب</label>
+              <div className="p-3 bg-muted/40 rounded-xl font-black text-sm border border-border/50">{transportModalData.studentName}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">خط الحافلة / المسار المدرسي</label>
+              <select name="routeId" required className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15 cursor-pointer">
+                <option value="">-- اختر خط الترحيل --</option>
+                {transportRoutes.map(r => (
+                  <option key={r.id} value={r.id}>{r.name} ({(r.feeAmount || 0).toLocaleString()} {currency})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">اتجاه الاشتراك</label>
+              <select name="direction" required className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15 cursor-pointer">
+                <option value="round-trip">اتجاهين (ذهاب وعودة) - كامل القيمة</option>
+                <option value="going">ذهاب فقط (صباحاً)</option>
+                <option value="returning">عودة فقط (عصراً)</option>
+              </select>
+            </div>
+            <div className="pt-3 flex gap-3 border-t border-border/50">
+              <button type="submit" className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all text-xs active:scale-[0.98] cursor-pointer">
+                تأكيد وإصدار رسم الترحيل
+              </button>
+              <button type="button" onClick={() => setTransportModalData(null)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-xs font-bold transition-colors active:scale-[0.98] cursor-pointer">
+                إلغاء
               </button>
             </div>
-            <form onSubmit={handleSubscribeTransport} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">اسم الطالب</label>
-                <div className="p-3 bg-muted/40 rounded-xl font-black text-sm border border-border/50">{transportModalData.studentName}</div>
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">خط الحافلة / المسار المدرسي</label>
-                <select name="routeId" required className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15 cursor-pointer">
-                  <option value="">-- اختر خط الترحيل --</option>
-                  {transportRoutes.map(r => (
-                    <option key={r.id} value={r.id}>{r.name} ({(r.feeAmount || 0).toLocaleString()} {currency})</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">اتجاه الاشتراك</label>
-                <select name="direction" required className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15 cursor-pointer">
-                  <option value="round-trip">اتجاهين (ذهاب وعودة) - كامل القيمة</option>
-                  <option value="going">ذهاب فقط (صباحاً)</option>
-                  <option value="returning">عودة فقط (عصراً)</option>
-                </select>
-              </div>
-              <div className="pt-3 flex gap-3 border-t border-border/50">
-                <button type="submit" className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all text-sm active:scale-[0.98]">تأكيد وإصدار رسم الترحيل</button>
-                <button type="button" onClick={() => setTransportModalData(null)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-[0.98]">إلغاء</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </form>
+        )}
+      </AdminModal>
 
-      {/* --- Bulk Billing Modal (إصدار رسوم جماعية) --- */}
-      {isBulkBillingOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury">
-          <div className="w-full max-w-lg modal-card-luxury overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-border/50 flex justify-between items-center bg-emerald-600/10 shrink-0">
-              <h3 className="font-black text-lg flex items-center gap-2.5 text-emerald-600">
-                <div className="h-8 w-8 rounded-xl bg-emerald-600/15 text-emerald-600 flex items-center justify-center">
-                  <Plus className="w-4 h-4" />
-                </div>
-                إصدار رسوم جماعية للشعبة أو الصف
-              </h3>
-              <button onClick={() => setIsBulkBillingOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <form onSubmit={handleBulkBilling} className="p-6 space-y-4 overflow-y-auto custom-scrollbar-modal">
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">نطاق الطلاب المستهدفين</label>
-                <select name="scope" required className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 cursor-pointer">
-                  <option value="all">جميع طلاب المرحلة الحالية ({getStageLabel(stage)})</option>
-                  <option value="grade">حسب الصف الدراسي المحدد</option>
-                  <option value="section">حسب الشعبة الدراسية المحددة</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">الصف الدراسي (في حال اختيار الصف)</label>
-                <select name="grade" className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 cursor-pointer">
-                  <option value="">-- جميع الصفوف --</option>
-                  {availableGrades.map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">الشعبة الدراسية (في حال اختيار الشعبة)</label>
-                <select name="sectionId" className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 cursor-pointer">
-                  <option value="">-- جميع الشعب --</option>
-                  {availableSections.map(s => (
-                    <option key={s.id} value={s.id}>{s.grade} - شعبة {s.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">بيان ووصف الفاتورة <span className="text-danger">*</span></label>
-                <input type="text" name="title" required placeholder="مثال: القسط الأول من الرسوم الدراسية" defaultValue="الرسوم الدراسية" className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-bold text-sm shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 hover:border-emerald-500/50" />
-              </div>
-              <div>
-                <label className="block text-xs font-extrabold text-foreground mb-1.5">المبلغ المطلوب لكل طالب ({currency}) <span className="text-danger">*</span></label>
-                <input type="number" name="amount" required min="1" placeholder="أدخل المبلغ..." className="h-11 w-full px-4 bg-background/80 border border-border/80 rounded-xl font-extrabold text-base shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15 hover:border-emerald-500/50 tabular-nums" />
-              </div>
-              <div className="pt-3 flex gap-3 border-t border-border/50 shrink-0">
-                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl shadow-md transition-all text-sm active:scale-[0.98]">إصدار الفواتير فوراً</button>
-                <button type="button" onClick={() => setIsBulkBillingOpen(false)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-[0.98]">إلغاء</button>
-              </div>
-            </form>
+      {/* --- Bulk Billing Modal (إصدار رسوم جماعية مع عداد تفاعلي) --- */}
+      <AdminModal
+        isOpen={isBulkBillingOpen}
+        onClose={() => setIsBulkBillingOpen(false)}
+        title="إصدار رسوم جماعية للشعبة أو الصف"
+        description="توليد فواتير ومطالبات دفعة واحدة للمجموعة المختارة"
+        icon={Plus}
+        tone="primary"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleBulkBilling} className="space-y-4">
+          <div>
+            <label className="block text-xs font-extrabold text-foreground mb-1.5">نطاق الطلاب المستهدفين</label>
+            <select 
+              name="scope" 
+              required 
+              value={bulkBillingScope}
+              onChange={e => setBulkBillingScope(e.target.value as any)}
+              className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+            >
+              <option value="all">جميع طلاب المرحلة الحالية ({getStageLabel(stage)})</option>
+              <option value="grade">حسب الصف الدراسي المحدد</option>
+              <option value="section">حسب الشعبة الدراسية المحددة</option>
+            </select>
           </div>
-        </div>
-      )}
+
+          {bulkBillingScope === "grade" && (
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">الصف الدراسي</label>
+              <select 
+                name="grade" 
+                value={bulkBillingGrade}
+                onChange={e => setBulkBillingGrade(e.target.value)}
+                className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+              >
+                <option value="">-- اختر الصف الدراسي --</option>
+                {availableGrades.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {bulkBillingScope === "section" && (
+            <div>
+              <label className="block text-xs font-extrabold text-foreground mb-1.5">الشعبة الدراسية</label>
+              <select 
+                name="sectionId" 
+                value={bulkBillingSectionId}
+                onChange={e => setBulkBillingSectionId(e.target.value)}
+                className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+              >
+                <option value="">-- اختر الشعبة --</option>
+                {availableSections.map(s => (
+                  <option key={s.id} value={s.id}>{s.grade} - شعبة {s.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-extrabold text-foreground mb-1.5">بيان ووصف الفاتورة <span className="text-danger">*</span></label>
+            <input 
+              type="text" 
+              name="title" 
+              required 
+              placeholder="مثال: القسط الأول من الرسوم الدراسية" 
+              defaultValue="الرسوم الدراسية" 
+              className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-bold text-xs shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" 
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-extrabold text-foreground mb-1.5">المبلغ المطلوب لكل طالب ({currency}) <span className="text-danger">*</span></label>
+            <input 
+              type="number" 
+              name="amount" 
+              required 
+              min="1" 
+              placeholder="أدخل المبلغ..." 
+              onChange={e => setBulkBillingAmount(Number(e.target.value))}
+              className="h-11 w-full px-4 bg-background border border-border/80 rounded-xl font-extrabold text-base shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums" 
+            />
+          </div>
+
+          {/* Dynamic Summary Strip */}
+          {bulkBillingAmount > 0 && (
+            <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl text-xs font-bold text-primary flex items-center justify-between">
+              <span>الطلاب المستهدفون: {
+                bulkBillingScope === 'all' 
+                  ? activeStageStudents.length 
+                  : bulkBillingScope === 'grade' && bulkBillingGrade
+                  ? activeStageStudents.filter(s => s.grade === bulkBillingGrade).length
+                  : bulkBillingScope === 'section' && bulkBillingSectionId
+                  ? activeStageStudents.filter(s => s.sectionId === bulkBillingSectionId).length
+                  : activeStageStudents.length
+              } طالب</span>
+              <span>إجمالي المطالبة: {(
+                (bulkBillingScope === 'all' 
+                  ? activeStageStudents.length 
+                  : bulkBillingScope === 'grade' && bulkBillingGrade
+                  ? activeStageStudents.filter(s => s.grade === bulkBillingGrade).length
+                  : bulkBillingScope === 'section' && bulkBillingSectionId
+                  ? activeStageStudents.filter(s => s.sectionId === bulkBillingSectionId).length
+                  : activeStageStudents.length) * bulkBillingAmount
+              ).toLocaleString()} {currency}</span>
+            </div>
+          )}
+
+          <div className="pt-3 flex gap-3 border-t border-border/50 shrink-0">
+            <button type="submit" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-extrabold py-2.5 rounded-xl shadow-md transition-all text-xs active:scale-[0.98] cursor-pointer">
+              إصدار الفواتير فوراً
+            </button>
+            <button type="button" onClick={() => setIsBulkBillingOpen(false)} className="flex-1 border border-border/80 hover:bg-accent py-2.5 rounded-xl text-xs font-bold transition-colors active:scale-[0.98] cursor-pointer">
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+
 
       {/* --- Advanced Print Engine --- */}
       <AdvancedPrintEngine

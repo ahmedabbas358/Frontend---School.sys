@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
+import { FinanceNavTabs } from "@/components/finance/finance-nav";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useMemo, useState } from "react";
 import { PieChart, TrendingUp, TrendingDown, Filter, FileText, User, Users, BarChart3, Wallet, CreditCard, Building2, ArrowUpRight, ArrowDownRight, Download, Printer, Calendar, Scale, Layers, Search, ChevronDown, ChevronUp, Info, Target, AlertTriangle, CheckCircle2, ArrowRightLeft, Truck, RotateCcw, Sparkles } from "lucide-react";
@@ -212,6 +213,8 @@ function FinanceReports() {
       }
     >
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        {/* Unified Finance Navigation Tabs */}
+        <FinanceNavTabs activeTab="reports" />
         
         {/* Filters Bar */}
         <FilterBar>

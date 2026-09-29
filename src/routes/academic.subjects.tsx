@@ -1,496 +1,648 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AppShell, PageCard, Badge, formatCurrency } from "@/components/app-shell";
-import { useGlobalStore, Subject } from "@/contexts/GlobalStoreContext";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useMemo } from "react";
+import { AppShell, PageCard, Badge } from "@/components/app-shell";
+import { useGlobalStore, Subject, EducationalStage } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
-import { getGradesForStage } from "@/lib/school-structure";
-import { 
-  Plus, 
-  Trash2, 
-  X, 
-  BookOpen, 
-  Hash, 
-  Search, 
-  Filter, 
-  Layers, 
-  GraduationCap, 
-  Clock, 
-  DollarSign, 
-  Sparkles,
+import { DataTable } from "@/components/data-table";
+import {
+  BookOpen,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Clock,
+  GraduationCap,
   Users,
-  Pencil,
-  Check,
-  Building2,
-  FileText
+  CheckCircle2,
+  X,
+  Layers,
+  Sparkles,
+  DollarSign,
+  AlertTriangle,
+  Award,
 } from "lucide-react";
-import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/academic/subjects")({
   head: () => ({
-    meta: [
-      { title: "المواد والمقررات الدراسية | منصة مدارس" },
-      { name: "description", content: "إدارة الخطة الدراسية والمناهج وتوزيع الساعات التدريسية والمواد." },
-    ],
+    meta: [{ title: "المواد والخطط الدراسية | منصة مدارس" }],
   }),
   component: AcademicSubjectsPage,
 });
 
+const STAGE_LABELS: Record<EducationalStage | "all", string> = {
+  all: "جميع المراحل",
+  kindergarten: "مرحلة الروضة",
+  primary: "المرحلة الابتدائية",
+  middle: "المرحلة المتوسطة",
+  high: "المرحلة الثانوية",
+};
+
 function AcademicSubjectsPage() {
-  const { 
-    currency, 
-    activeStageSubjects, 
-    activeStageSections, 
-    allTeachingAssignments,
-    allStaff,
-    addSubject, 
-    deleteSubject  
-  } = useGlobalStore();
+  const { allSubjects, addSubject, updateSubject, deleteSubject, allTeachingAssignments, allStaff, currency, addActivityLog } =
+    useGlobalStore();
+  const { stage: activeStage } = useStage();
 
-  const { stage, getStageLabel } = useStage();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filterGrade, setFilterGrade] = useState("all");
-  const [newSubject, setNewSubject] = useState<{
-    name: string;
-    code: string;
-    grade: string;
-    creditHours: number;
-    fee: number;
-  }>({ 
-    name: "", 
-    code: "", 
-    grade: "", 
-    creditHours: 4, 
-    fee: 0 
-  });
+  const [q, setQ] = useState("");
+  const [selectedStage, setSelectedStage] = useState<string>("all");
 
-  const availableGrades = useMemo(() => {
-    try {
-      return getGradesForStage(stage) || [];
-    } catch {
-      return [];
-    }
-  }, [stage]);
+  // Modals
+  const [addModal, setAddModal] = useState(false);
+  const [editSubject, setEditSubject] = useState<Subject | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Subject | null>(null);
 
-  // Filter subjects safely
+  // Form State
+  const [formName, setFormName] = useState("");
+  const [formCode, setFormCode] = useState("");
+  const [formCredits, setFormCredits] = useState<number>(3);
+  const [formStage, setFormStage] = useState<EducationalStage | "all">("all");
+  const [formFee, setFormFee] = useState<number>(0);
+  const [formGrades, setFormGrades] = useState<string[]>([]);
+
+  // Filtering
   const filteredSubjects = useMemo(() => {
-    if (!activeStageSubjects) return [];
-    return activeStageSubjects.filter((subject) => {
-      if (!subject) return false;
-      
-      // Filter by Grade
-      if (filterGrade !== "all") {
-        const matchesGrade = 
-          !subject.grades || 
-          subject.grades.length === 0 || 
-          subject.grades.includes(filterGrade) ||
-          subject.grades.some(g => g.includes(filterGrade) || filterGrade.includes(g));
-        if (!matchesGrade) return false;
+    return allSubjects.filter((sub) => {
+      if (selectedStage !== "all" && sub.stage !== "all" && sub.stage !== selectedStage) {
+        return false;
       }
-
-      // Filter by Search Query
-      if (search) {
-        const q = search.trim().toLowerCase();
-        const nameMatch = subject.name?.toLowerCase().includes(q) || false;
-        const codeMatch = subject.code?.toLowerCase().includes(q) || false;
-        if (!nameMatch && !codeMatch) return false;
-      }
-
-      return true;
+      if (!q.trim()) return true;
+      const term = q.trim().toLowerCase();
+      return (
+        sub.name.toLowerCase().includes(term) ||
+        sub.code.toLowerCase().includes(term) ||
+        sub.id.toLowerCase().includes(term)
+      );
     });
-  }, [activeStageSubjects, filterGrade, search]);
+  }, [allSubjects, selectedStage, q]);
 
-  // Compute stats
-  const totalCreditHours = useMemo(() => {
-    return filteredSubjects.reduce((acc, curr) => acc + (curr.creditHours || 0), 0);
-  }, [filteredSubjects]);
+  // Statistics
+  const stats = useMemo(() => {
+    const totalCredits = allSubjects.reduce((sum, s) => sum + (s.creditHours || 0), 0);
+    const assignedSubjectsCount = new Set(allTeachingAssignments.map((a) => a.subjectId)).size;
+    return {
+      total: allSubjects.length,
+      totalCredits,
+      assignedCount: assignedSubjectsCount,
+      unassignedCount: Math.max(0, allSubjects.length - assignedSubjectsCount),
+    };
+  }, [allSubjects, allTeachingAssignments]);
 
-  const handleAddSubject = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSubject.name.trim() || !newSubject.code.trim()) {
-      toast.error("الرجاء تعبئة اسم المادة ورمزها");
+  const openAddModal = () => {
+    setFormName("");
+    setFormCode(`SUB-${Math.floor(100 + Math.random() * 900)}`);
+    setFormCredits(3);
+    setFormStage(activeStage || "all");
+    setFormFee(0);
+    setFormGrades([]);
+    setAddModal(true);
+  };
+
+  const openEditModal = (sub: Subject) => {
+    setEditSubject(sub);
+    setFormName(sub.name);
+    setFormCode(sub.code);
+    setFormCredits(sub.creditHours || 3);
+    setFormStage(sub.stage);
+    setFormFee(sub.fee || 0);
+    setFormGrades(sub.grades || []);
+  };
+
+  const handleSaveAdd = () => {
+    if (!formName.trim()) {
+      toast.error("يرجى إدخال اسم المادة الدراسية");
       return;
     }
-    if (!newSubject.grade) {
-      toast.error("يرجى اختيار الصف الدراسي المستهدف");
+    if (!formCode.trim()) {
+      toast.error("يرجى إدخال كود المادة");
       return;
     }
-    
-    try {
-      addSubject({
-        name: newSubject.name.trim(),
-        code: newSubject.code.trim().toUpperCase(),
-        creditHours: Number(newSubject.creditHours) || 4,
-        stage: stage,
-        grades: [newSubject.grade],
-        fee: newSubject.fee > 0 ? Number(newSubject.fee) : undefined
-      });
-      toast.success(`تمت إضافة مادة "${newSubject.name}" بنجاح`);
-      setIsModalOpen(false);
-      setNewSubject({ name: "", code: "", grade: "", creditHours: 4, fee: 0 });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "تعذر حفظ المادة");
+
+    addSubject({
+      name: formName.trim(),
+      code: formCode.trim().toUpperCase(),
+      creditHours: Number(formCredits) || 3,
+      stage: formStage,
+      fee: Number(formFee) || 0,
+      grades: formGrades,
+    });
+
+    addActivityLog({
+      user: "مدير النظام",
+      action: "إضافة مادة دراسية",
+      entity: "الخطة الدراسية",
+      details: `تمت إضافة مادة: ${formName.trim()} (${formCode.trim()})`,
+    });
+
+    toast.success(`تمت إضافة مادة "${formName.trim()}" بنجاح`);
+    setAddModal(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editSubject) return;
+    if (!formName.trim()) {
+      toast.error("يرجى إدخال اسم المادة الدراسية");
+      return;
     }
+
+    updateSubject(editSubject.id, {
+      name: formName.trim(),
+      code: formCode.trim().toUpperCase(),
+      creditHours: Number(formCredits) || 3,
+      stage: formStage,
+      fee: Number(formFee) || 0,
+      grades: formGrades,
+    });
+
+    addActivityLog({
+      user: "مدير النظام",
+      action: "تعديل مادة دراسية",
+      entity: "الخطة الدراسية",
+      details: `تم تحديث بيانات مادة: ${formName.trim()}`,
+    });
+
+    toast.success(`تم تحديث مادة "${formName.trim()}" بنجاح`);
+    setEditSubject(null);
+  };
+
+  const handleDelete = () => {
+    if (!deleteConfirm) return;
+    deleteSubject(deleteConfirm.id);
+    addActivityLog({
+      user: "مدير النظام",
+      action: "حذف مادة دراسية",
+      entity: "الخطة الدراسية",
+      details: `تم حذف مادة: ${deleteConfirm.name}`,
+    });
+    toast.success(`تم حذف مادة "${deleteConfirm.name}" بنجاح`);
+    setDeleteConfirm(null);
   };
 
   return (
     <AppShell
-      title={`المواد والمقررات الدراسية — ${getStageLabel(stage)}`}
       breadcrumb={[
-        { label: "الرئيسية", to: "/" }, 
-        { label: "الإدارة الأكاديمية", to: "/academic/subjects" }, 
-        { label: "المواد الدراسية" }
+        { label: "الرئيسية", to: "/" },
+        { label: "الإدارة الأكاديمية", to: "/academic/classes" },
+        { label: "المواد والخطط الدراسية" },
       ]}
       actions={
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-xs font-black rounded-xl hover:bg-primary/90 transition-all shadow-md glow-primary hover:scale-[1.02]"
-        >
-          <Plus className="h-4 w-4" /> 
-          <span>إضافة مادة جديدة</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openAddModal}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+          >
+            <Plus className="h-4 w-4" /> إضافة مادة جديدة
+          </button>
+        </div>
       }
     >
-      <div className="space-y-6 animate-in fade-in duration-300">
-        
-        {/* =========================================================
-            Summary Stats Cards
-            ========================================================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-3xl border border-border/70 glass-card p-4 shadow-sm flex items-center gap-3.5">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-500/10 text-blue-500 shrink-0">
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary p-3.5 rounded-2xl shadow-inner border border-primary/20">
               <BookOpen className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-muted-foreground">إجمالي المواد النشطة</p>
-              <p className="text-2xl font-black text-foreground mt-0.5">{filteredSubjects.length}</p>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border/70 glass-card p-4 shadow-sm flex items-center gap-3.5">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-500 shrink-0">
-              <Clock className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground">إجمالي الحصص الأسبوعية</p>
-              <p className="text-2xl font-black text-foreground mt-0.5">{totalCreditHours} حصة</p>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border/70 glass-card p-4 shadow-sm flex items-center gap-3.5">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-500/10 text-amber-500 shrink-0">
-              <Layers className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground">الشُعب الدراسية المرتبطة</p>
-              <p className="text-2xl font-black text-foreground mt-0.5">{activeStageSections.length} شعبة</p>
+              <h1 className="text-2xl font-black">المواد والخطط الدراسية (Curriculum & Subjects)</h1>
+              <p className="text-sm font-bold text-muted-foreground mt-1">
+                إدارة المقررات الدراسية، الحصص الأسبوعية، توزيع المراحل، وتعيينات المعلمين
+              </p>
             </div>
           </div>
         </div>
 
-        {/* =========================================================
-            Grade Filtering Navigation Pills
-            ========================================================= */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-          <button
-            onClick={() => setFilterGrade("all")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all shadow-xs ${
-              filterGrade === "all"
-                ? "bg-primary text-primary-foreground shadow-md glow-primary scale-[1.02]"
-                : "bg-card hover:bg-accent border border-border/70 text-foreground"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>جميع المواد</span>
-            <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
-              filterGrade === "all" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
-            }`}>
-              {activeStageSubjects.length}
-            </span>
-          </button>
+        {/* Stats Grid */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <BookOpen className="h-4 w-4" />
+              </div>
+              <p className="text-xs font-bold text-muted-foreground">إجمالي المواد</p>
+            </div>
+            <p className="text-2xl font-black tabular-nums">{stats.total}</p>
+          </div>
 
-          {availableGrades.map((grade) => {
-            const count = activeStageSubjects.filter(s => 
-              !s.grades || s.grades.length === 0 || s.grades.includes(grade) || s.grades.some(g => g.includes(grade) || grade.includes(g))
-            ).length;
-            const isSelected = filterGrade === grade;
-            return (
-              <button
-                key={grade}
-                onClick={() => setFilterGrade(grade)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all shadow-xs ${
-                  isSelected
-                    ? "bg-primary text-primary-foreground shadow-md glow-primary scale-[1.02]"
-                    : "bg-card hover:bg-accent border border-border/70 text-foreground"
-                }`}
-              >
-                <GraduationCap className="w-4 h-4" />
-                <span>{grade}</span>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
-                  isSelected ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+          <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-8 w-8 rounded-xl bg-success/10 text-success flex items-center justify-center">
+                <Clock className="h-4 w-4" />
+              </div>
+              <p className="text-xs font-bold text-muted-foreground">إجمالي الحصص / الساعات</p>
+            </div>
+            <p className="text-2xl font-black text-success tabular-nums">{stats.totalCredits} حصة</p>
+          </div>
+
+          <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-8 w-8 rounded-xl bg-info/10 text-info flex items-center justify-center">
+                <Users className="h-4 w-4" />
+              </div>
+              <p className="text-xs font-bold text-muted-foreground">مواد مسندة لمعلمين</p>
+            </div>
+            <p className="text-2xl font-black tabular-nums text-primary">{stats.assignedCount}</p>
+          </div>
+
+          <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-8 w-8 rounded-xl bg-warning/10 text-warning-foreground flex items-center justify-center">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <p className="text-xs font-bold text-muted-foreground">مواد بدون معلم</p>
+            </div>
+            <p className={`text-2xl font-black tabular-nums ${stats.unassignedCount > 0 ? "text-warning-foreground" : "text-success"}`}>
+              {stats.unassignedCount}
+            </p>
+          </div>
         </div>
 
-        {/* =========================================================
-            Search Bar
-            ========================================================= */}
-        <div className="relative">
-          <Search className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="بحث باسم المقرر الدراسي أو الرمز (مثل MATH101)..."
-            className="w-full h-11 rounded-2xl border border-input/80 bg-card/90 ps-10 pe-10 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 shadow-xs transition-all placeholder:text-muted-foreground/70"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute end-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all active:scale-95"
+        {/* Filters */}
+        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="بحث باسم المادة، كود المقرر، أو المعرف..."
+                className="h-11 w-full rounded-xl border border-border/80 bg-background ps-10 pe-4 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              />
+            </div>
+            <select
+              value={selectedStage}
+              onChange={(e) => setSelectedStage(e.target.value)}
+              className="h-11 rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+              <option value="all">كافة المراحل التعليمية</option>
+              <option value="primary">المرحلة الابتدائية</option>
+              <option value="middle">المرحلة المتوسطة</option>
+              <option value="secondary">المرحلة الثانوية</option>
+            </select>
+          </div>
         </div>
 
-        {/* =========================================================
-            Subject Cards Breakdown
-            ========================================================= */}
-        <div className="space-y-6">
-          {availableGrades
-            .filter(g => filterGrade === "all" || filterGrade === g)
-            .map((grade) => {
-              const gradeSubjects = filteredSubjects.filter(s => 
-                !s.grades || s.grades.length === 0 || s.grades.includes(grade) || s.grades.some(g => g.includes(grade) || grade.includes(g))
-              );
-
-              if (gradeSubjects.length === 0 && filterGrade !== "all") {
-                return (
-                  <PageCard key={grade} className="p-8 text-center border-dashed">
-                    <BookOpen className="h-10 w-10 mx-auto mb-2 text-muted-foreground/40" />
-                    <h3 className="font-extrabold text-sm text-foreground">لا توجد مواد مسجلة لهذا الصف</h3>
-                    <p className="text-xs text-muted-foreground mt-1">يمكنك إضافة مقرر دراسي جديد عبر زر "إضافة مادة جديدة"</p>
-                  </PageCard>
-                );
-              }
-
-              if (gradeSubjects.length === 0) return null;
-
-              return (
-                <div key={grade} className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-xl bg-primary/10 text-primary">
-                        <GraduationCap className="h-4 w-4" />
-                      </div>
-                      <h3 className="font-black text-sm text-foreground">{grade}</h3>
+        {/* Subjects Table */}
+        <PageCard>
+          <DataTable
+            rows={filteredSubjects}
+            pageSize={25}
+            columns={[
+              {
+                key: "code",
+                header: "كود المادة",
+                cell: (s) => (
+                  <span className="font-mono font-bold text-xs px-2.5 py-1 rounded-lg bg-muted/60 border border-border/60 text-foreground">
+                    {s.code}
+                  </span>
+                ),
+              },
+              {
+                key: "name",
+                header: "اسم المقرر الدراسي",
+                cell: (s) => (
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0 shadow-inner">
+                      <BookOpen className="h-4 w-4" />
                     </div>
-                    <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                      {gradeSubjects.length} مقررات
-                    </span>
+                    <div>
+                      <div className="font-black text-sm text-foreground">{s.name}</div>
+                      <div className="text-[11px] text-muted-foreground font-mono">{s.id}</div>
+                    </div>
                   </div>
+                ),
+              },
+              {
+                key: "stage",
+                header: "المرحلة الدراسية",
+                cell: (s) => (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                    {STAGE_LABELS[s.stage] || s.stage}
+                  </span>
+                ),
+              },
+              {
+                key: "creditHours",
+                header: "الحصص / الساعات",
+                cell: (s) => (
+                  <div className="flex items-center gap-1.5 text-xs font-black text-foreground">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>{s.creditHours || 3} حصص أسبوعياً</span>
+                  </div>
+                ),
+              },
+              {
+                key: "fee",
+                header: "رسوم إضافية",
+                cell: (s) => (
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {s.fee ? `${s.fee.toLocaleString()} ${currency}` : "بدون رسوم"}
+                  </span>
+                ),
+              },
+              {
+                key: "teachers",
+                header: "المعلمون المسندون",
+                cell: (s) => {
+                  const assignments = allTeachingAssignments.filter((a) => a.subjectId === s.id);
+                  const teacherNames = Array.from(
+                    new Set(
+                      assignments
+                        .map((a) => allStaff.find((st) => st.id === (a.teacherId || (a as any).staffId))?.name)
+                        .filter(Boolean)
+                    )
+                  );
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {gradeSubjects.map((s) => {
-                      // Find assigned teachers for this subject
-                      const assignments = allTeachingAssignments.filter(ta => ta.subjectId === s.id);
-                      const teacherNames = Array.from(new Set(assignments.map(ta => {
-                        const staff = allStaff.find(st => st.id === ta.teacherId);
-                        return staff?.name;
-                      }).filter(Boolean)));
-
-                      return (
-                        <div 
-                          key={`${grade}-${s.id}`} 
-                          className="p-4 rounded-3xl border border-border/70 glass-card hover:border-primary/50 shadow-sm transition-all hover-lift flex flex-col justify-between"
-                        >
-                          <div>
-                            {/* Card Top */}
-                            <div className="flex items-center justify-between gap-2 mb-3">
-                              <span className="px-2.5 py-1 rounded-xl bg-primary/10 text-primary font-black text-xs tracking-wider" dir="ltr">
-                                {s.code}
-                              </span>
-                              <button 
-                                onClick={() => {
-                                  if (confirm(`هل أنت متأكد من حذف مادة "${s.name}"؟`)) {
-                                    deleteSubject(s.id);
-                                    toast.success("تم حذف المادة بنجاح");
-                                  }
-                                }}
-                                className="p-1.5 rounded-lg text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
-                                title="حذف المادة"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-
-                            {/* Subject Title */}
-                            <h4 className="font-extrabold text-sm text-foreground mb-1.5 leading-snug">
-                              {s.name}
-                            </h4>
-
-                            {/* Weekly load & Teacher assignment */}
-                            <div className="space-y-1.5 text-xs text-muted-foreground my-3 p-2.5 rounded-2xl bg-muted/30 border border-border/40">
-                              <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-1.5">
-                                  <Clock className="w-3.5 h-3.5 text-primary" />
-                                  <span>الحصص الأسبوعية:</span>
-                                </span>
-                                <span className="font-extrabold text-foreground">{s.creditHours || 4} حصص</span>
-                              </div>
-
-                              <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-1.5">
-                                  <Users className="w-3.5 h-3.5 text-blue-500" />
-                                  <span>المعلمون المسندون:</span>
-                                </span>
-                                <span className="font-bold text-foreground truncate max-w-[120px]">
-                                  {teacherNames.length > 0 ? teacherNames.join("، ") : "غير مسند"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Fee Status Footer */}
-                          <div className="pt-2.5 border-t border-border/40 flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground text-[11px] font-bold">الرسوم الإضافية:</span>
-                            {s.fee && s.fee > 0 ? (
-                              <span className="font-black text-danger">{formatCurrency(s.fee, currency)}</span>
-                            ) : (
-                              <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10">
-                                مجانية (ضمن المصروفات)
-                              </span>
-                            )}
-                          </div>
+                  return (
+                    <div className="text-xs">
+                      {teacherNames.length > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5 text-success shrink-0" />
+                          <span className="font-bold text-foreground">
+                            {teacherNames.slice(0, 2).join("، ")}
+                            {teacherNames.length > 2 ? ` (+${teacherNames.length - 2})` : ""}
+                          </span>
                         </div>
-                      );
-                    })}
+                      ) : (
+                        <span className="text-warning-foreground font-bold flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" /> بانتظار إسناد
+                        </span>
+                      )}
+                    </div>
+                  );
+                },
+              },
+              {
+                key: "actions",
+                header: "الخيارات",
+                cell: (s) => (
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      onClick={() => openEditModal(s)}
+                      className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-primary transition-colors border border-transparent hover:border-border"
+                      title="تعديل المادة"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(s)}
+                      className="p-2 rounded-xl hover:bg-danger/10 text-muted-foreground hover:text-danger transition-colors border border-transparent hover:border-danger/30"
+                      title="حذف المادة"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                </div>
-              );
-            })}
-        </div>
-
+                ),
+              },
+            ]}
+            empty="لا توجد مواد دراسية مسجلة مطابقة لمعايير البحث."
+          />
+        </PageCard>
       </div>
 
-      {/* =========================================================
-          Add Subject Modal
-          ========================================================= */}
-      {isModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setIsModalOpen(false)}
-          dir="rtl"
-        >
-          <div 
-            className="w-full max-w-md bg-card/98 dark:bg-card/95 border border-border/80 shadow-2xl backdrop-blur-2xl rounded-3xl p-6 sm:p-7 overflow-hidden animate-in zoom-in-95 duration-150 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3.5">
+      {/* ────── Modal: Add Subject ────── */}
+      {addModal && (
+        <div className="modal-backdrop-luxury" onClick={() => setAddModal(false)}>
+          <div className="modal-card-luxury max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-border/70 flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-                  <BookOpen className="w-5 h-5" />
+                <div className="h-10 w-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner">
+                  <Plus className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-foreground">إضافة مقرر دراسي جديد</h3>
-                  <p className="text-xs text-muted-foreground">تحديد مادة دراسية وتوزيع ساعاتها وصفها المستهدف</p>
+                  <h2 className="font-black text-lg">إضافة مقرر دراسي جديد</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">تحديد كود المادة والحصص والمرحلة الدراسية</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsModalOpen(false)} 
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              <button
+                onClick={() => setAddModal(false)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            
-            <form onSubmit={handleAddSubject} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">اسم المادة الدراسية <span className="text-destructive">*</span></label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="مثال: الرياضيات المتقدمة"
-                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
-                  value={newSubject.name}
-                  onChange={e => setNewSubject({...newSubject, name: e.target.value})}
-                />
-              </div>
-              
+
+            <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">رمز المادة <span className="text-destructive">*</span></label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="MATH102"
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 uppercase tracking-wider transition-all placeholder:text-muted-foreground/60"
-                    dir="ltr"
-                    value={newSubject.code}
-                    onChange={e => setNewSubject({...newSubject, code: e.target.value})}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">اسم المادة <span className="text-danger">*</span></label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="مثال: الرياضيات المتقدمة"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+                    autoFocus
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-foreground/85 mb-1.5">الحصص الأسبوعية</label>
-                  <input 
-                    type="number" 
-                    min="1"
-                    max="20"
-                    className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                    value={newSubject.creditHours}
-                    onChange={e => setNewSubject({...newSubject, creditHours: Number(e.target.value)})}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">كود المادة <span className="text-danger">*</span></label>
+                  <input
+                    type="text"
+                    value={formCode}
+                    onChange={(e) => setFormCode(e.target.value)}
+                    placeholder="مثال: MATH-101"
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold font-mono shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">الصف الدراسي المستهدف <span className="text-destructive">*</span></label>
-                <select
-                  required
-                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 cursor-pointer transition-all"
-                  value={newSubject.grade}
-                  onChange={(e) => setNewSubject({ ...newSubject, grade: e.target.value })}
-                >
-                  <option value="">-- اختر الصف الدراسي --</option>
-                  {availableGrades.map((grade) => (
-                    <option key={grade} value={grade}>{grade}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">المرحلة الدراسية</label>
+                  <select
+                    value={formStage}
+                    onChange={(e) => setFormStage(e.target.value as any)}
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm cursor-pointer focus:border-primary focus:outline-none"
+                  >
+                    <option value="all">جميع المراحل</option>
+                    <option value="primary">المرحلة الابتدائية</option>
+                    <option value="middle">المرحلة المتوسطة</option>
+                    <option value="secondary">المرحلة الثانوية</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">الحصص الأسبوعية</label>
+                  <input
+                    type="number"
+                    value={formCredits}
+                    onChange={(e) => setFormCredits(Number(e.target.value))}
+                    min={1}
+                    max={15}
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-foreground/85 mb-1.5">الرسوم الإضافية (اختياري)</label>
-                <input 
-                  type="number" 
-                  min="0"
-                  placeholder="0 (مجانية تلقائياً)"
-                  className="w-full h-11 rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
-                  value={newSubject.fee || ""}
-                  onChange={e => setNewSubject({...newSubject, fee: Number(e.target.value)})}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground">رسوم معامل أو مواد إضافية ({currency})</label>
+                <input
+                  type="number"
+                  value={formFee}
+                  onChange={(e) => setFormFee(Number(e.target.value))}
+                  min={0}
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
                 />
               </div>
 
-              <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2.5">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-input bg-background/80 text-xs font-semibold hover:bg-accent active:scale-[0.98] transition-all"
+              <div className="pt-3 border-t border-border flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setAddModal(false)}
+                  className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border hover:bg-accent transition-colors"
                 >
                   إلغاء
                 </button>
-                <button 
-                  type="submit" 
-                  className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-extrabold shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all glow-primary"
+                <button
+                  type="button"
+                  onClick={handleSaveAdd}
+                  className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
                 >
-                  حفظ المادة
+                  حفظ المقرر
                 </button>
               </div>
-            </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────── Modal: Edit Subject ────── */}
+      {editSubject && (
+        <div className="modal-backdrop-luxury" onClick={() => setEditSubject(null)}>
+          <div className="modal-card-luxury max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-border/70 flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner">
+                  <Edit2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="font-black text-lg">تعديل بيانات المقرر</h2>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">{editSubject.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditSubject(null)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">اسم المادة</label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">كود المادة</label>
+                  <input
+                    type="text"
+                    value={formCode}
+                    onChange={(e) => setFormCode(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold font-mono shadow-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">المرحلة الدراسية</label>
+                  <select
+                    value={formStage}
+                    onChange={(e) => setFormStage(e.target.value as any)}
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm cursor-pointer focus:border-primary focus:outline-none"
+                  >
+                    <option value="all">جميع المراحل</option>
+                    <option value="primary">المرحلة الابتدائية</option>
+                    <option value="middle">المرحلة المتوسطة</option>
+                    <option value="secondary">المرحلة الثانوية</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">الحصص الأسبوعية</label>
+                  <input
+                    type="number"
+                    value={formCredits}
+                    onChange={(e) => setFormCredits(Number(e.target.value))}
+                    min={1}
+                    max={15}
+                    className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground">رسوم إضافية ({currency})</label>
+                <input
+                  type="number"
+                  value={formFee}
+                  onChange={(e) => setFormFee(Number(e.target.value))}
+                  min={0}
+                  className="h-11 w-full rounded-xl border border-border/80 bg-background px-3.5 text-sm font-bold shadow-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-border flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditSubject(null)}
+                  className="rounded-xl px-5 py-2.5 text-sm font-bold border border-border hover:bg-accent transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
+                >
+                  تحديث المقرر
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────── Modal: Delete Subject Confirmation ────── */}
+      {deleteConfirm && (
+        <div className="modal-backdrop-luxury" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal-card-luxury max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="h-14 w-14 mx-auto rounded-2xl bg-danger/10 text-danger flex items-center justify-center mb-4 shadow-inner">
+                <Trash2 className="h-7 w-7" />
+              </div>
+              <h2 className="text-lg font-black">حذف المقرر الدراسي؟</h2>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                هل أنت متأكد من رغبتك في حذف مادة{" "}
+                <strong className="text-foreground font-black">"{deleteConfirm.name}"</strong>؟
+                قد تتأثر الجداول الدراسية وتعيينات المعلمين المرتبطة بها.
+              </p>
+              <div className="flex gap-2.5 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 rounded-xl border border-border py-2.5 text-sm font-bold hover:bg-accent transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="flex-1 rounded-xl bg-danger py-2.5 text-sm font-bold text-white hover:bg-danger/90 transition-all shadow-md shadow-danger/20"
+                >
+                  تأكيد الحذف
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

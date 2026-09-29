@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo, useRef } from "react";
 import { AppShell } from "@/components/app-shell";
+import { ExamsNavTabs } from "@/components/exams/exams-nav";
 import { useGlobalStore, ExamResult, ExamSubject, Exam } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
@@ -984,6 +985,8 @@ function ExamsArchivePage() {
       `}</style>
 
       <div className="space-y-6 pb-16">
+        {/* Unified Module Navigation */}
+        <ExamsNavTabs activeTab="archive" />
         
         {/* ========================================================================= */}
         {/* TOP SYSTEM HEADER & EXECUTIVE ACTION BAR                                  */}

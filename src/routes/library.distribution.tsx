@@ -21,7 +21,8 @@ import {
   ChevronRight,
   Package,
   Layers3,
-  BookmarkCheck
+  BookmarkCheck,
+  FileSpreadsheet
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useGlobalStore, Textbook, TextbookDistribution } from "@/contexts/GlobalStoreContext";
@@ -30,6 +31,7 @@ import { getGradesForStage } from "@/lib/school-structure";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/library/distribution")({
+  head: () => ({ meta: [{ title: "توزيع وتسليم الكتب المدرسية | منصة مدارس" }] }),
   component: LibraryDistribution,
 });
 
@@ -43,6 +45,7 @@ function LibraryDistribution() {
     distributeBatchToSection,
     removeDistribution,
     allSections,
+    addActivityLog,
   } = useGlobalStore();
 
   const { stage, getStageLabel } = useStage();
@@ -57,6 +60,9 @@ function LibraryDistribution() {
   // Selected student for drawer / modal
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [modalActiveTerm, setModalActiveTerm] = useState<string>("الفصل الأول");
+
+  // Return all books confirmation modal
+  const [returnConfirmStudent, setReturnConfirmStudent] = useState<any | null>(null);
 
   // Batch distribution modal state
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
@@ -153,6 +159,13 @@ function LibraryDistribution() {
 
     if (action === 'return' && distributionId) {
       removeDistribution(distributionId);
+      addActivityLog({
+        action: "delete",
+        category: "facilities",
+        details: `استرجاع نسخة كتاب (${textbook.title}) من الطالب: ${selectedStudent.name}`,
+        targetId: selectedStudent.id,
+        timestamp: new Date().toISOString(),
+      });
       toast.success(`تم استرجاع نسخة "${textbook.title}" إلى المستودع بنجاح`);
     } else if (action === 'give') {
       // Find matching inventory item stock
@@ -172,6 +185,15 @@ function LibraryDistribution() {
         issuedBy: "أمين المستودع المدرسي",
         receivedByGuardian: true,
       });
+
+      addActivityLog({
+        action: "create",
+        category: "facilities",
+        details: `تسليم كتاب (${textbook.title}) للطالب: ${selectedStudent.name}`,
+        targetId: selectedStudent.id,
+        timestamp: new Date().toISOString(),
+      });
+
       toast.success(`تم تسليم كتاب "${textbook.title}" للطالب وتحديث رصيد المستودع`);
     }
   };
@@ -209,10 +231,18 @@ function LibraryDistribution() {
       count++;
     });
 
+    addActivityLog({
+      action: "create",
+      category: "facilities",
+      details: `تسليم حزمة مقررات (${count} كتب) دفعة واحدة للطالب: ${selectedStudent.name}`,
+      targetId: selectedStudent.id,
+      timestamp: new Date().toISOString(),
+    });
+
     toast.success(`تم تسليم ${count} مقررات دراسية دفعة واحدة وتحديث المستودع!`);
   };
 
-  // Return all received for selected student
+  // Return all received for selected student (Open Luxury Modal)
   const returnAllReceivedForStudent = () => {
     if (!selectedStudent) return;
     const received = activeStageDistributions.filter(d => d.studentId === selectedStudent.id);
@@ -220,11 +250,25 @@ function LibraryDistribution() {
       toast.info("لا توجد كتب مستلمة مسجلة في عهدة الطالب لإرجاعها.");
       return;
     }
+    setReturnConfirmStudent(selectedStudent);
+  };
 
-    if (confirm(`هل أنت متأكد من استرجاع كافة عهدة الكتب (${received.length} كتب) للطالب وإعادتها للمستودع؟`)) {
-      received.forEach(item => removeDistribution(item.id));
-      toast.success(`تم استرجاع ${received.length} كتب إلى رصيد المستودع المركزي`);
-    }
+  // Execute Return All
+  const executeReturnAllReceived = () => {
+    if (!returnConfirmStudent) return;
+    const received = activeStageDistributions.filter(d => d.studentId === returnConfirmStudent.id);
+    received.forEach(item => removeDistribution(item.id));
+
+    addActivityLog({
+      action: "delete",
+      category: "facilities",
+      details: `استرجاع كامل عهدة الكتب (${received.length} كتب) للطالب: ${returnConfirmStudent.name} إلى المستودع`,
+      targetId: returnConfirmStudent.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    toast.success(`تم استرجاع ${received.length} كتب إلى رصيد المستودع المركزي`);
+    setReturnConfirmStudent(null);
   };
 
   // Quick 1-click deliver all for a student from the table
@@ -252,6 +296,14 @@ function LibraryDistribution() {
       count++;
     });
 
+    addActivityLog({
+      action: "create",
+      category: "facilities",
+      details: `تسليم سريع لكافة المقررات (${count} كتب) للطالب: ${student.name}`,
+      targetId: student.id,
+      timestamp: new Date().toISOString(),
+    });
+
     toast.success(`تم صرف وتسليم ${count} كتب دراسية للطالب ${student.name}`);
   };
 
@@ -263,14 +315,51 @@ function LibraryDistribution() {
       return;
     }
 
+    const sec = allSections.find(s => s.id === batchSectionId);
     const result = distributeBatchToSection(batchSectionId, batchTerm);
     if (result.distributedCount > 0) {
+      addActivityLog({
+        action: "create",
+        category: "facilities",
+        details: `صرف حزمة كتب لشعبة (${sec?.name || batchSectionId}): ${result.distributedCount} كتاباً لـ ${result.studentCount} طالباً`,
+        timestamp: new Date().toISOString(),
+      });
       toast.success(`تم بنجاح صرف وتسليم ${result.distributedCount} كتاباً لـ ${result.studentCount} طالباً وتحديث المستودع!`);
       setIsBatchModalOpen(false);
     } else {
       toast.info("لم يتم صرف أي كتب جديدة؛ ربما تم تسليم كافة المقررات لجميع طلاب هذه الشعبة مسبقاً.");
       setIsBatchModalOpen(false);
     }
+  };
+
+  // CSV Export
+  const exportDistributionCsv = () => {
+    const headers = ["رقم الطالب", "اسم الطالب", "الصف", "الشعبة", "حالة الاستلام", "نسبة الاستلام", "المقررات المستلمة", "إجمالي المقررات"];
+    const rows = filteredStudents.map(st => {
+      const { requiredCount, receivedCount, percentage, status } = getProgress(st);
+      const sec = allSections.find(s => s.id === st.sectionId);
+      return [
+        `"${st.id}"`,
+        `"${st.name}"`,
+        `"${st.grade}"`,
+        `"${sec ? sec.name : ''}"`,
+        `"${status === 'complete' ? 'مكتمل' : status === 'partial' ? 'جزئي' : 'معلق'}"`,
+        `"${percentage}%"`,
+        receivedCount,
+        requiredCount,
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `تقرير_توزيع_المقررات_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("تم تصدير كشف توزيع المقررات بنجاح");
   };
 
   // Textbooks for selected student in drawer
@@ -316,6 +405,15 @@ function LibraryDistribution() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={exportDistributionCsv}
+                className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-background/80 px-4 py-2.5 text-xs font-extrabold text-foreground shadow-sm transition-all hover:border-primary/50 hover:bg-accent active:scale-[0.98]"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                <span>تصدير كشف التوزيع (CSV)</span>
+              </button>
+
               <Link
                 to="/inventory/items"
                 className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-background/80 px-4 py-2.5 text-xs font-extrabold text-foreground shadow-sm transition-all hover:border-primary/50 hover:bg-accent active:scale-[0.98]"
@@ -938,6 +1036,72 @@ function LibraryDistribution() {
                 >
                   إغلاق
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RETURN CONFIRMATION MODAL */}
+        {returnConfirmStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
+            <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-destructive/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center shadow-inner border border-destructive/20">
+                    <RefreshCw className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-foreground">استرجاع عهدة المقررات</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">إعادة كافة الكتب المستلمة إلى رصيد المستودع</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReturnConfirmStudent(null)}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-sm font-bold text-foreground">
+                  هل أنت متأكد من استرجاع كامل عهدة المقررات للطالب وإعادتها فوراً إلى رصيد المستودع المركزي؟
+                </p>
+
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">اسم الطالب:</span>
+                    <span className="font-bold text-foreground">{returnConfirmStudent.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">الصف:</span>
+                    <span className="font-bold text-foreground">{returnConfirmStudent.grade}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">الكتب المسترجعة:</span>
+                    <span className="font-black text-primary">
+                      {activeStageDistributions.filter(d => d.studentId === returnConfirmStudent.id).length} كتب
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setReturnConfirmStudent(null)}
+                    className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeReturnAllReceived}
+                    className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
+                  >
+                    تأكيد الاسترجاع للمستودع
+                  </button>
+                </div>
               </div>
             </div>
           </div>

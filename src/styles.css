@@ -538,26 +538,37 @@
   position: fixed;
   inset: 0;
   z-index: 50;
-  background-color: oklch(0 0 0 / 0.62);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+  background-color: oklch(0 0 0 / 0.65);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
   animation: overlayFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .modal-card-luxury {
+  position: relative;
+  width: 100%;
+  max-height: min(92vh, 860px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background-color: color-mix(in oklch, var(--color-card) 98%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid color-mix(in oklch, var(--color-border) 85%, transparent);
   border-radius: 1.5rem; /* 24px rounded-3xl */
-  box-shadow: 0 25px 60px -15px oklch(0 0 0 / 0.3), 0 0 0 1px oklch(1 0 0 / 0.05);
+  box-shadow: 0 25px 60px -15px oklch(0 0 0 / 0.35), 0 0 0 1px oklch(1 0 0 / 0.08);
   animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .dark .modal-card-luxury {
-  background-color: color-mix(in oklch, var(--color-card) 92%, transparent);
-  border: 1px solid oklch(1 0 0 / 0.1);
-  box-shadow: 0 30px 70px -15px oklch(0 0 0 / 0.6), 0 0 0 1px oklch(1 0 0 / 0.08);
+  background-color: color-mix(in oklch, var(--color-card) 94%, transparent);
+  border: 1px solid oklch(1 0 0 / 0.12);
+  box-shadow: 0 30px 70px -15px oklch(0 0 0 / 0.6), 0 0 0 1px oklch(1 0 0 / 0.1);
 }
 
 /* Modal Inner Scrollbar */
@@ -573,6 +584,17 @@
 }
 .custom-scrollbar-modal::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklch, var(--color-muted-foreground) 45%, transparent);
+}
+
+/* Hide scrollbar across all browsers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 

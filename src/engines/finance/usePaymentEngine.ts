@@ -19,7 +19,8 @@ export function usePaymentEngine() {
     method: "cash" | "bank_transfer" | "card" | "cheque",
     destinationAccountId: string, // Treasury or Bank GL Account
     referenceNo?: string,
-    notes?: string
+    notes?: string,
+    sessionId?: string
   ) => {
     const invoice = (globalStore.allInvoices || []).find((i: any) => i.id === invoiceId);
     if (!invoice) throw new Error("الفاتورة غير موجودة");
@@ -36,6 +37,7 @@ export function usePaymentEngine() {
       method,
       referenceNo,
       notes,
+      sessionId,
     };
     
     globalStore.addPayment(paymentRecord);
@@ -61,7 +63,9 @@ export function usePaymentEngine() {
     studentId: string,
     totalAmount: number,
     method: "cash" | "bank_transfer" | "card" | "cheque",
-    destinationAccountId: string
+    destinationAccountId: string,
+    sessionId?: string,
+    notes?: string
   ) => {
     let remaining = totalAmount;
     
@@ -75,7 +79,7 @@ export function usePaymentEngine() {
       const balance = (inv.netAmount ?? inv.amount) - (inv.paid || 0);
       const applyAmount = Math.min(balance, remaining);
       
-      receiveInvoicePayment(inv.id, applyAmount, method, destinationAccountId, "تسديد إجمالي موزع");
+      receiveInvoicePayment(inv.id, applyAmount, method, destinationAccountId, "تسديد إجمالي موزع", notes, sessionId);
       remaining -= applyAmount;
     }
 

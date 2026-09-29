@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, PageCard } from "@/components/app-shell";
+import { FinanceNavTabs } from "@/components/finance/finance-nav";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { useMemo, useState } from "react";
@@ -26,18 +27,18 @@ function FinanceDashboard() {
 
   // Command Center Metrics
   const commandStats = useMemo(() => {
-    const totalTreasury = (allTreasuries || []).filter(t => t.status === "active").reduce((sum, t) => sum + t.balance, 0);
-    const totalBank = (allBankAccounts || []).filter(b => b.status === "active").reduce((sum, b) => sum + b.balance, 0);
+    const totalTreasury = (allTreasuries || []).filter(t => t.status === "active" || !t.status).reduce((sum, t) => sum + (t.balance || 0), 0);
+    const totalBank = (allBankAccounts || []).filter(b => b.status === "active" || !b.status).reduce((sum, b) => sum + (b.currentBalance ?? (b as any).balance ?? 0), 0);
     
     // Receivables: Unpaid invoices
     const totalReceivables = filteredInvoices.reduce((sum, inv) => {
-       const due = (inv.netAmount ?? inv.amount) - inv.paid;
+       const due = (inv.netAmount ?? inv.amount) - (inv.paid || 0);
        return due > 0 && inv.status !== "cancelled" ? sum + due : sum;
     }, 0);
 
     // Payables: Unpaid expenses + Vendor balances
-    const unpaidExpenses = (allExpenses || []).filter(e => e.status !== "posted" && e.status !== "paid").reduce((sum, e) => sum + e.amount, 0);
-    const vendorBalances = (allVendors || []).reduce((sum, v) => sum + v.balance, 0);
+    const unpaidExpenses = (allExpenses || []).filter(e => e.status !== "posted" && e.status !== "paid").reduce((sum, e) => sum + (e.amount || 0), 0);
+    const vendorBalances = (allVendors || []).reduce((sum, v) => sum + (v.balance || 0), 0);
     const totalPayables = unpaidExpenses + vendorBalances;
 
     return { totalTreasury, totalBank, totalReceivables, totalPayables, unpaidExpenses };
@@ -57,7 +58,7 @@ function FinanceDashboard() {
         type: "income" as const,
         currency,
         method: p.method,
-        link: "/finance/invoices"
+        link: "/finance/payments"
       };
     });
     const expenses = (allExpenses || []).map(e => ({
@@ -131,6 +132,8 @@ function FinanceDashboard() {
       }
     >
       <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        {/* Unified Finance Navigation Tabs */}
+        <FinanceNavTabs activeTab="dashboard" />
         
         <FilterBar>
           <AcademicYearSelector value={selectedYear ?? ''} onChange={setSelectedYear} years={allAcademicYears} />

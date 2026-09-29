@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
-import { CreditCard, Plus, Search, Filter, Printer, Receipt, DollarSign, CheckCircle2, X, Trash2, Calendar, FileText } from "lucide-react";
+import { CreditCard, Plus, Search, Filter, Printer, Receipt, DollarSign, CheckCircle2, X, Trash2, Calendar, FileText, Download } from "lucide-react";
 import { useState, useMemo } from "react";
 import { FinancialCard, FilterBar } from "@/components/financial-components";
 import { useGlobalStore, Payment } from "@/contexts/GlobalStoreContext";
@@ -12,6 +12,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FinanceNavTabs } from "@/components/finance/finance-nav";
 
 export const Route = createFileRoute("/finance/payments")({
   component: FinancePayments,
@@ -27,7 +29,17 @@ const paymentSchema = z.object({
 type PaymentForm = z.infer<typeof paymentSchema>;
 
 function FinancePayments() {
-  const { currency, activeStageInvoices, allPayments, addPayment, activeStageSections, activeStageStudents } = useGlobalStore();
+  const { 
+    currency, 
+    activeStageInvoices, 
+    allPayments, 
+    addPayment, 
+    activeStageSections, 
+    activeStageStudents,
+    allCashSessions,
+    allTreasuries,
+    allBankAccounts
+  } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   const [q, setQ] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
@@ -97,18 +109,44 @@ function FinancePayments() {
     }
   };
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<PaymentForm>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<PaymentForm>({
     resolver: zodResolver(paymentSchema),
+    defaultValues: { method: "cash" }
   });
 
+  const selectedInvoiceId = watch("invoiceId");
+  const selectedMethod = watch("method");
+  const selectedInvObj = useMemo(() => unpaidInvoices.find(i => i.id === selectedInvoiceId), [unpaidInvoices, selectedInvoiceId]);
+  const openCashSession = useMemo(() => allCashSessions.find(s => s.status === "open"), [allCashSessions]);
+
   const onSubmit = (data: PaymentForm) => {
+    const activeSession = data.method === "cash" ? openCashSession : undefined;
+    const inv = invoiceMap.get(data.invoiceId);
+    const student = inv ? studentMap.get(inv.studentId) : undefined;
+    const receiptId = `REC-${Date.now().toString().slice(-6)}`;
+
     addPayment({
       invoiceId: data.invoiceId, 
       amount: data.amount, 
       method: data.method, 
-      date: new Date().toISOString().split("T")[0]
+      date: new Date().toISOString().split("T")[0],
+      sessionId: activeSession?.id,
+    } as any);
+
+    setSelectedReceipt({
+      id: receiptId,
+      invoiceId: data.invoiceId,
+      invoiceTitle: inv?.title || "سداد رسوم دراسية",
+      studentName: inv?.studentName || student?.name || "طالب محدد",
+      studentGrade: student?.grade || "",
+      amount: data.amount,
+      method: data.method,
+      date: new Date().toISOString().split("T")[0],
+      cashier: activeSession?.cashierName || "أمين الصندوق والخزينة",
+      notes: data.notes || "سداد قسط دراسي معتمد",
     });
-    toast.success(`تم إخراج سند قبض بمبلغ ${data.amount.toLocaleString()} ${currency} للفاتورة ${data.invoiceId} بنجاح`);
+
+    toast.success(`تم قيد سند قبض بمبلغ ${data.amount.toLocaleString()} ${currency} للفاتورة بنجاح`);
     setIsModalOpen(false);
     reset();
   };
@@ -148,6 +186,46 @@ function FinancePayments() {
     return { totalCollected, totalCount: filteredPayments.length, cashSum, bankSum, cardSum };
   }, [filteredPayments]);
 
+  const handleExportCSV = () => {
+    if (filteredPayments.length === 0) {
+      toast.error("لا توجد مقبوضات لتصديرها");
+      return;
+    }
+
+    const headers = [
+      "رقم السند",
+      "اسم الطالب",
+      "الصف",
+      "رقم الفاتورة والمرجع",
+      "المبلغ المحصل",
+      "تاريخ الدفع",
+      "طريقة الدفع",
+      "الملاحظات"
+    ];
+
+    const rows = filteredPayments.map((p: any) => [
+      p.id,
+      `"${p.studentName?.replace(/"/g, '""') || ''}"`,
+      `"${p.studentGrade || ''}"`,
+      `"${p.invoiceId || p.referenceNo || ''}"`,
+      p.amount || 0,
+      p.date || "",
+      `"${getMethodLabel(p.method)}"`,
+      `"${p.notes?.replace(/"/g, '""') || ''}"`
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `سندات_القبض_${getStageLabel(stage)}_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("تم تصدير سجل سندات القبض بنجاح");
+  };
+
   return (
     <AppShell
       breadcrumb={[
@@ -156,7 +234,13 @@ function FinancePayments() {
         { label: "سندات القبض والمقبوضات" },
       ]}
       actions={
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleExportCSV}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border px-3.5 text-xs font-bold hover:bg-accent shadow-sm"
+          >
+            <Download className="h-4 w-4 text-primary" /> تصدير CSV
+          </button>
           <button 
             onClick={() => setIsPrintOpen(true)}
             className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border px-3.5 text-xs font-extrabold hover:bg-accent shadow-sm"
@@ -173,7 +257,8 @@ function FinancePayments() {
       }
     >
       <div className="space-y-6 pb-20 animate-in fade-in duration-500">
-        
+        <FinanceNavTabs activeTab="payments" />
+
         {/* Top Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <PageCard className="p-4 flex items-center gap-4 bg-card border border-border/50 rounded-2xl shadow-sm">
@@ -325,154 +410,278 @@ function FinancePayments() {
       </div>
 
       {/* --- New Payment Receipt Issuance Modal --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="w-full max-w-md rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl p-6 sm:p-7 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between mb-5 pb-3.5 border-b border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-                  <Receipt className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-foreground">إصدار سند قبض مالي جديد</h3>
-                  <p className="text-xs text-muted-foreground">توريد دفعة أو قسط لحساب الفاتورة المحددة</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => { setIsModalOpen(false); reset(); }} 
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">الفاتورة المستهدفة <span className="text-destructive">*</span></label>
-                <select
-                  {...register("invoiceId")}
-                  className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
-                >
-                  <option value="">-- اختر الفاتورة المطلوب سدادها --</option>
-                  {unpaidInvoices.map(inv => (
-                    <option key={inv.id} value={inv.id}>
-                      {inv.id} - {inv.studentName} (المتبقي: {((inv.netAmount ?? inv.amount) - inv.paid).toLocaleString()} {currency})
-                    </option>
-                  ))}
-                </select>
-                {errors.invoiceId && <p className="mt-1 text-xs text-destructive font-bold">{errors.invoiceId.message}</p>}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">المبلغ المحصل ({currency}) <span className="text-destructive">*</span></label>
-                <input
-                  type="number"
-                  {...register("amount")}
-                  placeholder="أدخل المبلغ المحصل..."
-                  className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-sm font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
-                />
-                {errors.amount && <p className="mt-1 text-xs text-destructive font-bold">{errors.amount.message}</p>}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-foreground/85">طريقة السداد وتوريد الخزينة <span className="text-destructive">*</span></label>
-                <select
-                  {...register("method")}
-                  className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
-                >
-                  <option value="cash">نقدي (كاش - الخزينة الرئيسية)</option>
-                  <option value="card">شبكة ومدى (الحساب البنكي)</option>
-                  <option value="bank_transfer">حوالة بنكية مباشرة</option>
-                  <option value="cheque">شيك مصرفي مالي</option>
-                </select>
-                {errors.method && <p className="mt-1 text-xs text-destructive font-bold">{errors.method.message}</p>}
-              </div>
-
-              <div className="mt-6 flex justify-end gap-2.5 pt-3 border-t border-border/60">
-                <button
-                  type="button"
-                  onClick={() => { setIsModalOpen(false); reset(); }}
-                  className="h-11 rounded-xl px-5 text-xs font-semibold border border-input bg-background/80 hover:bg-accent active:scale-[0.98] transition-all"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="h-11 rounded-xl bg-primary px-6 text-xs font-extrabold text-primary-foreground hover:bg-primary/90 shadow-md active:scale-[0.98] transition-all glow-primary"
-                >
-                  تأكيد وحفظ السند
-                </button>
-              </div>
-            </form>
+      <AdminModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); reset(); }}
+        title="إصدار سند قبض مالي رسمي"
+        description="توريد دفعة أو قسط لحساب الفاتورة المحددة وربطه بالخزينة"
+        icon={Receipt}
+        tone="success"
+        maxWidth="xl"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-foreground">الفاتورة المستهدفة <span className="text-destructive">*</span></label>
+            <select
+              {...register("invoiceId")}
+              className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+            >
+              <option value="">-- اختر الفاتورة المطلوب سدادها --</option>
+              {unpaidInvoices.map(inv => {
+                const remaining = (inv.netAmount ?? inv.amount) - inv.paid;
+                return (
+                  <option key={inv.id} value={inv.id}>
+                    {inv.id} - {inv.studentName} (المتبقي: {remaining.toLocaleString()} {currency})
+                  </option>
+                );
+              })}
+            </select>
+            {errors.invoiceId && <p className="mt-1 text-xs text-destructive font-bold">{errors.invoiceId.message}</p>}
           </div>
-        </div>
-      )}
 
-      {/* --- Single Receipt Print Modal --- */}
-      {selectedReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="bg-card/98 dark:bg-card/95 w-full max-w-lg rounded-3xl shadow-2xl border border-border/80 backdrop-blur-2xl overflow-hidden p-6 sm:p-7 space-y-6 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-4 border-b border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-                  <Receipt className="w-6 h-6" />
+          {selectedInvObj && (
+            <div className="p-3.5 rounded-2xl bg-primary/5 border border-primary/20 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-foreground">اسم الطالب: {selectedInvObj.studentName}</span>
+                <Badge tone="neutral" className="text-[10px] bg-background">فاتورة #{selectedInvObj.id}</Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center pt-1 font-mono">
+                <div className="p-2 rounded-xl bg-background border border-border/60">
+                  <div className="text-[10px] text-muted-foreground font-sans">الإجمالي</div>
+                  <div className="font-black text-foreground">{((selectedInvObj.netAmount ?? selectedInvObj.amount)).toLocaleString()} {currency}</div>
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-lg text-foreground">سند قبض مالي رسمي</h3>
-                  <p className="text-xs text-muted-foreground">معاينة تفاصيل العملية والتحصيل قبل الطباعة</p>
+                <div className="p-2 rounded-xl bg-background border border-border/60">
+                  <div className="text-[10px] text-muted-foreground font-sans">المدفوع</div>
+                  <div className="font-black text-emerald-600 dark:text-emerald-400">{selectedInvObj.paid.toLocaleString()} {currency}</div>
+                </div>
+                <div className="p-2 rounded-xl bg-background border border-border/60">
+                  <div className="text-[10px] text-muted-foreground font-sans">المتبقي المطلوب</div>
+                  <div className="font-black text-amber-600 dark:text-amber-400">
+                    {((selectedInvObj.netAmount ?? selectedInvObj.amount) - selectedInvObj.paid).toLocaleString()} {currency}
+                  </div>
                 </div>
               </div>
-              <button 
-                onClick={() => setSelectedReceipt(null)} 
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            <div className="p-5 bg-muted/30 dark:bg-muted/15 rounded-2xl border border-border/60 space-y-3 font-semibold text-sm">
-              <div className="flex justify-between border-b border-border/50 pb-2.5">
-                <span className="text-muted-foreground text-xs font-bold">رقم السند:</span>
-                <span className="font-mono font-black text-primary text-xs">{selectedReceipt.id}</span>
-              </div>
-              <div className="flex justify-between border-b border-border/50 pb-2.5">
-                <span className="text-muted-foreground text-xs font-bold">تاريخ الإصدار:</span>
-                <span className="text-xs font-bold tabular-nums">{selectedReceipt.date ? selectedReceipt.date.split("T")[0] : "-"}</span>
-              </div>
-              <div className="flex justify-between border-b border-border/50 pb-2.5">
-                <span className="text-muted-foreground text-xs font-bold">استلمنا من الطالب/الجهة:</span>
-                <span className="font-extrabold text-xs text-foreground">{selectedReceipt.studentName}</span>
-              </div>
-              <div className="flex justify-between border-b border-border/50 pb-2.5">
-                <span className="text-muted-foreground text-xs font-bold">رقم الفاتورة/البيان:</span>
-                <span className="text-xs font-bold">{selectedReceipt.invoiceTitle} ({selectedReceipt.invoiceId || "سند مباشر"})</span>
-              </div>
-              <div className="flex justify-between border-b border-border/50 pb-2.5">
-                <span className="text-muted-foreground text-xs font-bold">طريقة الدفع:</span>
-                <span className="text-xs font-bold">{getMethodLabel(selectedReceipt.method)}</span>
-              </div>
-              <div className="flex justify-between pt-2 text-base">
-                <span className="text-muted-foreground font-bold text-xs">المبلغ المحصل:</span>
-                <span className="font-black text-success tabular-nums text-lg">{selectedReceipt.amount.toLocaleString()} {currency}</span>
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-muted-foreground">تعبئة سريعة:</span>
+                {(() => {
+                  const rem = (selectedInvObj.netAmount ?? selectedInvObj.amount) - selectedInvObj.paid;
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setValue("amount", rem)}
+                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-all"
+                      >
+                        كامل المتبقي (100%)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setValue("amount", Math.round(rem / 2))}
+                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-muted hover:bg-muted/80 text-foreground transition-all"
+                      >
+                        النصف (50%)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setValue("amount", Math.round(rem / 4))}
+                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-muted hover:bg-muted/80 text-foreground transition-all"
+                      >
+                        الربع (25%)
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
             </div>
+          )}
 
-            <div className="flex gap-3 pt-2">
-              <button 
-                onClick={() => { window.print(); setSelectedReceipt(null); }}
-                className="flex-1 h-11 bg-primary text-primary-foreground rounded-xl font-extrabold flex items-center justify-center gap-2 hover:bg-primary/90 active:scale-[0.98] transition-all shadow-md glow-primary text-xs"
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-foreground">المبلغ المحصل ({currency}) <span className="text-destructive">*</span></label>
+            <div className="relative">
+              <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="number"
+                {...register("amount")}
+                placeholder="أدخل المبلغ المحصل..."
+                className="h-11 w-full rounded-xl border border-input bg-background/80 pr-10 pl-3.5 text-sm font-black tabular-nums text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all placeholder:text-muted-foreground/60"
+              />
+            </div>
+            {errors.amount && <p className="mt-1 text-xs text-destructive font-bold">{errors.amount.message}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-foreground">طريقة السداد وقناة الإيداع <span className="text-destructive">*</span></label>
+            <select
+              {...register("method")}
+              className="h-11 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all cursor-pointer"
+            >
+              <option value="cash">نقدي (كاش - الخزينة والصندوق المباشر)</option>
+              <option value="card">شبكة ومدى (الحساب البنكي المدرسي)</option>
+              <option value="bank_transfer">حوالة بنكية مباشرة</option>
+              <option value="cheque">شيك مصرفي مالي</option>
+            </select>
+            {errors.method && <p className="mt-1 text-xs text-destructive font-bold">{errors.method.message}</p>}
+          </div>
+
+          {selectedMethod === "cash" && (
+            <div className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+              openCashSession 
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${openCashSession ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                <span className="font-semibold">
+                  {openCashSession 
+                    ? `جلسة صندوق نشطة: ${(openCashSession as any).cashierName || (openCashSession as any).openedBy || (openCashSession as any).userId || "أمين الخزينة"} (سيتم تقييد السند بالوردية آلياً)` 
+                    : "تنبيه: لا توجد جلسة كاشير مفتوحة حالياً، سيتم قيد المبلغ في الخزينة العامة"}
+                </span>
+              </div>
+              {openCashSession && (
+                <Badge tone="success" className="border-emerald-500/40 text-[10px]">جلسة مفتوحة</Badge>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-foreground">ملاحظات أو رقم المرجع (اختياري)</label>
+            <input
+              type="text"
+              {...register("notes")}
+              placeholder="مثال: رقم الحوالة، اسم المودع، رقم الشيك..."
+              className="h-10 w-full rounded-xl border border-input bg-background/80 px-3.5 text-xs text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+            />
+          </div>
+
+          <div className="mt-6 flex justify-end gap-2.5 pt-3 border-t border-border/70">
+            <button
+              type="button"
+              onClick={() => { setIsModalOpen(false); reset(); }}
+              className="h-11 rounded-xl px-5 text-xs font-semibold border border-input bg-background/80 hover:bg-accent active:scale-[0.98] transition-all"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              className="h-11 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 text-xs font-black text-white hover:from-emerald-500 hover:to-teal-500 shadow-lg active:scale-[0.98] transition-all flex items-center gap-2"
+            >
+              <Receipt className="w-4 h-4" /> تأكيد وقيد السند
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+
+      {/* --- Luxury Printable Official Receipt Voucher Modal --- */}
+      <AdminModal
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+        title="معاينة سند القبض الرسمي المعتمد"
+        description="جاهز للطباعة والتسليم الفوري لولي الأمر"
+        icon={Receipt}
+        tone="primary"
+        maxWidth="2xl"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[11px] text-muted-foreground font-mono">سند قبض صادر آلياً من نظام إدارة المدارس</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="h-9 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 shadow hover:bg-primary/90 transition-all"
               >
-                <Printer className="w-4 h-4" /> طباعة السند الآن
+                <Printer className="w-3.5 h-3.5" /> طباعة
               </button>
-              <button 
-                onClick={() => setSelectedReceipt(null)} 
-                className="h-11 border border-input bg-background/80 hover:bg-accent px-6 rounded-xl font-semibold text-xs active:scale-[0.98] transition-all"
+              <button
+                type="button"
+                onClick={() => setSelectedReceipt(null)}
+                className="h-9 px-4 rounded-xl border border-input bg-background hover:bg-accent text-xs font-semibold transition-all"
               >
-                إغلاق
+                إغلاق النافذة
               </button>
             </div>
           </div>
-        </div>
-      )}
+        }
+      >
+        {selectedReceipt && (
+          <div className="space-y-5 bg-card" id="printable-receipt-card">
+            {/* School Header */}
+            <div className="flex justify-between items-center pb-4 border-b-2 border-primary/20">
+              <div className="text-right">
+                <h2 className="text-sm font-black text-foreground">مجموعة مدارس الأفق النموذجية الأهلية</h2>
+                <p className="text-[11px] text-muted-foreground">الإدارة المالية والحسابات العامة</p>
+                <p className="text-[10px] text-muted-foreground">الرقم الضريبي: 310294857200003</p>
+              </div>
+              <div className="text-center">
+                <div className="border-2 border-primary/40 rounded-2xl px-4 py-1.5 bg-primary/5">
+                  <span className="text-xs font-black text-primary">سند قبض مالي معتمد</span>
+                  <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{selectedReceipt.id}</div>
+                </div>
+              </div>
+              <div className="text-left font-mono text-[11px] text-muted-foreground">
+                <div>التاريخ: {selectedReceipt.date}</div>
+                <div>الوقت: {new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+            </div>
+
+            {/* Voucher Main Content Table */}
+            <div className="rounded-2xl border border-border/80 overflow-hidden divide-y divide-border/60 text-xs">
+              <div className="flex items-center p-3 bg-muted/20">
+                <span className="w-32 font-bold text-muted-foreground">استلمنا من الطالب:</span>
+                <span className="font-black text-foreground text-sm flex-1">{selectedReceipt.studentName}</span>
+                {selectedReceipt.studentGrade && (
+                  <Badge tone="neutral" className="text-[10px]">{selectedReceipt.studentGrade}</Badge>
+                )}
+              </div>
+              <div className="flex items-center p-3">
+                <span className="w-32 font-bold text-muted-foreground">مبلغ وقدره:</span>
+                <span className="font-mono font-black text-primary text-base flex-1">
+                  {selectedReceipt.amount.toLocaleString()} {currency}
+                </span>
+                <Badge tone="primary" className="text-[10px]">{getMethodLabel(selectedReceipt.method)}</Badge>
+              </div>
+              <div className="flex items-center p-3 bg-muted/20">
+                <span className="w-32 font-bold text-muted-foreground">وذلك عن:</span>
+                <span className="font-semibold text-foreground flex-1">
+                  {selectedReceipt.invoiceTitle} {selectedReceipt.invoiceId ? `(فاتورة #${selectedReceipt.invoiceId})` : ""}
+                </span>
+              </div>
+              {selectedReceipt.notes && (
+                <div className="flex items-center p-3">
+                  <span className="w-32 font-bold text-muted-foreground">ملاحظات وبيان:</span>
+                  <span className="text-muted-foreground flex-1">{selectedReceipt.notes}</span>
+                </div>
+              )}
+              <div className="flex items-center p-3 bg-muted/20">
+                <span className="w-32 font-bold text-muted-foreground">المستلم / أمين الصندوق:</span>
+                <span className="font-bold text-foreground flex-1">{selectedReceipt.cashier}</span>
+              </div>
+            </div>
+
+            {/* Signatures & Seal Area */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-dashed border-border/80 text-center text-xs">
+              <div className="space-y-4">
+                <span className="text-muted-foreground font-semibold">توقيع المستلم (أمين الصندوق)</span>
+                <div className="h-10 border-b border-border/80 font-mono text-[10px] text-muted-foreground/60 flex items-end justify-center pb-1">
+                  {selectedReceipt.cashier}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <span className="text-muted-foreground font-semibold">توقيع المودع / ولي الأمر</span>
+                <div className="h-10 border-b border-border/80 flex items-end justify-center pb-1 text-[10px] text-muted-foreground/60">
+                  ..........................
+                </div>
+              </div>
+              <div className="space-y-2 flex flex-col items-center justify-center">
+                <span className="text-muted-foreground font-semibold">الختم المالي الرسمي</span>
+                <div className="w-16 h-16 rounded-full border-2 border-dashed border-primary/40 flex items-center justify-center text-[10px] font-black text-primary/70 rotate-[-12deg] bg-primary/5">
+                  معتمد مالي
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </AdminModal>
 
       {/* --- Advanced Print Engine --- */}
       <AdvancedPrintEngine

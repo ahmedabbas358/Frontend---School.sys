@@ -84,6 +84,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminRolesRouteImport } from './routes/admin.roles'
 import { Route as AdminPermissionsRouteImport } from './routes/admin.permissions'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminFeaturesRouteImport } from './routes/admin.features'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminBackupRouteImport } from './routes/admin.backup'
 import { Route as AdminActivityLogRouteImport } from './routes/admin.activity-log'
@@ -469,6 +470,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFeaturesRoute = AdminFeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -542,6 +548,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity-log': typeof AdminActivityLogRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/features': typeof AdminFeaturesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/permissions': typeof AdminPermissionsRoute
   '/admin/roles': typeof AdminRolesRoute
@@ -622,6 +629,7 @@ export interface FileRoutesByTo {
   '/admin/activity-log': typeof AdminActivityLogRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/features': typeof AdminFeaturesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/permissions': typeof AdminPermissionsRoute
   '/admin/roles': typeof AdminRolesRoute
@@ -709,6 +717,7 @@ export interface FileRoutesById {
   '/admin/activity-log': typeof AdminActivityLogRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/features': typeof AdminFeaturesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/permissions': typeof AdminPermissionsRoute
   '/admin/roles': typeof AdminRolesRoute
@@ -797,6 +806,7 @@ export interface FileRouteTypes {
     | '/admin/activity-log'
     | '/admin/backup'
     | '/admin/dashboard'
+    | '/admin/features'
     | '/admin/notifications'
     | '/admin/permissions'
     | '/admin/roles'
@@ -877,6 +887,7 @@ export interface FileRouteTypes {
     | '/admin/activity-log'
     | '/admin/backup'
     | '/admin/dashboard'
+    | '/admin/features'
     | '/admin/notifications'
     | '/admin/permissions'
     | '/admin/roles'
@@ -963,6 +974,7 @@ export interface FileRouteTypes {
     | '/admin/activity-log'
     | '/admin/backup'
     | '/admin/dashboard'
+    | '/admin/features'
     | '/admin/notifications'
     | '/admin/permissions'
     | '/admin/roles'
@@ -1576,6 +1588,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/features': {
+      id: '/admin/features'
+      path: '/features'
+      fullPath: '/admin/features'
+      preLoaderRoute: typeof AdminFeaturesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/dashboard'
@@ -1664,6 +1683,7 @@ interface AdminRouteChildren {
   AdminActivityLogRoute: typeof AdminActivityLogRoute
   AdminBackupRoute: typeof AdminBackupRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminFeaturesRoute: typeof AdminFeaturesRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminPermissionsRoute: typeof AdminPermissionsRoute
   AdminRolesRoute: typeof AdminRolesRoute
@@ -1674,6 +1694,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminActivityLogRoute: AdminActivityLogRoute,
   AdminBackupRoute: AdminBackupRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminFeaturesRoute: AdminFeaturesRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminPermissionsRoute: AdminPermissionsRoute,
   AdminRolesRoute: AdminRolesRoute,

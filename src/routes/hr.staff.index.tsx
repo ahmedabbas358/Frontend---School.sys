@@ -15,15 +15,23 @@ import {
   AlertCircle,
   Briefcase,
   Layers,
-  Sparkles
+  Sparkles,
+  QrCode,
+  ShieldCheck,
+  KeyRound,
+  Calendar,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  UserPlus,
+  FileText,
+  Coins,
+  FileCheck
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { toast } from "sonner";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { 
   STAFF_SECTOR_TABS, 
@@ -33,6 +41,17 @@ import {
   matchesStaffId,
   StaffSector 
 } from "@/lib/staff-categories";
+import {
+  StaffAddEditModal,
+  StaffUserAccountModal,
+  StaffQuickLeaveModal,
+  StaffTeachingAssignmentsModal,
+  StaffQuickPreviewModal,
+  StaffSmartBadgeModal,
+  StaffDeleteConfirmModal,
+  StaffDocumentModal,
+  StaffAdvanceModal
+} from "@/components/hr/staff-modals";
 
 export const Route = createFileRoute("/hr/staff/")({
   head: () => ({
@@ -43,23 +62,6 @@ export const Route = createFileRoute("/hr/staff/")({
   }),
   component: HrStaffIndex,
 });
-
-const staffSchema = z.object({
-  employeeNo: z.string().optional(),
-  name: z.string().min(2, "الاسم مطلوب"),
-  role: z.string().min(2, "المسمى الوظيفي مطلوب"),
-  department: z.string().min(2, "القسم مطلوب"),
-  status: z.enum(["active", "on_leave", "terminated"]),
-  stage: z.enum(["kindergarten", "primary", "middle", "high", "all"]),
-  phone: z.string().optional(),
-  email: z.string().optional(),
-  basicSalary: z.coerce.number().min(0).optional(),
-  allowance: z.coerce.number().min(0).optional(),
-  deduction: z.coerce.number().min(0).optional(),
-  paymentType: z.enum(["Monthly", "Weekly", "PerLesson", "Hourly", "Daily"]).optional(),
-});
-
-type StaffForm = z.infer<typeof staffSchema>;
 
 function HrStaffIndex() {
   const { 
@@ -72,114 +74,161 @@ function HrStaffIndex() {
     addStaff, 
     updateStaff,
     deleteStaff,
-    currentAcademicYearId 
+    allUsers,
+    addUser,
+    updateUser,
+    addStaffLeave,
+    addTeachingAssignment,
+    deleteTeachingAssignment,
+    systemSettings,
+    currentAcademicYearId,
+    addStaffAdvance,
+    batchCreateStaffUsers
   } = useGlobalStore();
   const { stage, getStageLabel } = useStage();
   
+  // Filter States
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [activeSector, setActiveSector] = useState<string>("all");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [accountFilter, setAccountFilter] = useState<"all" | "has_account" | "no_account">("all");
+  
+  // Modal Control States
+  const [isAddEditOpen, setIsAddEditOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<any | null>(null);
+  const [previewStaff, setPreviewStaff] = useState<any | null>(null);
+  const [accountStaff, setAccountStaff] = useState<any | null>(null);
+  const [leaveStaff, setLeaveStaff] = useState<any | null>(null);
+  const [assignmentsStaff, setAssignmentsStaff] = useState<any | null>(null);
+  const [badgeStaff, setBadgeStaff] = useState<any | null>(null);
+  const [documentStaff, setDocumentStaff] = useState<any | null>(null);
+  const [advanceStaff, setAdvanceStaff] = useState<any | null>(null);
+  const [staffToDelete, setStaffToDelete] = useState<any | null>(null);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
-  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
-  const [staffToDelete, setStaffToDelete] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<StaffForm>({
-    resolver: zodResolver(staffSchema),
-    defaultValues: { status: "active", stage: "all", paymentType: "Monthly" },
-  });
-
-  const selectedPaymentType = watch("paymentType") || "Monthly";
-
-  const openAddModal = () => {
-    setEditingStaffId(null);
-    reset({
-      name: "",
-      role: "",
-      department: "",
-      status: "active",
-      stage: "all",
-      employeeNo: "",
-      phone: "",
-      email: "",
-      basicSalary: 6000,
-      allowance: 900,
-      deduction: 0,
-      paymentType: "Monthly"
-    });
-    setIsModalOpen(true);
+  // Helper to find linked user account in allUsers
+  const findLinkedUser = (s: any) => {
+    if (!s) return null;
+    return allUsers.find(
+      (u) =>
+        (u.staffId && u.staffId === s.id) ||
+        (u.email && s.email && u.email.trim().toLowerCase() === s.email.trim().toLowerCase()) ||
+        (u.fullName && s.name && u.fullName.trim() === s.name.trim()) ||
+        (u.username && s.employeeNo && u.username.toLowerCase() === s.employeeNo.toLowerCase()) ||
+        (u.username && u.username.toLowerCase() === `emp_${(s.employeeNo || s.id).toString().toLowerCase()}`)
+    ) || null;
   };
 
-  const openEditModal = (s: any) => {
-    setEditingStaffId(s.id);
-    reset({
-      name: s.name,
-      role: s.role,
-      department: s.department,
-      status: s.status,
-      stage: s.stage || "all",
-      employeeNo: s.employeeNo || "",
-      phone: s.phone || "",
-      email: s.email || "",
-      basicSalary: s.basicSalary || 0,
-      allowance: s.allowance || 0,
-      deduction: s.deduction || 0,
-      paymentType: s.paymentType || "Monthly"
-    });
-    setIsModalOpen(true);
+  // Open Handlers
+  const handleOpenAdd = () => {
+    setEditingStaff(null);
+    setIsAddEditOpen(true);
   };
 
-  const onSubmit = (data: StaffForm) => {
-    if (editingStaffId) {
-      updateStaff(editingStaffId, data as any);
+  const handleOpenEdit = (s: any) => {
+    setEditingStaff(s);
+    setIsAddEditOpen(true);
+  };
+
+  // Save Staff (Add or Edit)
+  const handleSaveStaff = (
+    staffData: any, 
+    userAccountParams?: { shouldCreate: boolean; username: string; role: string; password?: string }
+  ) => {
+    if (editingStaff?.id) {
+      updateStaff(editingStaff.id, staffData);
       toast.success("تم تحديث بيانات الموظف بنجاح");
     } else {
-      if (data.employeeNo) {
-        const isDuplicateInCurrentYear = activeStageStaff.some((s: any) => s.employeeNo === data.employeeNo);
-        if (isDuplicateInCurrentYear) {
-          toast.error("هذا الموظف مسجل مسبقاً في العام الدراسي الحالي! لا يمكن تسجيله مرة أخرى.");
-          return;
-        }
-      }
+      addStaff(staffData);
+      toast.success("تم تسجيل الموظف الجديد بنجاح في المنظومة");
 
-      addStaff({ ...data, academicYearId: currentAcademicYearId } as any);
-      toast.success("تم إضافة الموظف الجديد بنجاح");
+      // Auto-create User Account if requested
+      if (userAccountParams?.shouldCreate) {
+        addUser({
+          username: userAccountParams.username,
+          fullName: staffData.name,
+          role: userAccountParams.role,
+          status: "active",
+          email: staffData.email || "",
+          phone: staffData.phone || "",
+          password: userAccountParams.password || "Staff@2026",
+          stageScope: staffData.stage || "all",
+          staffId: staffData.id || staffData.employeeNo || "",
+          notes: `حساب تم إنشاؤه تلقائياً عند تسجيل الموظف (رقم: ${staffData.employeeNo || "تلقائي"})`,
+          lastLogin: "لم يسجل دخول",
+          twoFactorEnabled: false,
+          createdAt: new Date().toISOString().split("T")[0],
+        });
+        toast.success(`تم إنشاء وتفعيل حساب الدخول @${userAccountParams.username} بنجاح`);
+      }
     }
-    setIsModalOpen(false);
-    reset();
+    setIsAddEditOpen(false);
+    setEditingStaff(null);
   };
 
-  const confirmDelete = () => {
-    if (staffToDelete) {
-      deleteStaff(staffToDelete);
-      toast.success("تم حذف الموظف بنجاح");
+  // Delete Staff
+  const handleConfirmDelete = () => {
+    if (staffToDelete?.id) {
+      deleteStaff(staffToDelete.id);
+      toast.success(`تم حذف سجل الموظف ${staffToDelete.name} بنجاح ونقله لسلة المحذوفات`);
       setStaffToDelete(null);
     }
   };
 
-  const handleSmartRegistrationCheck = (empNoToCheck: string) => {
-    if (!empNoToCheck || empNoToCheck.length < 3) return;
-    const existingStaff = allStaff.find((s: any) => s.employeeNo === empNoToCheck);
-    if (existingStaff) {
-      toast.success("تم العثور على سجل سابق للموظف! جاري استيراد البيانات التاريخية...");
-      reset({
-        ...watch(),
-        name: existingStaff.name,
-        role: existingStaff.role,
-        department: existingStaff.department,
-        status: existingStaff.status,
-        phone: existingStaff.phone,
-        email: existingStaff.email,
-        basicSalary: existingStaff.basicSalary,
-        allowance: existingStaff.allowance,
-        deduction: existingStaff.deduction,
-        paymentType: existingStaff.paymentType,
-        stage: existingStaff.stage as any,
-      });
-    }
+  // User Account Management Actions
+  const handleLinkOrCreateUser = (userData: any) => {
+    addUser(userData);
+    toast.success(`تم إنشاء وربط حساب المستخدم @${userData.username} بنجاح`);
   };
 
+  const handleResetUserPassword = (userId: string, newPassword: string) => {
+    updateUser(userId, { 
+      password: newPassword,
+      notes: `تمت إعادة تعيين كلمة المرور (${newPassword}) بتاريخ ${new Date().toLocaleDateString("ar-SA")}` 
+    });
+    toast.success("تم حفظ وتحديث كلمة المرور الجديدة في النظام بنجاح");
+  };
+
+  const handleToggleUserStatus = (userId: string, newStatus: "active" | "disabled") => {
+    updateUser(userId, { status: newStatus });
+    toast.success(`تم ${newStatus === "active" ? "تفعيل" : "تعطيل"} حساب المستخدم بنجاح`);
+  };
+
+  // Leave Management Action
+  const handleSaveLeave = (leaveData: any, setStaffOnLeave: boolean) => {
+    addStaffLeave(leaveData, setStaffOnLeave);
+  };
+
+  // Advance Management Action
+  const handleSaveAdvance = (advanceData: any) => {
+    addStaffAdvance(advanceData);
+  };
+
+  // Unlinked Staff List for 1-Click Provisioning
+  const unlinkedStaffList = useMemo(() => {
+    return activeStageStaff.filter((s) => !s.isDeleted && !findLinkedUser(s));
+  }, [activeStageStaff, allUsers]);
+
+  const handleBatchSyncUsers = () => {
+    if (unlinkedStaffList.length === 0) {
+      toast.info("جميع موظفي الكادر لديهم حسابات دخول مفعلة بالفعل!");
+      return;
+    }
+    const staffPayload = unlinkedStaffList.map((s) => ({
+      staffId: s.id,
+      username: `emp_${(s.employeeNo || s.id).toLowerCase().replace(/[^a-z0-9]/g, "")}`,
+      fullName: s.name,
+      role: s.role.includes("معلم") ? "معلم" : s.role.includes("محاسب") ? "محاسب مالي" : "إداري",
+      email: s.email,
+      phone: s.phone,
+      stageScope: (s.stage as any) || "all",
+    }));
+    const createdCount = batchCreateStaffUsers(staffPayload);
+    toast.success(`تم إنشاء وتفعيل ${createdCount} حساب دخول جديد للكادر المدرسي بنجاح`);
+  };
+
+  // Filter List
   const filtered = useMemo(() => {
     return activeStageStaff.filter((s) => {
       if (s.isDeleted) return false;
@@ -193,6 +242,13 @@ function HrStaffIndex() {
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
       if (departmentFilter !== "all" && s.department !== departmentFilter) return false;
       
+      // User account filter
+      if (accountFilter !== "all") {
+        const hasAccount = Boolean(findLinkedUser(s));
+        if (accountFilter === "has_account" && !hasAccount) return false;
+        if (accountFilter === "no_account" && hasAccount) return false;
+      }
+
       if (q.trim()) {
         const query = q.toLowerCase();
         return (
@@ -205,18 +261,20 @@ function HrStaffIndex() {
       }
       return true;
     });
-  }, [q, statusFilter, departmentFilter, activeSector, activeStageStaff]);
+  }, [q, statusFilter, departmentFilter, activeSector, accountFilter, activeStageStaff, allUsers]);
 
-  const departments = useMemo(() => Array.from(new Set(activeStageStaff.map(item => item.department).filter(Boolean))), [activeStageStaff]);
+  const departments = useMemo(() => {
+    return Array.from(new Set(activeStageStaff.map((item) => item.department).filter(Boolean)));
+  }, [activeStageStaff]);
 
   const staffStats = useMemo(() => {
     const total = filtered.length;
-    const active = filtered.filter(item => item.status === "active").length;
-    const leaves = filtered.filter(item => item.status === "on_leave").length;
+    const active = filtered.filter((item) => item.status === "active").length;
+    const leaves = filtered.filter((item) => item.status === "on_leave").length;
     const payroll = filtered.reduce((sum, item) => sum + (item.basicSalary || 0) + (item.allowance || 0) - (item.deduction || 0), 0);
-    const teachers = filtered.filter(item => isTeachingStaff(item)).length;
-    return { total, active, leaves, payroll, teachers };
-  }, [filtered]);
+    const withAccount = filtered.filter((item) => Boolean(findLinkedUser(item))).length;
+    return { total, active, leaves, payroll, withAccount };
+  }, [filtered, allUsers]);
 
   const getAssignmentsSummary = (staff: any) => {
     if (!isTeachingStaff(staff)) {
@@ -229,22 +287,36 @@ function HrStaffIndex() {
       );
     }
 
-    const assignments = activeStageTeachingAssignments.filter(item => matchesStaffId(staff, item.teacherId));
+    const assignments = activeStageTeachingAssignments.filter((item) => matchesStaffId(staff, item.teacherId));
     if (assignments.length === 0) {
-      return <span className="text-[11px] text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">بانتظار إسناد</span>;
+      return (
+        <button
+          onClick={() => setAssignmentsStaff(staff)}
+          className="text-[11px] text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded-md transition-colors inline-flex items-center gap-1"
+          title="انقر لإسناد المواد والشعب"
+        >
+          <Plus className="h-3 w-3" /> بانتظار إسناد
+        </button>
+      );
     }
 
-    const subjects = new Set(assignments.map(item => activeStageSubjects.find(subject => subject.id === item.subjectId)?.name).filter(Boolean));
-    const sections = new Set(assignments.map(item => {
-      const section = activeStageSections.find(sec => sec.id === item.sectionId);
+    const subjects = new Set(assignments.map((item) => activeStageSubjects.find((subject) => subject.id === item.subjectId)?.name).filter(Boolean));
+    const sections = new Set(assignments.map((item) => {
+      const section = activeStageSections.find((sec) => sec.id === item.sectionId);
       return section ? `${section.grade}/${section.name}` : "";
     }).filter(Boolean));
     
     return (
-      <div className="flex flex-col text-xs">
-        <span className="font-black text-primary">{subjects.size} مادة</span>
-        <span className="text-[10px] text-muted-foreground font-bold">{sections.size} شعبة</span>
-      </div>
+      <button 
+        onClick={() => setAssignmentsStaff(staff)}
+        className="flex flex-col text-xs text-right hover:opacity-80 transition-opacity"
+        title="انقر لتعديل التكليف الأكاديمي"
+      >
+        <span className="font-black text-primary flex items-center gap-1">
+          <BookOpen className="h-3 w-3" /> {subjects.size} مادة
+        </span>
+        <span className="text-[10px] text-muted-foreground font-bold">{sections.size} شعبة دراسية</span>
+      </button>
     );
   };
 
@@ -262,6 +334,7 @@ function HrStaffIndex() {
         { label: "القسم", key: "department" },
         { label: "الهاتف", key: "phone" },
         { label: "الراتب الصافي", key: "netSalary" },
+        { label: "حساب الدخول", key: "accountUsername" },
         { label: "نطاق العمل", key: "stageLabel" },
         { label: "الحالة", key: "statusLabel" },
       ],
@@ -269,14 +342,18 @@ function HrStaffIndex() {
     }
   ];
 
-  const printData = filtered.map(item => ({
-    ...item,
-    employeeNo: item.employeeNo || item.id,
-    sectorLabel: STAFF_SECTOR_CONFIG[getStaffSector(item)].label,
-    stageLabel: item.stage === "all" ? "شامل" : getStageLabel(item.stage as any),
-    statusLabel: item.status === "active" ? "على رأس العمل" : item.status === "on_leave" ? "في إجازة" : "غير نشط",
-    netSalary: ((item.basicSalary || 0) + (item.allowance || 0) - (item.deduction || 0)).toLocaleString(),
-  }));
+  const printData = filtered.map((item) => {
+    const user = findLinkedUser(item);
+    return {
+      ...item,
+      employeeNo: item.employeeNo || item.id,
+      sectorLabel: STAFF_SECTOR_CONFIG[getStaffSector(item)].label,
+      stageLabel: item.stage === "all" ? "شامل" : getStageLabel(item.stage as any),
+      statusLabel: item.status === "active" ? "على رأس العمل" : item.status === "on_leave" ? "في إجازة" : "غير نشط",
+      netSalary: ((item.basicSalary || 0) + (item.allowance || 0) - (item.deduction || 0)).toLocaleString(),
+      accountUsername: user ? `@${user.username} (${user.role})` : "بدون حساب",
+    };
+  });
 
   return (
     <AppShell
@@ -287,6 +364,16 @@ function HrStaffIndex() {
       ]}
       actions={
         <div className="flex items-center gap-2">
+          {unlinkedStaffList.length > 0 && (
+            <button
+              onClick={handleBatchSyncUsers}
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-3.5 text-xs font-black shadow-xs hover:bg-amber-500/20 transition-all hover:scale-105 active:scale-95"
+              title="مزامنة وإنشاء حسابات دخول لكافة الكادر المتبقي بنقرة واحدة"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span>مزامنة حسابات الكادر ({unlinkedStaffList.length})</span>
+            </button>
+          )}
           <button
             onClick={() => setIsPrintOpen(true)}
             className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border/70 px-3.5 text-xs font-black shadow-xs hover:bg-accent transition-colors"
@@ -295,19 +382,19 @@ function HrStaffIndex() {
             طباعة السجل الشامل
           </button>
           <button 
-            onClick={openAddModal}
+            onClick={handleOpenAdd}
             className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-primary-foreground hover:bg-primary/90 shadow-sm transition-all hover:scale-105 active:scale-95 glow-primary"
           >
-            <Plus className="h-4 w-4" /> إضافة موظف / عامل جديد
+            <Plus className="h-4 w-4" /> إضافة موظف / كادر جديد
           </button>
         </div>
       }
     >
       <div className="space-y-5" dir="rtl">
         
-        {/* Sector Category Tabs (المحور الرابع) */}
+        {/* Sector Category Tabs */}
         <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-card border border-border/70 shadow-xs overflow-x-auto custom-scrollbar">
-          {STAFF_SECTOR_TABS.map(tab => {
+          {STAFF_SECTOR_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSector === tab.id;
             return (
@@ -330,12 +417,13 @@ function HrStaffIndex() {
         {/* Staff Statistics Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           <div className="rounded-3xl border border-border/70 bg-card/90 p-4 shadow-xs backdrop-blur-xl">
-            <span className="text-[11px] font-bold text-muted-foreground">إجمالي القوى العاملة بالقسم</span>
+            <span className="text-[11px] font-bold text-muted-foreground">إجمالي القوى العاملة</span>
             <div className="text-2xl font-black text-foreground mt-1 tabular-nums flex items-baseline gap-1.5">
               <span>{staffStats.total}</span>
               <span className="text-xs text-muted-foreground font-normal">موظف وعامل</span>
             </div>
           </div>
+
           <div className="rounded-3xl border border-border/70 bg-card/90 p-4 shadow-xs backdrop-blur-xl">
             <span className="text-[11px] font-bold text-muted-foreground">على رأس العمل</span>
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums flex items-baseline gap-1.5">
@@ -343,16 +431,18 @@ function HrStaffIndex() {
               <span className="text-xs text-muted-foreground font-normal">نشط</span>
             </div>
           </div>
+
           <div className="rounded-3xl border border-border/70 bg-card/90 p-4 shadow-xs backdrop-blur-xl">
-            <span className="text-[11px] font-bold text-muted-foreground">في إجازات رسمية</span>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 tabular-nums flex items-baseline gap-1.5">
-              <span>{staffStats.leaves}</span>
-              <span className="text-xs text-muted-foreground font-normal">موظف</span>
+            <span className="text-[11px] font-bold text-muted-foreground">حسابات النظام المفعلة</span>
+            <div className="text-2xl font-black text-primary mt-1 tabular-nums flex items-baseline gap-1.5">
+              <span>{staffStats.withAccount}</span>
+              <span className="text-xs text-muted-foreground font-normal">من أصل {staffStats.total}</span>
             </div>
           </div>
+
           <div className="rounded-3xl border border-border/70 bg-card/90 p-4 shadow-xs backdrop-blur-xl">
             <span className="text-[11px] font-bold text-muted-foreground">إجمالي مسير الأجور الشهري</span>
-            <div className="text-2xl font-black text-primary mt-1 tabular-nums flex items-baseline gap-1.5">
+            <div className="text-2xl font-black text-foreground mt-1 tabular-nums flex items-baseline gap-1.5">
               <span>{staffStats.payroll.toLocaleString()}</span>
               <span className="text-xs text-muted-foreground font-normal">{currency}</span>
             </div>
@@ -361,19 +451,20 @@ function HrStaffIndex() {
 
         {/* Filter and Search Bar */}
         <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs">
-          <div className="grid gap-3 md:grid-cols-[1fr_180px_220px]">
-            <div className="relative">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative lg:col-span-1">
               <Search className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="البحث بالاسم أو الرقم الوظيفي أو الجوال أو الوظيفة..."
+                placeholder="البحث بالاسم أو الرقم الوظيفي أو الوظيفة..."
                 className="h-10 w-full rounded-xl border border-input bg-background/80 ps-9 pe-3 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
               />
             </div>
+
             <select 
               value={statusFilter} 
-              onChange={event => setStatusFilter(event.target.value)} 
+              onChange={(e) => setStatusFilter(e.target.value)} 
               className="h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
             >
               <option value="all">كل الحالات الوظيفية</option>
@@ -381,13 +472,24 @@ function HrStaffIndex() {
               <option value="on_leave">في إجازة</option>
               <option value="terminated">منتهي الخدمة</option>
             </select>
+
             <select 
               value={departmentFilter} 
-              onChange={event => setDepartmentFilter(event.target.value)} 
+              onChange={(e) => setDepartmentFilter(e.target.value)} 
               className="h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
             >
               <option value="all">كل الأقسام والإدارات</option>
-              {departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+              {departments.map((dep) => <option key={dep} value={dep}>{dep}</option>)}
+            </select>
+
+            <select 
+              value={accountFilter} 
+              onChange={(e) => setAccountFilter(e.target.value as any)} 
+              className="h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+            >
+              <option value="all">كل الموظفين (حسابات وبدون)</option>
+              <option value="has_account">الموظفون ذوو حسابات النظام فقط</option>
+              <option value="no_account">الموظفون بدون حسابات نظام</option>
             </select>
           </div>
         </div>
@@ -412,7 +514,15 @@ function HrStaffIndex() {
               { 
                 key: "id", 
                 header: "الرقم الوظيفي", 
-                cell: (r) => <span className="font-black tabular-nums text-xs text-muted-foreground">{r.employeeNo || r.id}</span> 
+                cell: (r) => (
+                  <button
+                    onClick={() => setPreviewStaff(r)}
+                    className="font-black tabular-nums text-xs text-muted-foreground hover:text-primary transition-colors text-right"
+                    title="معاينة الموظف"
+                  >
+                    {r.employeeNo || r.id}
+                  </button>
+                )
               },
               { 
                 key: "name", 
@@ -451,13 +561,34 @@ function HrStaffIndex() {
                 }
               },
               { 
-                key: "phone", 
-                header: "الهاتف والتواصل", 
-                cell: (r) => (
-                  <span className="tabular-nums font-bold text-xs text-foreground/80" dir="ltr">
-                    {r.phone || "-"}
-                  </span>
-                ) 
+                key: "account", 
+                header: "حساب الدخول للنظام", 
+                cell: (r) => {
+                  const user = findLinkedUser(r);
+                  if (user) {
+                    return (
+                      <button
+                        onClick={() => setAccountStaff(r)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-all border border-emerald-500/20"
+                        title="إدارة بيانات الدخول وكلمة المرور"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        <span dir="ltr">@{user.username}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">({user.role})</span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      onClick={() => setAccountStaff(r)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold text-amber-600 bg-amber-500/10 hover:bg-amber-500/20 transition-all border border-amber-500/20"
+                      title="إنشاء حساب دخول في النظام لهذا الموظف"
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      <span>إنشاء حساب</span>
+                    </button>
+                  );
+                } 
               },
               { 
                 key: "salary", 
@@ -473,7 +604,7 @@ function HrStaffIndex() {
               },
               { 
                 key: "assignments", 
-                header: "الإسناد / النشاط", 
+                header: "التكليف / الحصص", 
                 cell: (r) => getAssignmentsSummary(r) 
               },
               {
@@ -487,30 +618,90 @@ function HrStaffIndex() {
               },
               {
                 key: "actions",
-                header: "الإجراءات",
+                header: "الإجراءات والتحكم",
                 cell: (r) => {
                   const isTeacher = isTeachingStaff(r);
-                  const profileUrl = isTeacher ? `/teachers/${r.employeeNo || r.id}` : `/hr/staff/${r.employeeNo || r.id}`;
                   return (
                     <div className="flex items-center justify-end gap-1">
-                      <Link 
-                        to={profileUrl as any} 
-                        className="inline-flex rounded-xl p-2 text-primary hover:bg-primary/10 transition-colors" 
-                        title="معاينة الملف الشامل"
+                      {/* Preview Modal Button */}
+                      <button
+                        onClick={() => setPreviewStaff(r)}
+                        className="inline-flex rounded-xl p-2 text-primary hover:bg-primary/10 transition-colors"
+                        title="معاينة الملف السريع"
                       >
                         <Eye className="h-4 w-4" />
-                      </Link>
+                      </button>
+
+                      {/* System Account Modal */}
+                      <button
+                        onClick={() => setAccountStaff(r)}
+                        className="inline-flex rounded-xl p-2 text-primary hover:bg-primary/10 transition-colors"
+                        title="إدارة حساب الدخول للنظام"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </button>
+
+                      {/* Quick Leave Modal */}
+                      <button
+                        onClick={() => setLeaveStaff(r)}
+                        className="inline-flex rounded-xl p-2 text-amber-600 hover:bg-amber-500/10 transition-colors"
+                        title="تسجيل إجازة / استئذان فوري"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </button>
+
+                      {/* Teaching Assignments Modal (Teachers only) */}
+                      {isTeacher && (
+                        <button
+                          onClick={() => setAssignmentsStaff(r)}
+                          className="inline-flex rounded-xl p-2 text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                          title="إسناد المواد والشعب الدراسية"
+                        >
+                          <BookOpen className="h-4 w-4" />
+                        </button>
+                      )}
+
+                      {/* Official Documents Generator Modal */}
                       <button 
-                        onClick={() => openEditModal(r)} 
+                        onClick={() => setDocumentStaff(r)} 
+                        className="inline-flex rounded-xl p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-colors" 
+                        title="إصدار مستندات وإفادات رسمية (تعريف بالراتب / خبرة / إخلاء طرف)"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </button>
+
+                      {/* Salary Advance / Loan Modal */}
+                      <button 
+                        onClick={() => setAdvanceStaff(r)} 
+                        className="inline-flex rounded-xl p-2 text-emerald-600 hover:bg-emerald-500/10 transition-colors" 
+                        title="طلب سلفة مالية / قرض قصير الأجل"
+                      >
+                        <Coins className="h-4 w-4" />
+                      </button>
+
+                      {/* Printable Smart Badge */}
+                      <button 
+                        onClick={() => setBadgeStaff(r)} 
+                        className="inline-flex rounded-xl p-2 text-amber-600 hover:bg-amber-500/10 transition-colors" 
+                        title="طباعة بطاقة الهوية الذكية"
+                      >
+                        <QrCode className="h-4 w-4" />
+                      </button>
+
+                      {/* Edit Modal */}
+                      <button 
+                        onClick={() => handleOpenEdit(r)} 
                         className="inline-flex rounded-xl p-2 text-primary hover:bg-primary/10 transition-colors" 
-                        title="تعديل البيانات"
+                        title="تعديل البيانات الشاملة"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
+
+                      {/* Delete Modal */}
                       <button 
-                        onClick={() => setStaffToDelete(r.id)} 
+                        onClick={() => setStaffToDelete(r)} 
                         className="inline-flex rounded-xl p-2 text-danger hover:bg-danger/10 transition-colors" 
-                        title="حذف"
+                        title="حذف الموظف"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -524,177 +715,121 @@ function HrStaffIndex() {
         </PageCard>
       </div>
 
-      {/* Add / Edit Staff Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="w-full max-w-xl max-h-[85vh] flex flex-col rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden">
-            <div className="p-5 border-b border-border/60 flex justify-between items-center bg-primary/5 shrink-0">
-              <h3 className="font-black text-base flex items-center gap-2 text-primary">
-                <Users className="h-5 w-5" />
-                {editingStaffId ? "تعديل بيانات الموظف" : "تسجيل موظف / عامل جديد في المنظومة"}
-              </h3>
-              <button 
-                onClick={() => { setIsModalOpen(false); reset(); }} 
-                className="h-8 w-8 rounded-full bg-muted/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* ─────────────────────────────────────────────────────────────
+          1. ADD / EDIT STAFF MODAL (MULTI-TABBED)
+         ───────────────────────────────────────────────────────────── */}
+      <StaffAddEditModal
+        isOpen={isAddEditOpen}
+        onClose={() => { setIsAddEditOpen(false); setEditingStaff(null); }}
+        initialData={editingStaff}
+        onSave={handleSaveStaff}
+        currency={currency}
+        departments={departments}
+        activeStageStaff={activeStageStaff}
+        allStaff={allStaff}
+        currentAcademicYearId={currentAcademicYearId}
+      />
 
-            <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1 text-xs">
-              <div className="grid gap-3.5 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">الرقم الوظيفي</label>
-                  <input
-                    {...register("employeeNo")}
-                    onBlur={(e) => handleSmartRegistrationCheck(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tabular-nums text-left"
-                    placeholder="مثال: EMP-105"
-                    dir="ltr"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">الاسم الكامل <span className="text-destructive">*</span></label>
-                  <input
-                    {...register("name")}
-                    className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    placeholder="اسم الموظف أو العامل..."
-                  />
-                  {errors.name && <p className="mt-1 text-[11px] font-bold text-destructive">{errors.name.message}</p>}
-                </div>
-              </div>
+      {/* ─────────────────────────────────────────────────────────────
+          2. STAFF SYSTEM USER ACCOUNT MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffUserAccountModal
+        isOpen={Boolean(accountStaff)}
+        onClose={() => setAccountStaff(null)}
+        staff={accountStaff}
+        linkedUser={findLinkedUser(accountStaff)}
+        onLinkOrCreate={handleLinkOrCreateUser}
+        onResetPassword={handleResetUserPassword}
+        onToggleUserStatus={handleToggleUserStatus}
+      />
 
-              <div className="grid gap-3.5 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">المسمى الوظيفي <span className="text-destructive">*</span></label>
-                  <input
-                    {...register("role")}
-                    className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    placeholder="سائق حافلة، محاسب، حارس أمن، معلم..."
-                  />
-                  {errors.role && <p className="mt-1 text-[11px] font-bold text-destructive">{errors.role.message}</p>}
-                </div>
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">القسم / الإدارة <span className="text-destructive">*</span></label>
-                  <input
-                    {...register("department")}
-                    className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    placeholder="الشؤون المالية، النقل، الصيانة، الأكاديمية..."
-                  />
-                  {errors.department && <p className="mt-1 text-[11px] font-bold text-destructive">{errors.department.message}</p>}
-                </div>
-              </div>
+      {/* ─────────────────────────────────────────────────────────────
+          3. STAFF QUICK LEAVE REGISTRATION MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffQuickLeaveModal
+        isOpen={Boolean(leaveStaff)}
+        onClose={() => setLeaveStaff(null)}
+        staff={leaveStaff}
+        allStaff={activeStageStaff}
+        onSaveLeave={handleSaveLeave}
+      />
 
-              <div className="grid gap-3.5 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">رقم الجوال</label>
-                  <input {...register("phone")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tabular-nums text-left" dir="ltr" placeholder="05XXXXXXXX" />
-                </div>
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">البريد الإلكتروني</label>
-                  <input {...register("email")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-left" dir="ltr" placeholder="staff@school.edu.sa" />
-                </div>
-              </div>
+      {/* ─────────────────────────────────────────────────────────────
+          4. STAFF TEACHING ASSIGNMENTS MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffTeachingAssignmentsModal
+        isOpen={Boolean(assignmentsStaff)}
+        onClose={() => setAssignmentsStaff(null)}
+        staff={assignmentsStaff}
+        subjects={activeStageSubjects}
+        sections={activeStageSections}
+        assignments={activeStageTeachingAssignments}
+        onAddAssignment={addTeachingAssignment}
+        onDeleteAssignment={deleteTeachingAssignment}
+      />
 
-              {/* Financial Scheme */}
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 space-y-3">
-                <h4 className="text-xs font-black text-primary uppercase">نظام الأجور والمستحقات</h4>
-                <div className="grid gap-3 sm:grid-cols-4">
-                  <div>
-                    <label className="mb-1 block font-bold text-foreground">نظام الصرف</label>
-                    <select {...register("paymentType")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-2 text-xs font-bold outline-none focus:border-primary cursor-pointer">
-                      <option value="Monthly">راتب شهري</option>
-                      <option value="PerLesson">نظام الحصص</option>
-                      <option value="Daily">أجر يومي</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block font-bold text-foreground">
-                      {selectedPaymentType === "Monthly" ? "الأساسي" : selectedPaymentType === "PerLesson" ? "أجر الحصة" : "الأجر اليومي"}
-                    </label>
-                    <input type="number" {...register("basicSalary")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-2.5 text-xs font-black outline-none focus:border-primary tabular-nums" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block font-bold text-foreground">البدلات</label>
-                    <input type="number" {...register("allowance")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-2.5 text-xs font-black text-emerald-600 dark:text-emerald-400 outline-none focus:border-primary tabular-nums" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block font-bold text-foreground">الحسميات</label>
-                    <input type="number" {...register("deduction")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-2.5 text-xs font-black text-destructive outline-none focus:border-primary tabular-nums" />
-                  </div>
-                </div>
-              </div>
+      {/* ─────────────────────────────────────────────────────────────
+          5. STAFF QUICK PREVIEW MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffQuickPreviewModal
+        isOpen={Boolean(previewStaff)}
+        onClose={() => setPreviewStaff(null)}
+        staff={previewStaff}
+        linkedUser={findLinkedUser(previewStaff)}
+        currency={currency}
+        onOpenEdit={() => handleOpenEdit(previewStaff)}
+        onOpenBadge={() => setBadgeStaff(previewStaff)}
+        onOpenUserAccount={() => setAccountStaff(previewStaff)}
+        onOpenLeave={() => setLeaveStaff(previewStaff)}
+        onOpenAssignments={isTeachingStaff(previewStaff) ? () => setAssignmentsStaff(previewStaff) : undefined}
+        onOpenDocument={() => setDocumentStaff(previewStaff)}
+        onOpenAdvance={() => setAdvanceStaff(previewStaff)}
+      />
 
-              <div className="grid gap-3.5 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">الحالة الوظيفية</label>
-                  <select {...register("status")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer">
-                    <option value="active">على رأس العمل</option>
-                    <option value="on_leave">في إجازة</option>
-                    <option value="terminated">منتهي الخدمة</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block font-bold text-foreground">نطاق العمل (المرحلة)</label>
-                  <select {...register("stage")} className="h-10 w-full rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer">
-                    <option value="all">شامل لكافة المراحل</option>
-                    <option value="kindergarten">رياض الأطفال</option>
-                    <option value="primary">الابتدائي</option>
-                    <option value="middle">المتوسط</option>
-                    <option value="high">الثانوي</option>
-                  </select>
-                </div>
-              </div>
+      {/* ─────────────────────────────────────────────────────────────
+          6. SMART EMPLOYEE BADGE PRINT MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffSmartBadgeModal
+        isOpen={Boolean(badgeStaff)}
+        onClose={() => setBadgeStaff(null)}
+        staff={badgeStaff}
+        schoolName={systemSettings?.schoolName || "منظومة مدارس الريادة الحديثة"}
+        schoolLogo={systemSettings?.logoUrl}
+      />
 
-              <div className="pt-3 flex justify-end gap-2.5 border-t border-border shrink-0">
-                <button
-                  type="button"
-                  onClick={() => { setIsModalOpen(false); reset(); }}
-                  className="h-10 px-5 rounded-xl border border-input text-xs font-bold hover:bg-accent"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="h-10 px-7 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md glow-primary"
-                >
-                  {editingStaffId ? "حفظ التعديلات" : "حفظ بيانات الموظف"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ─────────────────────────────────────────────────────────────
+          7. STAFF DELETE CONFIRMATION MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffDeleteConfirmModal
+        isOpen={Boolean(staffToDelete)}
+        onClose={() => setStaffToDelete(null)}
+        staff={staffToDelete}
+        onConfirmDelete={handleConfirmDelete}
+      />
 
-      {/* Delete Confirmation Modal */}
-      {staffToDelete && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="w-full max-w-sm rounded-3xl border border-border/80 bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
-            <div className="rounded-2xl bg-destructive/10 p-3.5 text-destructive mb-3.5 inline-block">
-              <AlertCircle className="h-8 w-8" />
-            </div>
-            <h2 className="text-base font-black text-foreground mb-1.5">تأكيد حذف الموظف</h2>
-            <p className="text-muted-foreground mb-5 text-xs font-bold leading-relaxed">
-              هل أنت متأكد من رغبتك في حذف هذا الموظف؟ سيتم أرشفة السجل وإلغاء ارتباطاته.
-            </p>
-            <div className="flex gap-2.5">
-              <button 
-                onClick={() => setStaffToDelete(null)} 
-                className="flex-1 h-10 rounded-xl border border-input text-xs font-bold hover:bg-accent"
-              >
-                إلغاء
-              </button>
-              <button 
-                onClick={confirmDelete} 
-                className="flex-1 h-10 rounded-xl bg-destructive text-destructive-foreground text-xs font-black hover:bg-destructive/90 shadow-md"
-              >
-                نعم، احذف
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ─────────────────────────────────────────────────────────────
+          8. OFFICIAL HR DOCUMENTS GENERATOR MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffDocumentModal
+        isOpen={Boolean(documentStaff)}
+        onClose={() => setDocumentStaff(null)}
+        staff={documentStaff}
+        currency={currency}
+        schoolName={systemSettings?.schoolName || "منظومة مدارس الريادة الحديثة"}
+      />
 
+      {/* ─────────────────────────────────────────────────────────────
+          9. SALARY ADVANCE / LOAN REQUEST MODAL
+         ───────────────────────────────────────────────────────────── */}
+      <StaffAdvanceModal
+        isOpen={Boolean(advanceStaff)}
+        onClose={() => setAdvanceStaff(null)}
+        staff={advanceStaff}
+        currency={currency}
+        onAddAdvance={handleSaveAdvance}
+      />
+
+      {/* Advanced Print Engine */}
       <AdvancedPrintEngine 
         isOpen={isPrintOpen} 
         onClose={() => setIsPrintOpen(false)} 

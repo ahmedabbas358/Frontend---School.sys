@@ -4,7 +4,7 @@ import { DataTable } from "@/components/data-table";
 import { useGlobalStore, StaffAttendanceRecord } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
-import { Clock, Download, Check, X, Printer, CalendarDays, Filter, TrendingDown, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Clock, Download, Check, X, Printer, CalendarDays, Filter, TrendingDown, AlertTriangle, ShieldCheck, Edit2, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { toast } from "sonner";
@@ -57,6 +57,7 @@ function HrAttendance() {
   const [month, setMonth] = useState(defaultDate.slice(0, 7));
   const [q, setQ] = useState("");
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<any | null>(null);
 
   const staffInScope = useMemo(
     () => activeStageStaff.filter(item => !item.isDeleted && item.status !== "terminated"),
@@ -218,11 +219,33 @@ function HrAttendance() {
                 <Clock className="h-5 w-5" />
                 <h2 className="text-lg font-bold">رصد اليوم</h2>
               </div>
-              <div className="w-56">
-                <ArabicDatePicker
-                  value={dailyDate}
-                  onChange={setDailyDate}
-                />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    dailyRows.forEach(staff => {
+                      upsertStaffAttendance({
+                        staffId: staff.id,
+                        date: dailyDate,
+                        status: "present",
+                        checkIn: "07:00",
+                        checkOut: "14:30",
+                        minutesLate: 0,
+                        deductionAmount: 0,
+                      });
+                    });
+                    toast.success(`تم رصد حضور جميع موظفي المرحلة (${dailyRows.length}) بنجاح`);
+                  }}
+                  className="h-10 px-3 rounded-xl bg-success/15 text-success hover:bg-success/25 border border-success/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+                  title="تسجيل حضور الجميع تلقائياً"
+                >
+                  <Check className="h-4 w-4" /> رصد حضور الكل
+                </button>
+                <div className="w-56">
+                  <ArabicDatePicker
+                    value={dailyDate}
+                    onChange={setDailyDate}
+                  />
+                </div>
               </div>
             </div>
 
@@ -244,11 +267,18 @@ function HrAttendance() {
                   key: "actions",
                   header: "تعديل سريع",
                   cell: (r) => (
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1">
                       <button onClick={() => markAttendance(r.id, "present")} className="rounded-md p-1.5 text-success hover:bg-success/10" title="حاضر"><Check className="h-4 w-4" /></button>
                       <button onClick={() => markAttendance(r.id, "late")} className="rounded-md p-1.5 text-warning hover:bg-warning/10" title="متأخر"><Clock className="h-4 w-4" /></button>
                       <button onClick={() => markAttendance(r.id, "excused")} className="rounded-md p-1.5 text-info hover:bg-info/10" title="بعذر"><ShieldCheck className="h-4 w-4" /></button>
                       <button onClick={() => markAttendance(r.id, "absent")} className="rounded-md p-1.5 text-danger hover:bg-danger/10" title="غائب"><X className="h-4 w-4" /></button>
+                      <button 
+                        onClick={() => setEditingRecord(r)} 
+                        className="rounded-md p-1.5 text-primary hover:bg-primary/10 transition-colors" 
+                        title="تعديل تفصيلي وملاحظات الاستئذان"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
                     </div>
                   ),
                 },
@@ -406,6 +436,153 @@ function HrAttendance() {
           </PageCard>
         )}
       </div>
+
+      {/* Detailed Attendance Edit Modal */}
+      {editingRecord && (
+        <div className="modal-backdrop-luxury">
+          <div className="modal-card-luxury max-w-lg w-full">
+            <div className="p-5 border-b border-border/70 flex justify-between items-center bg-primary/5 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary grid place-items-center shadow-xs">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-foreground">تعديل سجل حضور الموظف</h3>
+                  <p className="text-xs text-muted-foreground font-bold">{editingRecord.name} — {editingRecord.role}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingRecord(null)} 
+                className="h-8 w-8 rounded-full bg-muted/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                const status = fd.get("status") as Status;
+                const checkIn = fd.get("checkIn") as string;
+                const checkOut = fd.get("checkOut") as string;
+                const minutesLate = Number(fd.get("minutesLate")) || 0;
+                const deductionAmount = Number(fd.get("deductionAmount")) || 0;
+                const notes = fd.get("notes") as string;
+
+                upsertStaffAttendance({
+                  staffId: editingRecord.id,
+                  date: dailyDate,
+                  status,
+                  checkIn,
+                  checkOut,
+                  minutesLate,
+                  deductionAmount,
+                  notes: notes || undefined,
+                });
+
+                toast.success(`تم تحديث سجل حضور (${editingRecord.name}) بنجاح`);
+                setEditingRecord(null);
+              }}
+              className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1 text-xs"
+            >
+              <div className="p-3.5 bg-muted/40 rounded-xl border border-border/70 space-y-1.5">
+                <div className="flex justify-between font-bold">
+                  <span className="text-muted-foreground">الموظف:</span>
+                  <span className="text-foreground">{editingRecord.name} ({editingRecord.department})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-bold">تاريخ السجل:</span>
+                  <span className="font-mono text-primary font-bold">{dailyDate}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="font-bold text-foreground mb-1 block">الحالة</label>
+                  <select
+                    name="status"
+                    defaultValue={editingRecord.status}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 font-bold focus:border-primary cursor-pointer"
+                  >
+                    <option value="present">حاضر في الموعد</option>
+                    <option value="late">متأخر عن الموعد</option>
+                    <option value="excused">استئذان / عذر رسمي</option>
+                    <option value="absent">غائب بدون عذر</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-foreground mb-1 block">دقائق التأخير</label>
+                  <input
+                    type="number"
+                    name="minutesLate"
+                    defaultValue={editingRecord.minutesLate || 0}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 font-mono font-bold focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-foreground mb-1 block">وقت الحضور</label>
+                  <input
+                    type="time"
+                    name="checkIn"
+                    defaultValue={editingRecord.checkIn !== "--:--" ? editingRecord.checkIn : "07:00"}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 font-mono font-bold focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-foreground mb-1 block">وقت الانصراف</label>
+                  <input
+                    type="time"
+                    name="checkOut"
+                    defaultValue={editingRecord.checkOut !== "--:--" ? editingRecord.checkOut : "14:30"}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 font-mono font-bold focus:border-primary"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="font-bold text-foreground mb-1 block">قيمة الخصم المالي المقترح ({currency})</label>
+                  <input
+                    type="number"
+                    name="deductionAmount"
+                    defaultValue={editingRecord.deductionAmount || 0}
+                    className="w-full h-10 rounded-xl border border-input bg-background px-3 font-mono text-danger font-bold focus:border-primary"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="font-bold text-foreground mb-1 block">ملاحظات العذر والاستئذان</label>
+                  <textarea
+                    name="notes"
+                    rows={2}
+                    defaultValue={editingRecord.notes || ""}
+                    placeholder="تقرير طبي، إذن مسبق، عذر قاهر..."
+                    className="w-full rounded-xl border border-input bg-background p-2.5 font-bold focus:border-primary resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 border-t border-border/70 pt-4 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditingRecord(null)}
+                  className="h-10 px-5 rounded-xl border border-input text-muted-foreground font-bold hover:bg-accent text-xs"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="h-10 px-6 rounded-xl bg-primary text-primary-foreground font-black hover:bg-primary/90 shadow-md glow-primary text-xs"
+                >
+                  حفظ التعديل
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <AdvancedPrintEngine
         isOpen={isPrintOpen}

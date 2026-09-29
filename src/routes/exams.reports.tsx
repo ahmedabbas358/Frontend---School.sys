@@ -52,6 +52,9 @@ import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { AcademicCareerModal } from "@/components/academic-career-modal";
 import { BatchCertificatesModal } from "@/components/batch-certificates-modal";
+import { ExamsNavTabs } from "@/components/exams/exams-nav";
+import { BlankGradeSheetModal } from "@/components/exams/blank-grade-sheet-modal";
+import { LuxurySelect, LuxurySelectOption } from "@/components/ui/luxury-select";
 
 export const Route = createFileRoute("/exams/reports")({
   component: ExamsReportsPage,
@@ -311,10 +314,17 @@ const normalizeGrade = (g: string = "") => g.replace(/الابتدائي|الم�
 
 function ExamsReportsPage() {
   const [activeTab, setActiveTab] = useState<"master" | "report-card" | "analytics">("master");
+  const [isBlankSheetModalOpen, setIsBlankSheetModalOpen] = useState(false);
 
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الاختبارات", to: "/exams" }, { label: "التقارير والشهادات" }]}>
       <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto pb-12">
+        {/* Unified Module Navigation */}
+        <ExamsNavTabs 
+          activeTab="reports" 
+          onOpenBlankSheet={() => setIsBlankSheetModalOpen(true)}
+        />
+
         {/* Luxury Segmented Control Tab Navigation */}
         <div className="bg-card/80 backdrop-blur-md p-1.5 rounded-2xl border border-border/70 shadow-xs flex flex-wrap sm:inline-flex items-center gap-1.5">
           <button 
@@ -359,6 +369,12 @@ function ExamsReportsPage() {
         {activeTab === "report-card" && <ReportCardTab />}
         {activeTab === "analytics" && <AnalyticsTab />}
       </div>
+
+      {/* BLANK GRADE SHEET MODAL (كشف رصد درجات يدوي للمعلم) */}
+      <BlankGradeSheetModal
+        isOpen={isBlankSheetModalOpen}
+        onClose={() => setIsBlankSheetModalOpen(false)}
+      />
     </AppShell>
   );
 }
@@ -387,6 +403,7 @@ function MasterSheetTab() {
   const [filterSectionId, setFilterSectionId] = useState<string>("");
   const [filterRank, setFilterRank] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isMasterBlankSheetOpen, setIsMasterBlankSheetOpen] = useState(false);
 
   // Sorting State
   const [sortBy, setSortBy] = useState<"rank" | "name" | "section" | "total" | "pct">("rank");
@@ -905,84 +922,69 @@ function MasterSheetTab() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
             {/* 1. Exam Period */}
-            <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 hover:border-primary/40 transition-colors">
-              <label className="mb-1.5 block text-xs font-black text-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-primary" /> فترة الاختبار
-                </span>
-                <span className="text-[10px] text-muted-foreground font-bold">إلزامي</span>
-              </label>
-              <select 
+            <div>
+              <LuxurySelect 
+                label="فترة الاختبار"
+                icon={Calendar}
                 value={filterExamId} 
-                onChange={e => setFilterExamId(e.target.value)} 
-                className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs shadow-xs focus:border-primary cursor-pointer outline-none"
-              >
-                <option value="">جميع فترات الاختبارات</option>
-                {activeStageExams.map(e => (
-                  <option key={e.id} value={e.id}>{e.name} ({e.term})</option>
-                ))}
-              </select>
+                onChange={val => setFilterExamId(val)} 
+                options={[
+                  { value: "", label: "جميع فترات الاختبارات" },
+                  ...activeStageExams.map(e => ({
+                    value: e.id,
+                    label: e.name,
+                    sublabel: e.term,
+                    badge: e.status === "ongoing" ? "جارٍ" : undefined
+                  }))
+                ]}
+              />
             </div>
 
             {/* 2. Grade */}
-            <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 hover:border-primary/40 transition-colors">
-              <label className="mb-1.5 block text-xs font-black text-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-primary" /> الصف الدراسي
-                </span>
-                <span className="text-[10px] text-primary font-black">{filterGrade || "كل الصفوف"}</span>
-              </label>
-              <select 
+            <div>
+              <LuxurySelect 
+                label="الصف الدراسي"
+                icon={Layers}
                 value={filterGrade} 
-                onChange={e => { setFilterGrade(e.target.value); setFilterSectionId(""); }} 
-                className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs shadow-xs focus:border-primary cursor-pointer outline-none"
-              >
-                <option value="">كل الصفوف</option>
-                {uniqueGrades.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+                onChange={val => { setFilterGrade(val); setFilterSectionId(""); }} 
+                options={[
+                  { value: "", label: "كل الصفوف" },
+                  ...uniqueGrades.map(g => ({ value: g, label: g }))
+                ]}
+              />
             </div>
 
             {/* 3. Section */}
-            <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 hover:border-primary/40 transition-colors">
-              <label className="mb-1.5 block text-xs font-black text-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-primary" /> الشعبة الدراسية
-                </span>
-                <span className="text-[10px] text-muted-foreground font-bold">
-                  {filterSectionId ? `شعبة ${sectionsForGrade.find(s => s.id === filterSectionId)?.name}` : "كل الشعب"}
-                </span>
-              </label>
-              <select 
-                disabled={!filterGrade} 
+            <div>
+              <LuxurySelect 
+                label="الشعبة الدراسية"
+                icon={Users}
+                disabled={!filterGrade}
                 value={filterSectionId} 
-                onChange={e => setFilterSectionId(e.target.value)} 
-                className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs shadow-xs focus:border-primary disabled:opacity-50 cursor-pointer outline-none"
-              >
-                <option value="">كل الشعب</option>
-                {sectionsForGrade.map(s => <option key={s.id} value={s.id}>شعبة {s.name}</option>)}
-              </select>
+                onChange={val => setFilterSectionId(val)} 
+                options={[
+                  { value: "", label: "كل الشعب" },
+                  ...sectionsForGrade.map(s => ({ value: s.id, label: `شعبة ${s.name}` }))
+                ]}
+              />
             </div>
 
             {/* 4. Rating Filter */}
-            <div className="p-3 rounded-2xl bg-muted/30 border border-border/60 hover:border-primary/40 transition-colors">
-              <label className="mb-1.5 block text-xs font-black text-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Medal className="w-3.5 h-3.5 text-primary" /> التقدير العام
-                </span>
-                <span className="text-[10px] text-muted-foreground font-bold">تصفية</span>
-              </label>
-              <select 
+            <div>
+              <LuxurySelect 
+                label="التقدير العام"
+                icon={Medal}
                 value={filterRank} 
-                onChange={e => setFilterRank(e.target.value)} 
-                className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 font-bold text-xs shadow-xs focus:border-primary cursor-pointer outline-none"
-              >
-                <option value="all">جميع التقديرات</option>
-                <option value="ممتاز">ممتاز (90% فأكثر) ⭐</option>
-                <option value="جيد جداً">جيد جداً (80% - 89%) 🟢</option>
-                <option value="جيد">جيد (65% - 79%) 🔵</option>
-                <option value="مقبول">مقبول (50% - 64%) 🟡</option>
-                <option value="راسب">راسب (أقل من 50%) 🔴</option>
-              </select>
+                onChange={val => setFilterRank(val)} 
+                options={[
+                  { value: "all", label: "جميع التقديرات" },
+                  { value: "ممتاز", label: "ممتاز (90% فأكثر) ⭐", badge: "⭐" },
+                  { value: "جيد جداً", label: "جيد جداً (80% - 89%) 🟢" },
+                  { value: "جيد", label: "جيد (65% - 79%) 🔵" },
+                  { value: "مقبول", label: "مقبول (50% - 64%) 🟡" },
+                  { value: "راسب", label: "راسب (أقل من 50%) 🔴" }
+                ]}
+              />
             </div>
           </div>
 
@@ -1110,7 +1112,7 @@ function MasterSheetTab() {
         </div>
       </div>
 
-      {/* 3. Action Toolbar: Search, Pagination Size & Printing */}
+      {/* 3. Action Toolbar: Search, Density & Printing */}
       <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Search Input */}
         <div className="relative w-full lg:max-w-md">
@@ -1136,9 +1138,9 @@ function MasterSheetTab() {
           {/* Page Density Selector */}
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/60 text-xs">
             <span className="text-muted-foreground font-black px-2 flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-primary" /> الطلاب / صفحة:
+              <Users className="w-3.5 h-3.5 text-primary" /> العرض:
             </span>
-            {[15, 20, 25, 30, 50, 100, 0].map(size => (
+            {[20, 50, 100, 0].map(size => (
               <button
                 key={size}
                 type="button"
@@ -1156,27 +1158,30 @@ function MasterSheetTab() {
           </div>
 
           {/* Export Excel Menu */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleExportCsv("page")}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 bg-background px-3 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-sm cursor-pointer"
-              title="تصدير الصفحة المعروضة حالياً إلى Excel"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
-              <span>تصدير الصفحة ({paginatedData.length})</span>
-            </button>
-            <button
-              onClick={() => handleExportCsv("all")}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-black text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors shadow-sm cursor-pointer"
-              title={`تصدير كامل الكشف (${totalItems} طالب) إلى Excel`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>تصدير الكل ({totalItems})</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleExportCsv(selectedStudentIds.size > 0 ? "selected" : "all")}
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-black text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors shadow-sm cursor-pointer"
+            title="تصدير بيانات الكشف إلى ملف Excel"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>تصدير Excel {selectedStudentIds.size > 0 ? `(${selectedStudentIds.size})` : `(${totalItems})`}</span>
+          </button>
+
+          {/* Blank Grade Sheet for Teachers Button */}
+          <button
+            type="button"
+            onClick={() => setIsMasterBlankSheetOpen(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 text-xs font-black text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 transition-all shadow-sm cursor-pointer"
+            title="طباعة كشف رصد ورقي فارغ أو مسودة لتسليمه لمعلم المادة"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>كشف رصد يدوي (للمعلم)</span>
+          </button>
 
           {/* Print Buttons */}
           <button
+            type="button"
             onClick={() => {
               setCurrentPrintPage(1);
               setIsLightweightPrintOpen(true);
@@ -1188,6 +1193,7 @@ function MasterSheetTab() {
           </button>
 
           <button
+            type="button"
             onClick={() => setIsPrintOpen(true)}
             className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title="فتح محرك الطباعة المتقدم للتخصيص الكامل"
@@ -1203,9 +1209,9 @@ function MasterSheetTab() {
         {/* Table Top Header Info */}
         <div className="p-4 border-b border-border/60 bg-muted/30 flex flex-col gap-3 text-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-base font-black text-foreground">كشف الدرجات المجمع</h3>
-              <span className="text-xs bg-primary/10 text-primary font-black px-2.5 py-0.5 rounded-lg">
+              <span className="text-xs bg-primary/10 text-primary font-black px-2.5 py-0.5 rounded-lg border border-primary/20">
                 {totalItems.toLocaleString("ar-SA")} طالب مطابق
               </span>
               {pageSize > 0 && totalPages > 1 && (
@@ -1230,7 +1236,7 @@ function MasterSheetTab() {
               <button
                 type="button"
                 onClick={() => setFilterSectionId("")}
-                className={`px-3 py-1 rounded-xl font-black text-xs transition-all shrink-0 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all shrink-0 cursor-pointer ${
                   !filterSectionId
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -1246,7 +1252,7 @@ function MasterSheetTab() {
                     key={s.id}
                     type="button"
                     onClick={() => setFilterSectionId(s.id)}
-                    className={`px-3 py-1 rounded-xl font-black text-xs transition-all shrink-0 cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all shrink-0 cursor-pointer ${
                       isSelected
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -1259,180 +1265,202 @@ function MasterSheetTab() {
             </div>
           )}
 
-          {/* Top Quick Pagination & Density Bar */}
-          <div className="pt-2 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-            {/* Page Size Pills */}
-            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60 flex-wrap">
-              <span className="text-[11px] text-muted-foreground font-black px-1.5 flex items-center gap-1">
-                <Users className="w-3 h-3 text-primary" /> العرض بالصفحة:
-              </span>
-              {[10, 15, 20, 25, 30, 50, 100, 0].map(sz => (
-                <button
-                  key={sz}
-                  type="button"
-                  onClick={() => setPageSize(sz)}
-                  className={`px-2.5 py-0.5 rounded-lg font-black text-xs transition-all cursor-pointer ${
-                    pageSize === sz
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background"
-                  }`}
-                  title={sz === 0 ? "عرض كافة الطلاب بدون تقسيم" : `تقسيم العرض إلى ${sz} طالباً بالصفحة`}
-                >
-                  {sz === 0 ? "الكل" : sz}
-                </button>
-              ))}
-            </div>
-
-            {/* Quick Page Stepper Controls (When paginated) */}
-            {totalPages > 1 && pageSize > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  disabled={safeCurrentPage === 1}
-                  onClick={() => setCurrentPage(1)}
-                  className="p-1.5 rounded-lg border border-border/60 bg-background text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer"
-                  title="الصفحة الأولى"
-                >
-                  <ChevronsRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  disabled={safeCurrentPage === 1}
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  className="p-1.5 rounded-lg border border-border/60 bg-background text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer"
-                  title="الصفحة السابقة"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-
-                <span className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-black text-xs">
-                  صفحة {safeCurrentPage} من {totalPages}
+          {/* Active Batch Selection Bar (Appears when students are selected) */}
+          {selectedStudentIds.size > 0 && (
+            <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/25 flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-primary" />
+                <span className="font-black text-xs text-foreground">
+                  تم تحديد <b className="text-primary">{selectedStudentIds.size}</b> طالب من الكشف
                 </span>
-
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  disabled={safeCurrentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  className="p-1.5 rounded-lg border border-border/60 bg-background text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer"
-                  title="الصفحة التالية"
+                  onClick={() => setIsBatchCertificatesOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-black shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <Award className="w-3.5 h-3.5" />
+                  <span>طباعة الشهادات للطلاب المحددين ({selectedStudentIds.size})</span>
                 </button>
                 <button
                   type="button"
-                  disabled={safeCurrentPage === totalPages}
-                  onClick={() => setCurrentPage(totalPages)}
-                  className="p-1.5 rounded-lg border border-border/60 bg-background text-foreground hover:bg-muted disabled:opacity-30 transition-all cursor-pointer"
-                  title="الصفحة الأخيرة"
+                  onClick={() => handleExportCsv("selected")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-border/80 bg-background text-foreground text-xs font-bold hover:bg-muted transition-all cursor-pointer"
                 >
-                  <ChevronsLeft className="w-3.5 h-3.5" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>تصدير درجات المحددين</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectByCriteria("clear")}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-500/10 transition-all cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>إلغاء التحديد</span>
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* The Table */}
-        <div className="overflow-x-auto relative">
-          <table className="w-full text-right text-xs">
+        <div className="overflow-x-auto relative scrollbar-thin">
+          <table className="w-full text-right text-xs border-collapse">
             <thead className="bg-muted/80 border-b border-border/60 text-muted-foreground font-black select-none sticky top-0 z-20">
               <tr>
+                {/* Checkbox */}
+                <th className="py-3 px-2 text-center w-9 sticky right-0 z-30 bg-muted/95 backdrop-blur-xs">
+                  <input
+                    type="checkbox"
+                    checked={isAllPageSelected}
+                    onChange={handleToggleSelectAllPage}
+                    className="w-4 h-4 rounded border-border/80 text-primary cursor-pointer accent-primary"
+                    title="تحديد كل طلاب الصفحة"
+                  />
+                </th>
+
+                {/* Rank */}
                 <th 
                   onClick={() => {
                     if (sortBy === "rank") setSortOrder(sortOrder === "asc" ? "desc" : "asc");
                     else { setSortBy("rank"); setSortOrder("asc"); }
                   }}
-                  className="py-3 px-3 text-center w-14 cursor-pointer hover:text-foreground sticky right-0 z-30 bg-muted/95 backdrop-blur-xs shadow-xs"
+                  className="py-3 px-2 text-center w-12 cursor-pointer hover:text-foreground sticky right-9 z-30 bg-muted/95 backdrop-blur-xs"
                 >
                   <div className="flex items-center justify-center gap-1">
-                    <span>الترتيب</span>
+                    <span>م</span>
                     <ArrowUpDown className="w-3 h-3 text-muted-foreground/60" />
                   </div>
                 </th>
+
+                {/* Student Name & Academic ID combined */}
                 <th 
                   onClick={() => {
                     if (sortBy === "name") setSortOrder(sortOrder === "asc" ? "desc" : "asc");
                     else { setSortBy("name"); setSortOrder("asc"); }
                   }}
-                  className="py-3 px-4 cursor-pointer hover:text-foreground min-w-[200px] sticky right-14 z-30 bg-muted/95 backdrop-blur-xs shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
+                  className="py-3 px-3 cursor-pointer hover:text-foreground min-w-[190px] sticky right-21 z-30 bg-muted/95 backdrop-blur-xs shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
                 >
                   <div className="flex items-center gap-1">
-                    <span>اسم الطالب رباعياً</span>
+                    <span>اسم الطالب والرقم الأكاديمي</span>
                     <ArrowUpDown className="w-3 h-3 text-muted-foreground/60" />
                   </div>
                 </th>
-                <th className="py-3 px-3 text-center w-28">الرقم الأكاديمي</th>
+
+                {/* Section */}
                 <th 
                   onClick={() => {
                     if (sortBy === "section") setSortOrder(sortOrder === "asc" ? "desc" : "asc");
                     else { setSortBy("section"); setSortOrder("asc"); }
                   }}
-                  className="py-3 px-3 text-center cursor-pointer hover:text-foreground w-20"
+                  className="py-3 px-2 text-center cursor-pointer hover:text-foreground w-16"
                 >
                   <div className="flex items-center justify-center gap-1">
                     <span>الشعبة</span>
                     <ArrowUpDown className="w-3 h-3 text-muted-foreground/60" />
                   </div>
                 </th>
-                {applicableSubjects.map(s => (
-                  <th key={s.id} className="py-3 px-3 text-center whitespace-nowrap min-w-[90px]">
-                    {s.name}
-                  </th>
-                ))}
+
+                {/* Subjects with clean concise names */}
+                {applicableSubjects.map(s => {
+                  const conciseName = s.name
+                    .replace("القرآن الكريم والدراسات الإسلامية", "القرآن والدراسات")
+                    .replace("اللغة العربية واللغويات", "اللغة العربية")
+                    .replace("الرياضيات العامة", "الرياضيات")
+                    .replace("اللغة الإنجليزية المتقدمة", "اللغة الإنجليزية");
+                  return (
+                    <th key={s.id} className="py-3 px-2 text-center whitespace-nowrap min-w-[75px]" title={s.name}>
+                      {conciseName}
+                    </th>
+                  );
+                })}
+
+                {/* Total Marks */}
                 <th 
                   onClick={() => {
                     if (sortBy === "total") setSortOrder(sortOrder === "asc" ? "desc" : "asc");
                     else { setSortBy("total"); setSortOrder("desc"); }
                   }}
-                  className="py-3 px-3 text-center text-primary cursor-pointer hover:text-primary/80 whitespace-nowrap"
+                  className="py-3 px-2 text-center text-primary cursor-pointer hover:text-primary/80 whitespace-nowrap w-24 bg-primary/5"
                 >
                   <div className="flex items-center justify-center gap-1">
                     <span>المجموع</span>
                     <ArrowUpDown className="w-3 h-3 text-primary/60" />
                   </div>
                 </th>
+
+                {/* Percentage */}
                 <th 
                   onClick={() => {
                     if (sortBy === "pct") setSortOrder(sortOrder === "asc" ? "desc" : "asc");
                     else { setSortBy("pct"); setSortOrder("desc"); }
                   }}
-                  className="py-3 px-3 text-center text-primary cursor-pointer hover:text-primary/80 whitespace-nowrap"
+                  className="py-3 px-2 text-center text-primary cursor-pointer hover:text-primary/80 whitespace-nowrap w-20"
                 >
                   <div className="flex items-center justify-center gap-1">
                     <span>النسبة</span>
                     <ArrowUpDown className="w-3 h-3 text-primary/60" />
                   </div>
                 </th>
-                <th className="py-3 px-3 text-center text-primary whitespace-nowrap w-24">التقدير</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap w-20">الحالة</th>
+
+                {/* Rank / Rating */}
+                <th className="py-3 px-2 text-center whitespace-nowrap w-24">التقدير</th>
+
+                {/* Pass Status */}
+                <th className="py-3 px-2 text-center whitespace-nowrap w-20">الحالة</th>
+
+                {/* Row Actions */}
+                <th className="py-3 px-2 text-center whitespace-nowrap w-24">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {paginatedData.map((d, idx) => {
                 const rankNumber = (safeCurrentPage - 1) * effectivePageSize + idx + 1;
+                const isSelected = selectedStudentIds.has(d.student.id);
+
                 return (
-                  <tr key={d.student.id} className="hover:bg-accent/20 transition-colors group">
-                    <td className="py-3 px-3 text-center font-black sticky right-0 z-10 bg-card group-hover:bg-accent/20 transition-colors">
+                  <tr key={d.student.id} className={`hover:bg-accent/25 transition-colors group ${isSelected ? "bg-primary/5" : ""}`}>
+                    {/* Checkbox */}
+                    <td className="py-3 px-2 text-center sticky right-0 z-10 bg-card group-hover:bg-accent/25 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectStudent(d.student.id)}
+                        className="w-4 h-4 rounded border-border/80 text-primary cursor-pointer accent-primary"
+                      />
+                    </td>
+
+                    {/* Rank */}
+                    <td className="py-3 px-2 text-center font-black sticky right-9 z-10 bg-card group-hover:bg-accent/25 transition-colors text-xs">
                       {rankNumber === 1 ? "🥇 1" : rankNumber === 2 ? "🥈 2" : rankNumber === 3 ? "🥉 3" : rankNumber}
                     </td>
-                    <td className="py-3 px-4 sticky right-14 z-10 bg-card group-hover:bg-accent/20 transition-colors shadow-[2px_0_5px_rgba(0,0,0,0.06)]">
+
+                    {/* Name + Academic ID */}
+                    <td className="py-3 px-3 sticky right-21 z-10 bg-card group-hover:bg-accent/25 transition-colors shadow-[2px_0_5px_rgba(0,0,0,0.06)]">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-md bg-primary/10 text-primary font-black text-[11px] flex items-center justify-center shrink-0">
+                        <div className="w-7 h-7 rounded-xl bg-primary/10 text-primary font-black text-xs flex items-center justify-center shrink-0">
                           {d.student.name[0]}
                         </div>
-                        <span className="font-black text-sm text-foreground">{d.student.name}</span>
+                        <div>
+                          <span className="font-black text-xs text-foreground block">{d.student.name}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono tabular-nums block" dir="ltr">
+                            {d.student.nationalId || `ID: ${d.student.id.slice(-6)}`}
+                          </span>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3 px-3 text-center font-mono text-muted-foreground font-bold tabular-nums" dir="ltr">
-                      {d.student.nationalId || "-"}
+
+                    {/* Section */}
+                    <td className="py-3 px-2 text-center font-bold text-muted-foreground">
+                      <span className="px-2 py-0.5 rounded-md bg-muted/60 text-xs">{d.section || "-"}</span>
                     </td>
-                    <td className="py-3 px-3 text-center font-bold text-muted-foreground">
-                      {d.section || "-"}
-                    </td>
+
+                    {/* Subject scores */}
                     {applicableSubjects.map(s => {
                       const val = d.subjectsMap[s.id];
                       return (
-                        <td key={s.id} className="py-3 px-3 text-center font-bold tabular-nums">
+                        <td key={s.id} className="py-3 px-2 text-center font-bold tabular-nums text-xs">
                           {val !== undefined ? (
                             <span className={val === 0 ? "text-muted-foreground/50" : "text-foreground font-black"}>
                               {val}
@@ -1441,13 +1469,19 @@ function MasterSheetTab() {
                         </td>
                       );
                     })}
-                    <td className="py-3 px-3 text-center font-black text-primary bg-primary/5 tabular-nums text-sm">
+
+                    {/* Total Marks */}
+                    <td className="py-3 px-2 text-center font-black text-primary bg-primary/5 tabular-nums text-xs">
                       {d.totalMarks} <span className="text-[10px] text-muted-foreground font-normal">/{d.totalMaxMarks}</span>
                     </td>
-                    <td className="py-3 px-3 text-center font-black tabular-nums text-sm" dir="ltr">
+
+                    {/* Percentage */}
+                    <td className="py-3 px-2 text-center font-black tabular-nums text-xs" dir="ltr">
                       {d.percentage.toFixed(1)}%
                     </td>
-                    <td className="py-3 px-3 text-center font-bold">
+
+                    {/* Rank / Rating */}
+                    <td className="py-3 px-2 text-center font-bold">
                       <span className={`px-2 py-0.5 rounded-md text-[11px] font-black ${
                         d.rank === 'ممتاز' ? 'bg-emerald-500/15 text-emerald-600' : 
                         d.rank === 'جيد جداً' ? 'bg-blue-500/15 text-blue-600' :
@@ -1457,7 +1491,9 @@ function MasterSheetTab() {
                         {d.rank}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-center">
+
+                    {/* Pass Status */}
+                    <td className="py-3 px-2 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                         d.isPassed 
                           ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
@@ -1466,13 +1502,41 @@ function MasterSheetTab() {
                         {d.isPassed ? "ناجح" : "راسب"}
                       </span>
                     </td>
+
+                    {/* Row Actions */}
+                    <td className="py-3 px-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedStudentIds(new Set([d.student.id]));
+                            setIsBatchCertificatesOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg border border-border/70 text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all cursor-pointer"
+                          title="عرض وطباعة شهادة الطالب"
+                        >
+                          <Award className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedStudentForCareer(d.student.id);
+                            setIsCareerModalOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg border border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
+                          title="السجل الأكاديمي والمهني للطالب"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
 
               {paginatedData.length === 0 && (
                 <tr>
-                  <td colSpan={applicableSubjects.length + 7} className="py-14 text-center text-muted-foreground font-bold">
+                  <td colSpan={applicableSubjects.length + 8} className="py-14 text-center text-muted-foreground font-bold">
                     <Users className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
                     لا توجد بيانات مطابقة لخيارات الفلترة أو البحث المحددة.
                   </td>
@@ -1906,6 +1970,41 @@ function MasterSheetTab() {
           templates={[printTemplate]}
           title={`الكشف المجمع للدرجات - ${filterGrade || "كل الصفوف"}`}
           onClose={() => setIsPrintOpen(false)}
+        />
+      )}
+
+      {/* 8. Academic Career Modal */}
+      {isCareerModalOpen && selectedStudentForCareer && (
+        <AcademicCareerModal
+          isOpen={isCareerModalOpen}
+          onClose={() => {
+            setIsCareerModalOpen(false);
+            setSelectedStudentForCareer("");
+          }}
+          studentId={selectedStudentForCareer}
+        />
+      )}
+
+      {/* 9. Batch Certificates Modal */}
+      {isBatchCertificatesOpen && (
+        <BatchCertificatesModal
+          isOpen={isBatchCertificatesOpen}
+          onClose={() => setIsBatchCertificatesOpen(false)}
+          examId={filterExamId}
+          grade={filterGrade}
+          sectionId={filterSectionId || "all"}
+          preSelectedStudentIds={Array.from(selectedStudentIds)}
+        />
+      )}
+
+      {/* 10. Blank Grade Sheet Modal */}
+      {isMasterBlankSheetOpen && (
+        <BlankGradeSheetModal
+          isOpen={isMasterBlankSheetOpen}
+          onClose={() => setIsMasterBlankSheetOpen(false)}
+          initialExamId={filterExamId}
+          initialGrade={filterGrade}
+          initialSectionId={filterSectionId}
         />
       )}
     </div>

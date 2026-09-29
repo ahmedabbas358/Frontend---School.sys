@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from "react";
 import { EducationalStage, useStage, GRADE_OPTIONS } from "./StageContext";
+export type { EducationalStage };
 
 export interface Guardian {
   id: string;
@@ -108,6 +109,7 @@ export interface AcademicYear {
 export interface TeachingAssignment {
   id: string;
   teacherId: string;
+  staffId?: string;
   subjectId: string;
   sectionId: string;
   yearId: string;
@@ -199,6 +201,7 @@ export interface Treasury {
 
 export interface CashSession {
   openedBy?: string;
+  cashierName?: string;
   id: string;
   treasuryId: string;
   userId: string;
@@ -621,6 +624,12 @@ export interface MaintenanceRequest {
   costEstimate?: number;
   dateRequested: string;
   dateCompleted?: string;
+  roomId?: string;
+  roomName?: string;
+  category?: string;
+  technicianName?: string;
+  notes?: string;
+  expenseId?: string;
 }
 
 export interface Room {
@@ -633,6 +642,9 @@ export interface Room {
   status: "available" | "occupied" | "maintenance";
   assignedSectionId?: string;
   assignedSectionName?: string;
+  code?: string;
+  supervisorName?: string;
+  facilities?: string[];
 }
 
 export interface BankAccount {
@@ -642,6 +654,8 @@ export interface BankAccount {
   accountNumber: string;
   iban: string;
   balance: number;
+  currentBalance?: number;
+  accountId?: string;
   currency: string;
   status: "active" | "inactive";
 }
@@ -669,12 +683,15 @@ export interface StaffContract {
   staffName: string;
   type?: "full_time" | "part_time" | "contractor";
   contractType?: "full_time" | "part_time" | "contractor";
+  jobTitle?: string;
+  department?: string;
   startDate: string;
   endDate: string;
   basicSalary: number;
   allowances?: number;
   deductions?: number;
   status: "active" | "expired" | "renewing";
+  terms?: string;
 }
 
 export interface StaffLeave {
@@ -687,6 +704,11 @@ export interface StaffLeave {
   days: number;
   status: "pending" | "approved" | "rejected";
   notes?: string;
+  decisionReason?: string;
+  replacementStaffId?: string;
+  replacementStaffName?: string;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface StaffAttendanceRecord {
@@ -717,12 +739,15 @@ export interface StaffAdvance {
 
 export interface ActivityLog {
   id: string;
-  user: string;
+  user?: string;
   action: string;
-  entity: string;
+  entity?: string;
   details: string;
   date: string;
   ip?: string;
+  category?: string;
+  targetId?: any;
+  timestamp?: string;
 }
 
 export interface Textbook {
@@ -878,7 +903,68 @@ export interface SystemSettings {
   sessionTimeout: string;
   force2FA: boolean;
   lockAfter5Fails: boolean;
+  logoUrl?: string;
+  stampUrl?: string;
+  schoolWebsite?: string;
+  schoolType?: string;
+  tableDensity?: "comfortable" | "compact";
+  fontFamily?: string;
+  calendarType?: "gregorian" | "hijri" | "dual";
+  defaultStaffRole?: string;
+  backupFrequency?: string;
+  backupRetention?: string;
+  backupStorage?: { local: boolean; cloud: boolean; s3: boolean };
+  features: SystemFeatures;
 }
+
+export interface SystemFeatures {
+  // الأقسام والوحدات التشغيلية
+  transport: boolean;          // وحدة النقل المدرسي والحافلات
+  library: boolean;            // وحدة المكتبة وتوزيع المقررات
+  clinic: boolean;             // وحدة العيادة الطبية والرعاية الصحية
+  facilities: boolean;         // وحدة إدارة المرافق والمباني والصيانة
+  inventory: boolean;          // وحدة إدارة المستودعات والعهد
+  hrPayroll: boolean;          // وحدة الموارد البشرية ومسير الرواتب
+  examsReports: boolean;       // وحدة الاختبارات ورصد الدرجات والشهادات
+  financeInvoicing: boolean;   // المركز المالي والفوترة وسندات القبض
+  admissionRegistration: boolean; // بوابة القبول والتسجيل الإلكتروني
+  // التطبيقات وقنوات التواصل
+  parentPortal: boolean;       // بوابة وتطبيق ولي الأمر
+  teacherApp: boolean;         // تطبيق المعلم ورصد الحضور
+  smsAlerts: boolean;          // تنبيهات الرسائل النصية القصيرة SMS
+  whatsappAlerts: boolean;     // إشعارات وتنبيهات واتساب الفورية
+  // التقنيات المتقدمة والتكامل
+  onlinePayments: boolean;     // بوابات السداد والدفع الإلكتروني
+  qrVerification: boolean;     // التحقق الرقمي عبر رمز الاستجابة QR
+  noorIntegration: boolean;    // المزامنة والربط مع نظام نور الوزاري
+  webhooksApi: boolean;        // المفاتيح البرمجية وأحداث الـ Webhooks
+  twoFactorAuth: boolean;      // التحقق الثنائي بخطوتين (2FA)
+  smartAnalyticsAi: boolean;   // التحليلات الذكية ومساعد الذكاء الاصطناعي
+  trashBin: boolean;           // سلة المحذوفات المركزية واسترجاع البيانات
+}
+
+export const defaultFeatures: SystemFeatures = {
+  transport: true,
+  library: true,
+  clinic: true,
+  facilities: true,
+  inventory: true,
+  hrPayroll: true,
+  examsReports: true,
+  financeInvoicing: true,
+  admissionRegistration: true,
+  parentPortal: true,
+  teacherApp: true,
+  smsAlerts: true,
+  whatsappAlerts: true,
+  onlinePayments: true,
+  qrVerification: true,
+  noorIntegration: true,
+  webhooksApi: true,
+  twoFactorAuth: true,
+  smartAnalyticsAi: true,
+  trashBin: true,
+};
 
 export const defaultSettings: SystemSettings = {
   schoolName: "مدرسة النموذج الأهلية",
@@ -948,13 +1034,56 @@ export const defaultSettings: SystemSettings = {
   force2FA: true,
   lockAfter5Fails: true,
   paymentGateway: "none",
+  logoUrl: "",
+  stampUrl: "",
+  schoolWebsite: "https://school.edu.sa",
+  schoolType: "أهلي (بنين وبنات)",
+  tableDensity: "comfortable",
+  fontFamily: "Cairo",
+  calendarType: "dual",
+  defaultStaffRole: "معلم (صلاحيات تدريس فقط)",
+  backupFrequency: "يومياً (الساعة 02:00 صباحاً)",
+  backupRetention: "30 يوماً",
+  backupStorage: { local: true, cloud: true, s3: false },
+  features: defaultFeatures,
 };
 // --- Full Enterprise Benchmark Generator (15,000 Students + All Modules) ---
 function generateFullEnterpriseSchoolData() {
   const stages: EducationalStage[] = ["kindergarten", "primary", "middle", "high"];
-  const firstNames = ["أحمد", "محمد", "علي", "سارة", "فاطمة", "خالد", "عبدالله", "عمر", "نورة", "مريم", "سعد", "فيصل", "نوف", "هند", "عبير", "زياد", "طلال", "ياسر", "ريم", "لمى", "طارق", "بدر", "أمل", "منى", "حسام", "باسم", "أسماء", "خديجة", "إبراهيم", "وليد"];
-  const fatherNames = ["سليمان", "عبد العزيز", "إبراهيم", "صالح", "فهد", "منصور", "وليد", "ماجد", "تركي", "سعود", "حسين", "عادل", "مازن", "سعيد", "حمد", "أشرف", "سامي", "رائد", "هشام", "عصام"];
-  const familyNames = ["العتيبي", "القحطاني", "الشمري", "الدوسري", "الزهراني", "المطيري", "الغامدي", "العنزي", "الشهري", "السبيعي", "الحربي", "البقمي", "المالكي", "التميمي", "السعيد", "الأحمدي", "العوفي", "السلمي", "الرويلي", "الزيعي"];
+  const firstNames = [
+    "أحمد", "محمد", "علي", "سارة", "فاطمة", "خالد", "عبدالله", "عمر", "نورة", "مريم", 
+    "سعد", "فيصل", "نوف", "هند", "عبير", "زياد", "طلال", "ياسر", "ريم", "لمى", 
+    "طارق", "بدر", "أمل", "منى", "حسام", "باسم", "أسماء", "خديجة", "إبراهيم", "وليد",
+    "ريان", "جود", "سلطان", "شهد", "عبد العزيز", "دانا", "فهد", "ليان", "ماجد", "غادة",
+    "تركي", "رنا", "سعود", "هيا", "حسين", "رغد", "عادل", "سمر", "نايف", "خلود",
+    "سعيد", "روان", "حمد", "جمانة", "أشرف", "لجين", "سامي", "تالا", "رائد", "يارا",
+    "هشام", "ديما", "عصام", "أروى", "يزيد", "مها", "مشاري"
+  ];
+  const fatherNames = [
+    "سليمان", "عبد العزيز", "إبراهيم", "صالح", "فهد", "منصور", "وليد", "ماجد", "تركي", "سعود",
+    "حسين", "عادل", "مازن", "سعيد", "حمد", "أشرف", "سامي", "رائد", "هشام", "عصام",
+    "عبد الرحمن", "عبد الله", "خالد", "ناصر", "محمد", "أحمد", "سلطان", "فيصل", "طارق", "بدر",
+    "مشعل", "بندر", "متعب", "نايف", "فواز", "يوسف", "حسن", "علي", "مبارك", "ظافر",
+    "غانم", "سالم", "جابر", "راجح", "مساعد", "دخيل", "مسفر", "شايع", "معيض", "عايض",
+    "مطلق", "محسن", "ضيف الله", "شبيب", "رداد", "فايز", "مبروك", "ناجي", "وافي", "بركات", "مرزوق"
+  ];
+  const grandNames = [
+    "ناصر", "خالد", "محمد", "عبد الله", "سلطان", "فيصل", "حمد", "سعد", "تركي", "فهد",
+    "منصور", "صالح", "إبراهيم", "سليمان", "عبد العزيز", "عبد الرحمن", "بدر", "ماجد", "وليد", "عمر",
+    "علي", "حسن", "حسين", "يوسف", "سالم", "جابر", "مبارك", "غانم", "مسفر", "عايض",
+    "شايع", "شبيب", "مطلق", "فواز", "نايف", "بندر", "مشعل", "متعب", "عادل", "سامي",
+    "رائد", "هشام", "عصام", "مازن", "سعيد", "أشرف", "راجح", "مساعد", "فايز", "مرزوق",
+    "معيض", "رداد", "مبروك"
+  ];
+  const familyNames = [
+    "العتيبي", "القحطاني", "الشمري", "الدوسري", "الزهراني", "المطيري", "الغامدي", "العنزي", "الشهري", "السبيعي",
+    "الحربي", "البقمي", "المالكي", "التميمي", "السعيد", "الأحمدي", "العوفي", "السلمي", "الرويلي", "الزبيدي",
+    "الخالدي", "الجهني", "البلوي", "العسيري", "القرني", "الفيفي", "العمري", "الرشيدي", "الهذلي", "الحازمي",
+    "الصاعدي", "الرحيلي", "الثبيتي", "الروقي", "الشريف", "السفياني", "اليامي", "الدعجاني", "النفيعي", "المقاطي",
+    "اللحيدان", "الفوزان", "الراجحي", "الوابل", "السويلم", "القصيبي", "المنصور", "المهيدب", "الزامل", "العليان",
+    "الجميح", "العوجان", "المعجل", "البابطين", "الخضير", "السديري", "الجريسي", "العثيم", "التركي", "الحكير",
+    "السنبل", "العمار", "الهديب", "السليمان", "الحميد", "الشثري", "الفريح", "المشعل", "البواردي", "الرميح", "المهنا"
+  ];
   
   const gradesMap: Record<EducationalStage, string[]> = {
     kindergarten: GRADE_OPTIONS.kindergarten,
@@ -1142,32 +1271,64 @@ function generateFullEnterpriseSchoolData() {
     status: s.status === "terminated" ? "expired" : "active"
   }));
 
-  // --- 4. 15,000 Students & Guardians ---
+  // --- 4. 15,000 Students & 5,500 Realistic Family Units ---
   const generatedStudents: Student[] = [];
   const generatedGuardians: Guardian[] = [];
   const generatedEnrollments: StudentEnrollment[] = [];
   const generatedInvoices: Invoice[] = [];
   const generatedTransportSubscriptions: TransportSubscription[] = [];
 
+  const totalFamiliesCount = 5500;
+  const jobsList = [
+    "مهندس استشاري", "طبيب عام", "معلم فيزياء", "رائد أعمال", "مدير تسويق", 
+    "محاسب قانوني", "أستاذ جامعي", "ضابط متقاعد", "موظف حكومي", "رجل أعمال", 
+    "مبرمج نظم", "صيدلي", "مستشار قانوني", "مدير مشاريع", "مهندس مدني"
+  ];
+
+  // Pre-generate 5,500 distinct, realistic family records with patronymic & family names
+  for (let f = 1; f <= totalFamiliesCount; f++) {
+    const fnFather = fatherNames[(f * 31 + 7) % fatherNames.length];
+    const fnGrand = grandNames[(f * 43 + 11) % grandNames.length];
+    const fnFamily = familyNames[(f * 47 + 13) % familyNames.length];
+    const famName = `${fnFather} بن ${fnGrand} ${fnFamily}`;
+    const famPhone = `05${String(10000000 + (f * 17) % 89999999).padStart(8, '0')}`;
+    const famPhoneSecond = (f % 3 === 0) ? `05${String(10000000 + (f * 31 + 5) % 89999999).padStart(8, '0')}` : undefined;
+    const famNationalId = `1${String(100000000 + (f * 43) % 899999999)}`;
+    const job = jobsList[f % jobsList.length];
+
+    generatedGuardians.push({
+      id: `GRD-FAM-${String(f).padStart(5, '0')}`,
+      name: famName,
+      phone: famPhone,
+      phoneSecond: famPhoneSecond,
+      nationalId: famNationalId,
+      relation: "أب",
+      job,
+      gender: "ذكر",
+      address: "المملكة العربية السعودية"
+    });
+  }
+
   const perStageCount = 3750; // 3750 per stage * 4 stages = 15,000 students
   let overallIndex = 1;
 
-  stages.forEach(stage => {
+  stages.forEach((stage, stageIdx) => {
     const grades = gradesMap[stage];
     const baseTuition = stage === "high" ? 8000 : stage === "middle" ? 6500 : stage === "primary" ? 5000 : 4500;
     const stageSections = generatedSections.filter(sec => sec.stage === stage);
 
     for (let i = 0; i < perStageCount; i++) {
-      const fn = firstNames[i % firstNames.length];
-      const mn = fatherNames[(i + 1) % fatherNames.length];
-      const ln = familyNames[(i + 2) % familyNames.length];
-      const fullName = `${fn} ${mn} ${ln}`;
-      const guardianName = `${mn} ${ln}`;
-      const guardianPhone = `05${String(10000000 + (overallIndex * 23) % 89999999).padStart(8, '0')}`;
+      // Natural multi-stage sibling distribution across 5,500 families (2 to 3 children per family)
+      const famIndex = (i + stageIdx * 1375) % totalFamiliesCount;
+      const fam = generatedGuardians[famIndex];
+
+      const fn = firstNames[(overallIndex * 17 + stageIdx * 13) % firstNames.length];
+      const fatherFirstName = fam.name.split(" ")[0];
+      const familyLastName = fam.name.split(" ").slice(-1)[0];
+      const fullName = `${fn} ${fatherFirstName} ${familyLastName}`;
       const studentId = `STU-15K-${String(overallIndex).padStart(5, '0')}`;
-      const guardianId = `GRD-15K-${String(overallIndex).padStart(5, '0')}`;
       const grade = grades[i % grades.length];
-      const isMale = (i % 2 === 0);
+      const isMale = (overallIndex % 2 === 0);
       const gradeSections = stageSections.filter(sec => sec.grade === grade);
       const matchedSec = gradeSections.length > 0 
         ? gradeSections[Math.floor(i / grades.length) % gradeSections.length] 
@@ -1178,23 +1339,26 @@ function generateFullEnterpriseSchoolData() {
         name: fullName,
         dob: "2015-06-15",
         nationalId: `1${String(100000000 + (overallIndex * 17) % 899999999)}`,
-        guardianName,
-        guardianPhone,
-        guardianRelation: "أب",
+        guardianName: fam.name,
+        guardianPhone: fam.phone,
+        guardianRelation: fam.relation,
+        guardians: [
+          {
+            id: fam.id,
+            name: fam.name,
+            phone: fam.phone,
+            phoneSecond: fam.phoneSecond,
+            relation: fam.relation,
+            job: fam.job,
+            isPrimary: true,
+            address: fam.address
+          }
+        ],
         stage,
         grade,
         sectionId: matchedSec?.id,
         gender: isMale ? "ذكر" : "أنثى",
         status: "نشط"
-      });
-
-      generatedGuardians.push({
-        id: guardianId,
-        name: guardianName,
-        phone: guardianPhone,
-        relation: "أب",
-        gender: "ذكر",
-        address: "المملكة العربية السعودية"
       });
 
       generatedEnrollments.push({
@@ -2095,14 +2259,165 @@ export interface UserAccount {
   role: string;
   status: "active" | "disabled";
   lastLogin: string;
+  email?: string;
+  phone?: string;
+  staffId?: string; // Direct deterministic link to Staff in HR
+  guardianId?: string;
+  avatar?: string;
+  notes?: string;
+  stageScope?: EducationalStage | "all";
+  twoFactorEnabled?: boolean;
+  createdAt?: string;
+  password?: string;
 }
 
 const initialUsers: UserAccount[] = [
-  { id: "U-1001", username: "admin", fullName: "أحمد العتيبي", role: "مدير عام", status: "active", lastLogin: "2026-06-13 09:42" },
-  { id: "U-1002", username: "principal01", fullName: "خالد القحطاني", role: "مدير مدرسة", status: "active", lastLogin: "2026-06-13 08:01" },
-  { id: "U-1003", username: "registrar01", fullName: "نوال الزهراني", role: "أمين تسجيل", status: "active", lastLogin: "2026-06-12 14:22" },
-  { id: "U-1004", username: "t.mona", fullName: "منى الزهراني", role: "معلم", status: "active", lastLogin: "2026-06-13 07:11" },
-  { id: "U-1005", username: "g.saad", fullName: "سعد الحربي", role: "ولي أمر", status: "disabled", lastLogin: "2026-05-30 20:30" },
+  { 
+    id: "U-1001", 
+    username: "admin", 
+    fullName: "أحمد العتيبي", 
+    role: "مدير عام", 
+    status: "active", 
+    lastLogin: "2026-09-27 08:30", 
+    email: "admin@school.edu.sa", 
+    phone: "0501110001",
+    stageScope: "all",
+    twoFactorEnabled: true,
+    createdAt: "2024-01-01",
+    notes: "مدير النظام العام والحساب الرئيسي للمؤسسة"
+  },
+  { 
+    id: "U-1002", 
+    username: "principal01", 
+    fullName: "د. خالد عبدالرحمن القحطاني", 
+    role: "مدير مدرسة", 
+    status: "active", 
+    lastLogin: "2026-09-27 07:45", 
+    staffId: "EMP-1001",
+    email: "principal@school.edu.sa", 
+    phone: "0501112233",
+    stageScope: "all",
+    twoFactorEnabled: true,
+    createdAt: "2024-01-05",
+    notes: "مدير المدرسة التنفيذي ورئيس الهيئة الإدارية"
+  },
+  { 
+    id: "U-1003", 
+    username: "monira.kg", 
+    fullName: "أستاذة منيرة الدوسري", 
+    role: "مدير مدرسة", 
+    status: "active", 
+    lastLogin: "2026-09-26 13:15", 
+    staffId: "EMP-1002",
+    email: "monira.kg@school.edu.sa", 
+    phone: "0502223344",
+    stageScope: "kindergarten",
+    twoFactorEnabled: false,
+    createdAt: "2024-02-10",
+    notes: "مديرة مرحلة رياض الأطفال"
+  },
+  { 
+    id: "U-1004", 
+    username: "t.ahmed", 
+    fullName: "أحمد المعلم السعيد", 
+    role: "معلم", 
+    status: "active", 
+    lastLogin: "2026-09-27 07:15", 
+    staffId: "EMP-1003",
+    email: "ahmed.teacher@school.edu.sa", 
+    phone: "0503334455",
+    stageScope: "primary",
+    twoFactorEnabled: false,
+    createdAt: "2024-03-01",
+    notes: "معلم صفوف أولية ومشرف النشاط"
+  },
+  { 
+    id: "U-1005", 
+    username: "t.fatima", 
+    fullName: "فاطمة الزهراء الشمري", 
+    role: "معلم", 
+    status: "active", 
+    lastLogin: "2026-09-26 12:40", 
+    staffId: "EMP-1004",
+    email: "fatima.sh@school.edu.sa", 
+    phone: "0504445566",
+    stageScope: "middle",
+    twoFactorEnabled: false,
+    createdAt: "2024-03-05",
+    notes: "معلمة علوم وفيزياء للمرحلة المتوسطة"
+  },
+  { 
+    id: "U-1006", 
+    username: "it.admin", 
+    fullName: "م. ياسر العتيبي", 
+    role: "مدير عام", 
+    status: "active", 
+    lastLogin: "2026-09-27 08:10", 
+    staffId: "EMP-1005",
+    email: "yasser.it@school.edu.sa", 
+    phone: "0505556677",
+    stageScope: "all",
+    twoFactorEnabled: true,
+    createdAt: "2024-01-10",
+    notes: "مسؤول تقنية المعلومات وقواعد البيانات"
+  },
+  { 
+    id: "U-1007", 
+    username: "clinic.amal", 
+    fullName: "د. أمل الغامدي", 
+    role: "إداري", 
+    status: "active", 
+    lastLogin: "2026-09-26 11:20", 
+    staffId: "EMP-1006",
+    email: "clinic@school.edu.sa", 
+    phone: "0506667788",
+    stageScope: "all",
+    twoFactorEnabled: false,
+    createdAt: "2024-04-01",
+    notes: "طبيبة العيادة المدرسية والرعاية الصحية"
+  },
+  { 
+    id: "U-1008", 
+    username: "registrar01", 
+    fullName: "نوال الزهراني", 
+    role: "أمين تسجيل", 
+    status: "active", 
+    lastLogin: "2026-09-27 08:00", 
+    email: "registrar@school.edu.sa", 
+    phone: "0509991122",
+    stageScope: "all",
+    twoFactorEnabled: true,
+    createdAt: "2024-01-15",
+    notes: "مسؤولة القبول والتسجيل وملفات الطلاب"
+  },
+  { 
+    id: "U-1009", 
+    username: "finance.salem", 
+    fullName: "سالم المنصور", 
+    role: "محاسب مالي", 
+    status: "active", 
+    lastLogin: "2026-09-27 08:25", 
+    email: "finance@school.edu.sa", 
+    phone: "0508882211",
+    stageScope: "all",
+    twoFactorEnabled: true,
+    createdAt: "2024-01-20",
+    notes: "محاسب أول - التحصيل ومسيرات الرواتب"
+  },
+  { 
+    id: "U-1010", 
+    username: "g.saad", 
+    fullName: "سعد الحربي", 
+    role: "ولي أمر", 
+    status: "disabled", 
+    lastLogin: "2026-08-30 20:30", 
+    email: "saad.parent@gmail.com", 
+    phone: "0551122334",
+    stageScope: "all",
+    twoFactorEnabled: false,
+    createdAt: "2024-05-10",
+    notes: "حساب ولي أمر موقوف مؤقتاً بطلب الإدارة"
+  },
 ];
 
 // --- Context ---
@@ -2110,6 +2425,7 @@ interface GlobalStoreContextType {
   // All Data
   allStudents: Student[];
   allDeletedStudents: Student[];
+  allGuardians: Guardian[];
   allStudentEnrollments: StudentEnrollment[];
   allEmployeeAssignments: EmployeeAssignment[];
   allInvoices: Invoice[];
@@ -2189,7 +2505,7 @@ interface GlobalStoreContextType {
   softDeleteStudent: (id: string) => void;
   restoreStudent: (id: string) => void;
   hardDeleteStudent: (id: string) => void;
-  addGuardian: (g: Omit<Guardian, "id">) => void;
+  addGuardian: (g: Omit<Guardian, "id"> & { id?: string }) => string;
   updateGuardian: (id: string, updates: Partial<Guardian>) => void;
   softDeleteGuardian: (id: string) => void;
   restoreGuardian: (id: string) => void;
@@ -2212,7 +2528,12 @@ interface GlobalStoreContextType {
   addPayment: (paymentData: Omit<Payment, "id">) => void;
   addExpense: (expenseData: Omit<Expense, "id"> & { status?: Expense["status"] }) => void;
   addVendor: (vendor: any) => void;
+  updateVendor: (id: string, updates: Partial<Vendor>) => void;
+  deleteVendor: (id: string) => void;
   payVendor: (vendorId: string, amount: number) => void;
+  addBankAccount: (bank: Omit<BankAccount, "id">) => void;
+  updateBankAccount: (id: string, updates: Partial<BankAccount>) => void;
+  deleteBankAccount: (id: string) => void;
   submitExpense: (id: string) => void;
   approveExpense: (id: string) => void;
   postExpense: (id: string) => void;
@@ -2251,7 +2572,7 @@ interface GlobalStoreContextType {
     notes?: string;
     settleAdvances?: boolean;
   }) => void;
-  addClinicVisit: (visit: Omit<ClinicVisit, "id" | "studentName" | "stage">) => void;
+  addClinicVisit: (visit: Omit<ClinicVisit, "id" | "stage"> & { studentName?: string }) => void;
   addDisciplineIncident: (incident: Omit<DisciplineIncident, "id">) => void;
   addAttendanceSession: (session: Omit<AttendanceSession, "id">, records: Omit<AttendanceRecord, "id" | "sessionId">[]) => void;
   bulkRecordStudentAttendance: (params: {
@@ -2313,6 +2634,7 @@ interface GlobalStoreContextType {
   saveExamGradePolicy: (policy: Partial<ExamGradePolicy> & { examId: string; grade: string }) => void;
 
   addSubject: (subject: Omit<Subject, "id">) => void;
+  updateSubject: (id: string, updates: Partial<Subject>) => void;
   deleteSubject: (id: string) => void;
   updateScheduleSlot: (slot: Omit<ScheduleSlot, "id">) => void;
   clearScheduleSlot: (sectionId: string, day: string, period: number) => void;
@@ -2330,8 +2652,8 @@ interface GlobalStoreContextType {
   promoteStaff: (promotions: { employeeId: string; nextRole: string; nextAcademicYearId: string; status: "active" | "on_leave" | "terminated"; basicSalary: number }[]) => void;
   generateBulkData: (count: number) => void;
 
-  addMaintenanceRequest: (req: Omit<MaintenanceRequest, "id">) => void;
-  updateMaintenanceRequest: (id: string, updates: Partial<MaintenanceRequest>) => void;
+  addMaintenanceRequest: (req: Omit<MaintenanceRequest, "id">, setRoomUnderMaintenance?: boolean) => void;
+  updateMaintenanceRequest: (id: string, updates: Partial<MaintenanceRequest>, restoreRoomAvailable?: boolean) => void;
   undoMaintenanceRequest: (id: string) => void;
   deleteMaintenanceRequest: (id: string) => void;
 
@@ -2340,9 +2662,16 @@ interface GlobalStoreContextType {
   deleteRoom: (id: string) => void;
 
   addStaffEvaluation: (evalData: Omit<StaffEvaluation, "id">) => void;
+  updateStaffEvaluation: (id: string, updates: Partial<StaffEvaluation>) => void;
+  deleteStaffEvaluation: (id: string) => void;
+
   addStaffContract: (contractData: Omit<StaffContract, "id">) => void;
-  addStaffLeave: (leaveData: Omit<StaffLeave, "id">) => void;
-  updateStaffLeave: (id: string, updates: Partial<StaffLeave>) => void;
+  updateStaffContract: (id: string, updates: Partial<StaffContract>) => void;
+  deleteStaffContract: (id: string) => void;
+
+  addStaffLeave: (leaveData: Omit<StaffLeave, "id">, setStaffOnLeave?: boolean) => void;
+  updateStaffLeave: (id: string, updates: Partial<StaffLeave>, syncStaffStatus?: boolean) => void;
+  deleteStaffLeave: (id: string) => void;
 
   addActivityLog: (logData: Omit<ActivityLog, "id" | "date">) => void;
 
@@ -2350,9 +2679,8 @@ interface GlobalStoreContextType {
   addUser: (userData: Omit<UserAccount, "id">) => void;
   updateUser: (id: string, updates: Partial<UserAccount>) => void;
   deleteUser: (id: string) => void;
-
-  allGuardians: Guardian[];
-
+  syncStaffUserAccount: (staffId: string, updates: Partial<UserAccount>) => void;
+  batchCreateStaffUsers: (staffList: any[]) => number;
   // Library Distribution
   allTextbooks: Textbook[];
   allTextbookDistributions: TextbookDistribution[];
@@ -2381,6 +2709,11 @@ interface GlobalStoreContextType {
 
   systemSettings: SystemSettings;
   updateSettings: (updates: Partial<SystemSettings>) => void;
+  resetSettings: () => void;
+  toggleFeature: (key: keyof SystemFeatures, enabled?: boolean) => void;
+  updateFeatures: (updates: Partial<SystemFeatures>) => void;
+  restoreFullBackup: (backupPayload: any) => { success: boolean; message: string; count: number };
+  wipeSystemData: (options?: { wipeStudents?: boolean; wipeStaff?: boolean; wipeFinance?: boolean; resetSettings?: boolean }) => void;
 
   // Notifications
   notifications: AppNotification[];
@@ -2423,7 +2756,21 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   }, [vendors]);
   const [expenseCategories] = useState<ExpenseCategory[]>(initialExpenseCategories);
   const [treasuries, setTreasuries] = useState<Treasury[]>(initialTreasuries);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(initialBankAccounts);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_bank_accounts") : null;
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return initialBankAccounts;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_bank_accounts", JSON.stringify(bankAccounts));
+      } catch {}
+    }
+  }, [bankAccounts]);
   const [cashSessions, setCashSessions] = useState<CashSession[]>(initialCashSessions);
 
   const [books, setBooks] = useState<Book[]>(initialBooks);
@@ -2659,7 +3006,24 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   });
   const [staffAdvances, setStaffAdvances] = useState<StaffAdvance[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(initialActivityLogs);
-  const [users, setUsers] = useState<UserAccount[]>(initialUsers);
+  const [users, setUsers] = useState<UserAccount[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_users") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialUsers;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_users", JSON.stringify(users));
+      } catch {}
+    }
+  }, [users]);
 
   // Notifications
   const [notifications, setNotifications] = useState<AppNotification[]>([
@@ -2697,7 +3061,19 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     try {
       const saved = typeof window !== "undefined" ? localStorage.getItem("darasi_system_settings") : null;
       if (saved) {
-        return { ...defaultSettings, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        return {
+          ...defaultSettings,
+          ...parsed,
+          features: {
+            ...defaultFeatures,
+            ...(parsed.features || {})
+          },
+          defaultChannels: {
+            ...defaultSettings.defaultChannels,
+            ...(parsed.defaultChannels || {})
+          }
+        };
       }
     } catch (e) {
       console.error("Error loading settings:", e);
@@ -2736,7 +3112,158 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   }, [academicYears]);
   
   const updateSettings = (updates: Partial<SystemSettings>) => {
-    setSystemSettings(prev => ({ ...prev, ...updates }));
+    setSystemSettings(prev => ({
+      ...prev,
+      ...updates,
+      features: updates.features ? { ...defaultFeatures, ...prev.features, ...updates.features } : prev.features
+    }));
+  };
+
+  const resetSettings = () => {
+    setSystemSettings(defaultSettings);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("darasi_system_settings", JSON.stringify(defaultSettings));
+      } catch (e) {
+        console.error("Error resetting settings:", e);
+      }
+    }
+  };
+
+  const toggleFeature = (key: keyof SystemFeatures, enabled?: boolean) => {
+    setSystemSettings(prev => {
+      const current = prev.features?.[key] ?? defaultFeatures[key];
+      const nextVal = enabled !== undefined ? enabled : !current;
+      return {
+        ...prev,
+        features: {
+          ...defaultFeatures,
+          ...(prev.features || {}),
+          [key]: nextVal
+        }
+      };
+    });
+  };
+
+  const updateFeatures = (featuresUpdates: Partial<SystemFeatures>) => {
+    setSystemSettings(prev => ({
+      ...prev,
+      features: {
+        ...defaultFeatures,
+        ...(prev.features || {}),
+        ...featuresUpdates
+      }
+    }));
+  };
+
+  const restoreFullBackup = (backupPayload: any) => {
+    try {
+      if (!backupPayload || typeof backupPayload !== "object") {
+        return { success: false, message: "صيغة ملف النسخة الاحتياطية غير صالحة", count: 0 };
+      }
+      const data = backupPayload.data || backupPayload.tables || backupPayload;
+      let count = 0;
+      if (data.students && Array.isArray(data.students)) {
+        setStudents(data.students);
+        count += data.students.length;
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem("darasi_students", JSON.stringify(data.students)); } catch {}
+        }
+      }
+      if (data.staff && Array.isArray(data.staff)) {
+        setStaff(data.staff);
+        count += data.staff.length;
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem("darasi_staff", JSON.stringify(data.staff)); } catch {}
+        }
+      }
+      if (data.guardians && Array.isArray(data.guardians)) {
+        setGuardians(data.guardians);
+        count += data.guardians.length;
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem("darasi_guardians", JSON.stringify(data.guardians)); } catch {}
+        }
+      }
+      if (data.invoices && Array.isArray(data.invoices)) {
+        setInvoices(data.invoices);
+        count += data.invoices.length;
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem("darasi_invoices", JSON.stringify(data.invoices)); } catch {}
+        }
+      }
+      if (data.expenses && Array.isArray(data.expenses)) {
+        setExpenses(data.expenses);
+        count += data.expenses.length;
+        if (typeof window !== "undefined") {
+          try { localStorage.setItem("darasi_expenses", JSON.stringify(data.expenses)); } catch {}
+        }
+      }
+      if (data.settings && typeof data.settings === "object") {
+        setSystemSettings(prev => ({
+          ...defaultSettings,
+          ...prev,
+          ...data.settings,
+          features: {
+            ...defaultFeatures,
+            ...(prev.features || {}),
+            ...(data.settings.features || {})
+          }
+        }));
+      }
+      if (data.academicYears && Array.isArray(data.academicYears)) {
+        setAcademicYears(data.academicYears);
+      }
+      addActivityLog({
+        user: "مدير النظام",
+        action: "استعادة نسخة احتياطية",
+        entity: "النسخ الاحتياطي",
+        details: `تمت استعادة ${count} سجل وإعدادات المنصة بنجاح`,
+      });
+      return { success: true, message: `تمت استعادة ${count} سجل بنجاح وتحديث كافة قواعد البيانات`, count };
+    } catch (e: any) {
+      console.error("Error restoring backup:", e);
+      return { success: false, message: `فشلت الاستعادة: ${e.message || "خطأ غير معروف"}`, count: 0 };
+    }
+  };
+
+  const wipeSystemData = (options?: { wipeStudents?: boolean; wipeStaff?: boolean; wipeFinance?: boolean; resetSettings?: boolean }) => {
+    if (options?.wipeStudents) {
+      setStudents([]);
+      setGuardians([]);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("darasi_students");
+          localStorage.removeItem("darasi_guardians");
+        } catch {}
+      }
+    }
+    if (options?.wipeStaff) {
+      setStaff([]);
+      if (typeof window !== "undefined") {
+        try { localStorage.removeItem("darasi_staff"); } catch {}
+      }
+    }
+    if (options?.wipeFinance) {
+      setInvoices([]);
+      setExpenses([]);
+      setPayments([]);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("darasi_invoices");
+          localStorage.removeItem("darasi_expenses");
+          localStorage.removeItem("darasi_payments");
+        } catch {}
+      }
+    }
+    if (options?.resetSettings) {
+      resetSettings();
+    }
+    addActivityLog({
+      user: "مدير النظام",
+      action: "إعادة ضبط المصنع",
+      entity: "النظام الشامل",
+      details: "تم تنفيذ عملية إعادة ضبط المصنع ومسح البيانات المحددة",
+    });
   };
 
   const [textbooks, setTextbooks] = useState<Textbook[]>(() => {
@@ -2924,6 +3451,50 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     };
     setStudentEnrollments(prev => [newEnrollment, ...prev]);
 
+    // Automatically synchronize primary and linked guardians into the guardians directory
+    const guardiansToSync = studentData.guardians && studentData.guardians.length > 0
+      ? studentData.guardians
+      : (studentData.guardianName && studentData.guardianName.trim() ? [{
+          id: undefined,
+          name: studentData.guardianName.trim(),
+          relation: studentData.guardianRelation || studentData.guardianRelationship || "أب",
+          phone: studentData.guardianPhone || "",
+          address: studentData.address || "",
+          isPrimary: true
+        }] : []);
+
+    if (guardiansToSync.length > 0) {
+      setGuardians(prevGuardians => {
+        let updated = [...prevGuardians];
+        for (const gInfo of guardiansToSync) {
+          if (!gInfo.name || !gInfo.name.trim()) continue;
+          const cleanName = gInfo.name.trim().toLowerCase();
+          const cleanPhone = (gInfo.phone || "").replace(/\D/g, "");
+          const exists = updated.some(g => 
+            (gInfo.id && g.id === gInfo.id) ||
+            g.name.trim().toLowerCase() === cleanName ||
+            (cleanPhone && cleanPhone.length >= 7 && g.phone.replace(/\D/g, "") === cleanPhone)
+          );
+          if (!exists) {
+            const isFemale = (gInfo.relation?.includes("أم") || gInfo.relation?.includes("أخت") || gInfo.relation?.includes("عمة") || gInfo.relation?.includes("خالة"));
+            const newG: Guardian = {
+              id: gInfo.id || `G-${Date.now().toString(36)}-${Math.floor(1000 + Math.random() * 9000)}`,
+              name: gInfo.name.trim(),
+              phone: gInfo.phone || "",
+              phoneSecond: gInfo.phoneSecond || undefined,
+              email: gInfo.email || undefined,
+              job: gInfo.job || undefined,
+              relation: gInfo.relation || "أب",
+              gender: isFemale ? "أنثى" : "ذكر",
+              address: gInfo.address || studentData.address || "",
+            };
+            updated.unshift(newG);
+          }
+        }
+        return updated;
+      });
+    }
+
     return newStudentId;
   };
 
@@ -2957,8 +3528,11 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setStudentEnrollments(prev => prev.filter(e => e.studentId !== targetStudentId && e.id !== id));
   };
 
-  const addGuardian = (g: Omit<Guardian, "id">) => {
-    setGuardians(prev => [...prev, { ...g, id: `G-${Math.floor(1000 + Math.random() * 9000)}` }]);
+  const addGuardian = (g: Omit<Guardian, "id"> & { id?: string }): string => {
+    const newId = g.id || `G-${Date.now().toString(36)}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newRecord: Guardian = { ...g, id: newId };
+    setGuardians(prev => [newRecord, ...prev]);
+    return newId;
   };
 
   const updateGuardian = (id: string, updates: Partial<Guardian>) => {
@@ -3287,8 +3861,47 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addVendor = (vendor: any) => setVendors(prev => [...prev, { ...vendor, id: `VEN-${Math.random().toString(36).substr(2, 9)}` }]);
-  const payVendor = (vendorId: string, amount: number) => { /* Logic here */ };
+  const addVendor = (vendor: any) => {
+    const id = `VEN-${Math.floor(1000 + Math.random() * 9000)}`;
+    setVendors(prev => [...prev, { ...vendor, id }]);
+    addAuditLog({ action: "create", details: `إضافة مورد جديد: ${vendor.name}`, entityType: 'system', entityId: id, userId: 'SYS', userName: 'المستخدم الحالي' });
+  };
+
+  const updateVendor = (id: string, updates: Partial<Vendor>) => {
+    setVendors(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
+    addAuditLog({ action: "update", details: `تحديث بيانات مورد: ${id}`, entityType: 'system', entityId: id, userId: 'SYS', userName: 'المستخدم الحالي' });
+  };
+
+  const deleteVendor = (id: string) => {
+    setVendors(prev => prev.filter(v => v.id !== id));
+    addAuditLog({ action: "delete", details: `حذف مورد: ${id}`, entityType: 'system', entityId: id, userId: 'SYS', userName: 'المستخدم الحالي' });
+  };
+
+  const payVendor = (vendorId: string, amount: number) => {
+    setVendors(prev => prev.map(v => {
+      if (v.id === vendorId) {
+        return { ...v, balance: Math.max(0, (v.balance || 0) - amount) };
+      }
+      return v;
+    }));
+    addAuditLog({ action: "update", details: `سداد مستحقات للمورد ${vendorId} بمبلغ ${amount}`, entityType: 'system', entityId: vendorId, userId: 'SYS', userName: 'المستخدم الحالي' });
+  };
+
+  const addBankAccount = (bank: Omit<BankAccount, "id">) => {
+    const id = `BNK-${Math.floor(1000 + Math.random() * 9000)}`;
+    setBankAccounts(prev => [...prev, { ...bank, id, status: bank.status || "active" }]);
+    addAuditLog({ action: "create", details: `إضافة حساب بنكي جديد: ${bank.bankName} (${bank.accountNumber})`, entityType: 'system', entityId: id, userId: 'SYS', userName: 'المستخدم الحالي' });
+  };
+
+  const updateBankAccount = (id: string, updates: Partial<BankAccount>) => {
+    setBankAccounts(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+    addAuditLog({ action: "update", details: `تحديث حساب بنكي: ${id}`, entityType: 'system', entityId: id, userId: 'SYS', userName: 'المستخدم الحالي' });
+  };
+
+  const deleteBankAccount = (id: string) => {
+    setBankAccounts(prev => prev.filter(b => b.id !== id));
+    addAuditLog({ action: "delete", details: `حذف حساب بنكي: ${id}`, entityType: 'system', entityId: id, userId: 'SYS', userName: 'المستخدم الحالي' });
+  };
 
   const submitExpense = (id: string) => {
     setExpenses(prev => prev.map(e => e.id === id && (e.status === "draft" || !e.status) ? { ...e, status: "submitted" } : e));
@@ -3338,10 +3951,12 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   };
 
   const addPayment = (paymentData: Omit<Payment, "id">) => {
-    const { method, amount, invoiceId, studentId } = paymentData;
+    const { method, amount, invoiceId } = paymentData;
+    const resolvedStudentId = paymentData.studentId || (invoiceId ? invoices.find(i => i.id === invoiceId)?.studentId : undefined);
     const paymentId = `PAY-${Math.floor(1000 + Math.random() * 9000)}`;
     const payment: Payment = {
       ...paymentData,
+      studentId: resolvedStudentId,
       id: paymentId,
       date: paymentData.date || new Date().toISOString().split("T")[0]
     };
@@ -3366,7 +3981,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     // Debit Cash/Bank (ACC-101 / ACC-102), Credit AR (ACC-103)
     const debitAcc = method === 'cash' ? 'ACC-101' : 'ACC-102';
     const jl1: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: debitAcc, debit: amount, credit: 0 };
-    const jl2: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: "ACC-103", debit: 0, credit: amount, studentId, referenceId: studentId, referenceType: 'student' };
+    const jl2: JournalLine = { id: `JL-${Math.floor(10000 + Math.random() * 90000)}`, journalEntryId: jId, accountId: "ACC-103", debit: 0, credit: amount, studentId: resolvedStudentId, referenceId: resolvedStudentId, referenceType: 'student' };
     
     setJournalEntries(prev => [je, ...prev]);
     setJournalLines(prev => [jl1, jl2, ...prev]);
@@ -4076,6 +4691,10 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setSubjects(prev => [{ ...subjectData, id: `SUB-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
   };
 
+  const updateSubject = (id: string, updates: Partial<Subject>) => {
+    setSubjects(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
   const deleteSubject = (id: string) => {
     setSubjects(prev => prev.filter(s => s.id !== id));
   };
@@ -4338,23 +4957,30 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     setTeachingAssignments(prev => prev.filter(a => a.id !== id));
   };
 
-  const addMaintenanceRequest = (req: Omit<MaintenanceRequest, "id">) => {
-    setMaintenanceRequests(prev => [{ ...req, id: `MR-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  const addMaintenanceRequest = (req: Omit<MaintenanceRequest, "id">, setRoomUnderMaintenance: boolean = false) => {
+    const newId = `MR-${Math.floor(1000 + Math.random() * 9000)}`;
+    setMaintenanceRequests(prev => [{ ...req, id: newId }, ...prev]);
+    if (req.roomId && (setRoomUnderMaintenance || req.priority === "high")) {
+      setRooms(prev => prev.map(rm => rm.id === req.roomId ? { ...rm, status: "maintenance" } : rm));
+    }
   };
-  const updateMaintenanceRequest = (id: string, updates: Partial<MaintenanceRequest>) => {
+  const updateMaintenanceRequest = (id: string, updates: Partial<MaintenanceRequest>, restoreRoomAvailable: boolean = true) => {
     setMaintenanceRequests(prev => prev.map(r => {
       if (r.id === id) {
         const updated = { ...r, ...updates };
         if (updates.status === "completed" && r.status !== "completed" && updated.costEstimate) {
           // create expense when maintenance completed
           addExpense({
-            title: `صيانة: ${updated.title}`,
+            title: `صيانة: ${updated.title} (${updated.location || "مرفق عام"})`,
             amount: updated.costEstimate,
             date: new Date().toISOString().split("T")[0],
             categoryId: "EXPCAT-4", // Maintenance category
-            beneficiary: "مقاول صيانة",
+            beneficiary: updated.technicianName || "مقاول صيانة وتجهيزات",
             method: "bank_transfer"
           });
+          if (restoreRoomAvailable && updated.roomId) {
+            setRooms(prev => prev.map(rm => rm.id === updated.roomId && rm.status === "maintenance" ? { ...rm, status: "available" } : rm));
+          }
         }
         return updated;
       }
@@ -4411,10 +5037,57 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
   };
 
   const addStaffEvaluation = (evalData: Omit<StaffEvaluation, "id">) => setStaffEvaluations(prev => [{ ...evalData, id: `SE-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
-  const addStaffContract = (contractData: Omit<StaffContract, "id">) => setStaffContracts(prev => [{ ...contractData, id: `SC-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
+  const updateStaffEvaluation = (id: string, updates: Partial<StaffEvaluation>) => setStaffEvaluations(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  const deleteStaffEvaluation = (id: string) => setStaffEvaluations(prev => prev.filter(e => e.id !== id));
+
+  const addStaffContract = (contractData: Omit<StaffContract, "id">) => {
+    const newId = `SC-${Math.floor(1000 + Math.random() * 9000)}`;
+    setStaffContracts(prev => [{ ...contractData, id: newId }, ...prev]);
+    if (contractData.staffId && contractData.basicSalary) {
+      setStaff(prev => prev.map(s => s.id === contractData.staffId ? { ...s, basicSalary: contractData.basicSalary, status: s.status === "terminated" ? "active" : s.status } : s));
+    }
+  };
+  const updateStaffContract = (id: string, updates: Partial<StaffContract>) => {
+    setStaffContracts(prev => prev.map(c => {
+      if (c.id === id) {
+        const updated = { ...c, ...updates };
+        if (updated.staffId && updates.basicSalary) {
+          setStaff(stf => stf.map(s => s.id === updated.staffId ? { ...s, basicSalary: updates.basicSalary } : s));
+        }
+        return updated;
+      }
+      return c;
+    }));
+  };
+  const deleteStaffContract = (id: string) => setStaffContracts(prev => prev.filter(c => c.id !== id));
   
-  const addStaffLeave = (leaveData: Omit<StaffLeave, "id">) => setStaffLeaves(prev => [{ ...leaveData, id: `SL-${Math.floor(1000 + Math.random() * 9000)}` }, ...prev]);
-  const updateStaffLeave = (id: string, updates: Partial<StaffLeave>) => setStaffLeaves(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+  const addStaffLeave = (leaveData: Omit<StaffLeave, "id">, setStaffOnLeave: boolean = false) => {
+    const newId = `SL-${Math.floor(1000 + Math.random() * 9000)}`;
+    setStaffLeaves(prev => [{ ...leaveData, id: newId }, ...prev]);
+    if (setStaffOnLeave && leaveData.staffId) {
+      setStaff(prev => prev.map(s => s.id === leaveData.staffId ? { ...s, status: "on_leave" } : s));
+    }
+  };
+  const updateStaffLeave = (id: string, updates: Partial<StaffLeave>, syncStaffStatus: boolean = true) => {
+    setStaffLeaves(prev => prev.map(l => {
+      if (l.id === id) {
+        const updated = { ...l, ...updates };
+        if (syncStaffStatus && updated.staffId) {
+          if (updates.status === "approved") {
+            const today = new Date().toISOString().split("T")[0];
+            if (updated.startDate <= today && updated.endDate >= today) {
+              setStaff(stf => stf.map(s => s.id === updated.staffId ? { ...s, status: "on_leave" } : s));
+            }
+          } else if (updates.status === "rejected") {
+            setStaff(stf => stf.map(s => s.id === updated.staffId && s.status === "on_leave" ? { ...s, status: "active" } : s));
+          }
+        }
+        return updated;
+      }
+      return l;
+    }));
+  };
+  const deleteStaffLeave = (id: string) => setStaffLeaves(prev => prev.filter(l => l.id !== id));
 
   const addActivityLog = (logData: Omit<ActivityLog, "id" | "date">) => {
     setActivityLogs(prev => [{ ...logData, id: `AL-${Math.floor(1000 + Math.random() * 9000)}`, date: new Date().toISOString() }, ...prev]);
@@ -4436,6 +5109,61 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     const user = users.find(u => u.id === id);
     setUsers(prev => prev.filter(u => u.id !== id));
     addActivityLog({ user: "مدير النظام", action: "حذف مستخدم", entity: "المستخدمون", details: `تم حذف حساب: ${user?.fullName || id}` });
+  };
+
+  const syncStaffUserAccount = (staffId: string, updates: Partial<UserAccount>) => {
+    setUsers(prev => prev.map(u => {
+      if (u.staffId === staffId) {
+        return { ...u, ...updates };
+      }
+      return u;
+    }));
+    addActivityLog({ user: "مدير النظام", action: "مزامنة حساب موظف", entity: "المستخدمون", details: `تمت مزامنة حساب الموظف: ${staffId}` });
+  };
+
+  const batchCreateStaffUsers = (staffList: { staffId: string; username: string; role: string; password?: string; email?: string; phone?: string; fullName: string; stageScope?: EducationalStage | "all" }[]) => {
+    let createdCount = 0;
+    setUsers(prev => {
+      const existingUsernames = new Set(prev.map(u => u.username.toLowerCase()));
+      const existingStaffIds = new Set(prev.filter(u => u.staffId).map(u => u.staffId));
+      const toAdd: UserAccount[] = [];
+
+      staffList.forEach(item => {
+        if (existingStaffIds.has(item.staffId)) return;
+        let baseU = item.username.toLowerCase().replace(/[^a-z0-9_]/g, "");
+        if (!baseU) baseU = `user_${item.staffId.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+        let finalU = baseU;
+        let counter = 1;
+        while (existingUsernames.has(finalU)) {
+          finalU = `${baseU}_${counter++}`;
+        }
+        existingUsernames.add(finalU);
+
+        toAdd.push({
+          id: `U-${Math.floor(1000 + Math.random() * 9000)}`,
+          username: finalU,
+          fullName: item.fullName,
+          role: item.role || "معلم",
+          status: "active",
+          lastLogin: "لم يسجل دخول بعد",
+          staffId: item.staffId,
+          email: item.email || "",
+          phone: item.phone || "",
+          stageScope: item.stageScope || "all",
+          twoFactorEnabled: false,
+          createdAt: new Date().toISOString().split("T")[0],
+          notes: "تم الإنشاء التلقائي عبر مزامنة الكادر الإداري والتعليمي"
+        });
+        createdCount++;
+      });
+
+      return [...toAdd, ...prev];
+    });
+
+    if (createdCount > 0) {
+      addActivityLog({ user: "مدير النظام", action: "مزامنة حسابات الكادر", entity: "المستخدمون", details: `تم إنشاء ${createdCount} حساب مستخدم جديد لكادر المدرسة دفعة واحدة` });
+    }
+    return createdCount;
   };
 
   const generateBulkData = (count: number) => {
@@ -4940,6 +5668,11 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       updateTimetableSettings,
       systemSettings,
       updateSettings,
+      resetSettings,
+      toggleFeature,
+      updateFeatures,
+      restoreFullBackup,
+      wipeSystemData,
       
       addStudent,
       updateStudent,
@@ -4949,7 +5682,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       addGuardian, updateGuardian, softDeleteGuardian, restoreGuardian, hardDeleteGuardian,
       restoreItem, hardDeleteItem,
       addPayment, addInvoice, issueInvoice, cancelInvoice, updateInvoice, deleteInvoice, addFeeStructure, updateFeeStructure, deleteFeeStructure, addDiscount, updateDiscount, deleteDiscount, addExpense, submitExpense, approveExpense, postExpense, updateExpense, deleteExpense, rolloverFinancialBalances,
-      allVendors: vendors, addVendor, payVendor,
+      allVendors: vendors, addVendor, updateVendor, deleteVendor, payVendor, addBankAccount, updateBankAccount, deleteBankAccount,
       addAccount, updateAccount, deleteAccount, toggleAccountStatus,
       addBook, issueBook, returnBook, addInventoryItem, updateInventoryItem, deleteInventoryItem,
       processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, quickCheckInStaff, addStaffAdvance, disburseStaffSalary, addClinicVisit, addDisciplineIncident, addAttendanceSession, bulkRecordStudentAttendance, addBehaviorTransaction,
@@ -4957,7 +5690,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 
       currency,
       setCurrency,
-      addExam, updateExam, deleteExam, addExamSubject, updateExamSubject, deleteExamSubject, saveExamResults, approveExamResults, updateSingleExamResult, resetExamDataToDefaults, getExamGradePolicy, saveExamGradePolicy, addSubject, deleteSubject,
+      addExam, updateExam, deleteExam, addExamSubject, updateExamSubject, deleteExamSubject, saveExamResults, approveExamResults, updateSingleExamResult, resetExamDataToDefaults, getExamGradePolicy, saveExamGradePolicy, addSubject, updateSubject, deleteSubject,
       updateScheduleSlot, clearScheduleSlot, addAcademicYear, updateAcademicYear, addTeachingAssignment, deleteTeachingAssignment,
       assignStudentToSection,
       promoteStudents,
@@ -4965,9 +5698,12 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       
       addMaintenanceRequest, updateMaintenanceRequest, undoMaintenanceRequest, deleteMaintenanceRequest,
       addRoom, updateRoom, deleteRoom,
-      addStaffEvaluation, addStaffContract, addStaffLeave, updateStaffLeave,
+      addStaffEvaluation, updateStaffEvaluation, deleteStaffEvaluation,
+      addStaffContract, updateStaffContract, deleteStaffContract,
+      addStaffLeave, updateStaffLeave, deleteStaffLeave,
       addActivityLog,
       addUser, updateUser, deleteUser,
+      syncStaffUserAccount, batchCreateStaffUsers,
 
       generateBulkData,
 
@@ -4992,7 +5728,33 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
 export function useGlobalStore() {
   const context = useContext(GlobalStoreContext);
   if (context === undefined) {
-    return {} as Partial<GlobalStoreContextType> as GlobalStoreContextType;
+    return {
+      systemSettings: defaultSettings,
+      allAcademicYears: [],
+      allStudents: [],
+      allStaff: [],
+      allGuardians: [],
+      allInvoices: [],
+      allExpenses: [],
+      allSections: [],
+      allSubjects: [],
+      allUsers: [],
+      currency: "ر.س",
+      setCurrency: () => {},
+      updateSettings: () => {},
+      resetSettings: () => {},
+      toggleFeature: () => {},
+      updateFeatures: () => {},
+      restoreFullBackup: () => ({ success: false, message: "", count: 0 }),
+      wipeSystemData: () => {},
+      updateAcademicYear: () => {},
+      addActivityLog: () => {},
+      addUser: () => {},
+      updateUser: () => {},
+      deleteUser: () => {},
+      syncStaffUserAccount: () => {},
+      batchCreateStaffUsers: () => 0,
+    } as Partial<GlobalStoreContextType> as GlobalStoreContextType;
   }
   return context;
 }
