@@ -157,13 +157,13 @@ function FinanceDashboard() {
             <div className="p-2 bg-warning/10 text-warning rounded-xl group-hover:scale-110 transition-transform"><Users className="w-5 h-5" /></div>
             <div className="font-bold text-sm">مسير الرواتب</div>
           </Link>
-          <button onClick={() => { generateBulkData(1000); toast.success("تم توليد بيانات المحاكاة الكثيفة لـ 1,000 طالب و 500 موظف بنجاح!"); }} className="flex items-center gap-3 p-4 bg-card border border-primary/40 rounded-2xl hover:border-primary hover:bg-primary/10 transition-all group text-right">
-            <div className="p-2 bg-primary/20 text-primary rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
+          <Link to="/finance/treasury" className="flex items-center gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-amber-500/50 hover:bg-amber-500/5 transition-all group">
+            <div className="p-2 bg-amber-500/10 text-amber-600 rounded-xl group-hover:scale-110 transition-transform"><Wallet className="w-5 h-5" /></div>
             <div>
-              <div className="font-black text-xs text-primary">اختبار الأداء الكثيف</div>
-              <div className="text-[10px] text-muted-foreground">توليد (10,000 طالب و 500 موظف)</div>
+              <div className="font-bold text-sm">الخزينة والصناديق</div>
+              <div className="text-[10px] text-muted-foreground">جلسات الكاشير واليومية</div>
             </div>
-          </button>
+          </Link>
         </div>
 
         {/* Core KPIs */}

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageCard, Badge } from "@/components/app-shell";
 import { AdminModal } from "@/components/admin/admin-modal";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   HardDrive,
   Download,
@@ -359,6 +360,9 @@ function BackupPage() {
       }
     >
       <div className="space-y-5" dir="rtl">
+        {/* Unified Admin Sub-Navigation */}
+        <AdminNav activeTab="/admin/backup" />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-4">
           <div className="flex items-center gap-4">

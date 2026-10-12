@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { matchesStaffId, getStaffSector, STAFF_SECTOR_CONFIG } from "@/lib/staff-categories";
+import { AdminModal } from "@/components/admin/admin-modal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/teachers/$id")({
@@ -1696,102 +1697,86 @@ function TeacherProfile() {
 
       {/* Quick Edit Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200" dir="rtl">
-          <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-border/60 shrink-0 bg-primary/5">
-              <h2 className="text-base font-black text-foreground">تعديل الملف المهني للمعلم</h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 text-muted-foreground hover:text-foreground flex items-center justify-center">
-                <X className="h-4 w-4" />
-              </button>
+        <AdminModal
+          isOpen={true}
+          onClose={() => setIsEditModalOpen(false)}
+          title="تعديل الملف المهني للمعلم"
+          subtitle={`تحديث بيانات المعلم الأساسية وسجلات التواصل: ${t.name}`}
+          icon={Pencil}
+          tone="primary"
+          size="medium"
+        >
+          <form onSubmit={handleUpdate} className="space-y-4 text-xs font-bold">
+            <div>
+              <label className="block mb-1 text-foreground">الاسم الرباعي</label>
+              <input 
+                value={editFormData.name} 
+                onChange={e => setEditFormData({...editFormData, name: e.target.value})} 
+                className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
+                required
+              />
             </div>
-            
-            <form onSubmit={handleUpdate} className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1 text-xs font-bold">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block mb-1 text-foreground">الاسم الرباعي</label>
+                <label className="block mb-1 text-foreground">المسمى الوظيفي</label>
                 <input 
-                  value={editFormData.name} 
-                  onChange={e => setEditFormData({...editFormData, name: e.target.value})} 
+                  value={editFormData.role} 
+                  onChange={e => setEditFormData({...editFormData, role: e.target.value})} 
                   className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
-                  required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1 text-foreground">المسمى الوظيفي</label>
-                  <input 
-                    value={editFormData.role} 
-                    onChange={e => setEditFormData({...editFormData, role: e.target.value})} 
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 text-foreground">رقم الجوال</label>
-                  <input 
-                    value={editFormData.phone} 
-                    onChange={e => setEditFormData({...editFormData, phone: e.target.value})} 
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
-                    dir="ltr"
-                  />
-                </div>
+              <div>
+                <label className="block mb-1 text-foreground">رقم الجوال</label>
+                <input 
+                  value={editFormData.phone} 
+                  onChange={e => setEditFormData({...editFormData, phone: e.target.value})} 
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
+                  dir="ltr"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1 text-foreground">المؤهل</label>
-                  <input 
-                    value={editFormData.qualification} 
-                    onChange={e => setEditFormData({...editFormData, qualification: e.target.value})} 
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 text-foreground">الحالة الوظيفية</label>
-                  <select 
-                    value={editFormData.status} 
-                    onChange={e => setEditFormData({...editFormData, status: e.target.value as any})} 
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
-                  >
-                    <option value="active">على رأس العمل</option>
-                    <option value="on_leave">في إجازة</option>
-                    <option value="terminated">غير نشط</option>
-                  </select>
-                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block mb-1 text-foreground">المؤهل</label>
+                <input 
+                  value={editFormData.qualification} 
+                  onChange={e => setEditFormData({...editFormData, qualification: e.target.value})} 
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
+                />
               </div>
-              <div className="flex justify-end gap-2.5 pt-3 border-t border-border">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="h-10 px-5 rounded-xl border border-input text-xs font-bold">إلغاء</button>
-                <button type="submit" className="h-10 px-7 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md glow-primary">حفظ التغييرات</button>
+              <div>
+                <label className="block mb-1 text-foreground">الحالة الوظيفية</label>
+                <select 
+                  value={editFormData.status} 
+                  onChange={e => setEditFormData({...editFormData, status: e.target.value as any})} 
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="active">على رأس العمل</option>
+                  <option value="on_leave">في إجازة</option>
+                  <option value="terminated">غير نشط</option>
+                </select>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-border">
+              <button type="button" onClick={() => setIsEditModalOpen(false)} className="h-10 px-5 rounded-xl border border-input text-xs font-bold hover:bg-muted transition-all cursor-pointer">إلغاء</button>
+              <button type="submit" className="h-10 px-7 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md glow-primary hover:bg-primary/90 transition-all cursor-pointer">حفظ التغييرات</button>
+            </div>
+          </form>
+        </AdminModal>
       )}
 
       {/* 1. Modal: Slot Assignment & Conflict-Aware Editor */}
       {isSlotModalOpen && selectedCoord && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
-          onClick={() => setIsSlotModalOpen(false)}
-          dir="rtl"
+        <AdminModal
+          isOpen={true}
+          onClose={() => setIsSlotModalOpen(false)}
+          title="إسناد وتعديل حصة في جدول المعلم"
+          subtitle={`${selectedCoord.day} • الحصة ${selectedCoord.period} (${periodTimeRanges[selectedCoord.period]?.start || ""} - ${periodTimeRanges[selectedCoord.period]?.end || ""})`}
+          icon={Calendar}
+          tone="primary"
+          size="medium"
         >
-          <div 
-            className="w-full max-w-lg rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150 p-6 space-y-4 my-8"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div>
-                <h3 className="font-black text-base text-foreground">إسناد وتعديل حصة في جدول المعلم</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {selectedCoord.day} • الحصة {selectedCoord.period} ({periodTimeRanges[selectedCoord.period]?.start} - {periodTimeRanges[selectedCoord.period]?.end})
-                </p>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setIsSlotModalOpen(false)}
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
+          <div className="space-y-4">
             {/* Conflict Detection Warning Banner */}
             {(() => {
               const conflict = checkTeacherConflict(selectedCoord.day, selectedCoord.period, slotSectionId, editingSlotId || undefined);
@@ -1826,7 +1811,7 @@ function TeacherProfile() {
                     const firstSub = allSubjects.find(s => s.stage === stg || s.stage === "all");
                     setSlotSubjectId(firstSub?.id || "");
                   }}
-                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
                 >
                   <option value="kindergarten">مرحلة رياض الأطفال</option>
                   <option value="primary">المرحلة الابتدائية</option>
@@ -1846,7 +1831,7 @@ function TeacherProfile() {
                     const sec = allSections.find(s => s.id === secId);
                     if (sec?.roomId) setSlotRoomId(sec.roomId);
                   }}
-                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
                   required
                 >
                   <option value="">-- اختر الشعبة --</option>
@@ -1866,7 +1851,7 @@ function TeacherProfile() {
                 <select
                   value={slotSubjectId}
                   onChange={(e) => setSlotSubjectId(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
                   required
                 >
                   <option value="">-- اختر المادة التعليمية --</option>
@@ -1886,7 +1871,7 @@ function TeacherProfile() {
                 <select
                   value={slotRoomId}
                   onChange={(e) => setSlotRoomId(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
                 >
                   <option value="">-- القاعة الافتراضية للشعبة --</option>
                   {allRooms.map(r => (
@@ -1905,7 +1890,7 @@ function TeacherProfile() {
                   value={slotNotes}
                   onChange={(e) => setSlotNotes(e.target.value)}
                   placeholder="مثال: مراجعة دورية، حصة نشاط، معمل حاسب..."
-                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
                 />
               </div>
 
@@ -1932,7 +1917,7 @@ function TeacherProfile() {
                   </button>
                   <button
                     type="submit"
-                    className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md glow-primary cursor-pointer active:scale-95"
+                    className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md shadow-primary/20 hover:bg-primary/90 cursor-pointer active:scale-95"
                   >
                     تثبيت الحصة في الجدول
                   </button>
@@ -1940,36 +1925,21 @@ function TeacherProfile() {
               </div>
             </form>
           </div>
-        </div>
+        </AdminModal>
       )}
 
       {/* 2. Modal: Timetable Timing & Breaks Setting */}
       {isTimingModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
-          onClick={() => setIsTimingModalOpen(false)}
-          dir="rtl"
+        <AdminModal
+          isOpen={true}
+          onClose={() => setIsTimingModalOpen(false)}
+          title="ضبط تواقيت الحصص والفسح المدرسية"
+          subtitle="تحديد مواعيد الحصص وفترات الراحة والفسح اليومية للمنظومة الأكاديمية"
+          icon={Clock}
+          tone="info"
+          size="medium"
         >
-          <div 
-            className="w-full max-w-lg rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150 p-6 space-y-4 my-8"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div>
-                <h3 className="font-black text-base text-foreground">ضبط تواقيت الحصص والفسح المدرسية</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  تحديد مواعيد الحصص وفترات الراحة والفسح اليومية للمنظومة
-                </p>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setIsTimingModalOpen(false)}
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
+          <div className="space-y-4">
             {/* Presets */}
             <div>
               <label className="block text-xs font-bold text-foreground mb-1.5">القوالب الزمنية الجاهزة:</label>
@@ -1977,7 +1947,7 @@ function TeacherProfile() {
                 <button
                   type="button"
                   onClick={() => setTempTimingSettings(prev => ({ ...prev, startTime: "07:30", periodDuration: 45 }))}
-                  className="p-2 rounded-xl border border-border/70 hover:border-primary/50 text-center text-xs font-bold bg-muted/20 hover:bg-primary/5 transition-all"
+                  className="p-2 rounded-xl border border-border/70 hover:border-primary/50 text-center text-xs font-bold bg-muted/20 hover:bg-primary/5 transition-all cursor-pointer"
                 >
                   <Sun className="w-3.5 h-3.5 mx-auto mb-1 text-amber-500" />
                   <span>التوقيت الصيفي</span>
@@ -1986,7 +1956,7 @@ function TeacherProfile() {
                 <button
                   type="button"
                   onClick={() => setTempTimingSettings(prev => ({ ...prev, startTime: "08:00", periodDuration: 45 }))}
-                  className="p-2 rounded-xl border border-border/70 hover:border-primary/50 text-center text-xs font-bold bg-muted/20 hover:bg-primary/5 transition-all"
+                  className="p-2 rounded-xl border border-border/70 hover:border-primary/50 text-center text-xs font-bold bg-muted/20 hover:bg-primary/5 transition-all cursor-pointer"
                 >
                   <Clock className="w-3.5 h-3.5 mx-auto mb-1 text-blue-500" />
                   <span>التوقيت الشتوي</span>
@@ -1995,7 +1965,7 @@ function TeacherProfile() {
                 <button
                   type="button"
                   onClick={() => setTempTimingSettings(prev => ({ ...prev, startTime: "09:00", periodDuration: 35 }))}
-                  className="p-2 rounded-xl border border-border/70 hover:border-primary/50 text-center text-xs font-bold bg-muted/20 hover:bg-primary/5 transition-all"
+                  className="p-2 rounded-xl border border-border/70 hover:border-primary/50 text-center text-xs font-bold bg-muted/20 hover:bg-primary/5 transition-all cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 mx-auto mb-1 text-emerald-500" />
                   <span>شهر رمضان</span>
@@ -2072,338 +2042,299 @@ function TeacherProfile() {
               <button
                 type="button"
                 onClick={handleSaveTimetableTiming}
-                className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md glow-primary cursor-pointer active:scale-95"
+                className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md glow-primary cursor-pointer active:scale-95 hover:bg-primary/90"
               >
                 اعتماد التواقيت والفسح
               </button>
             </div>
           </div>
-        </div>
+        </AdminModal>
       )}
 
       {/* 3. Modal: Salary Scheme & Financial Structure Editor */}
       {isFinanceModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
-          onClick={() => setIsFinanceModalOpen(false)}
-          dir="rtl"
+        <AdminModal
+          isOpen={true}
+          onClose={() => setIsFinanceModalOpen(false)}
+          title="تعديل الهيكل المالي ونظام الأجر للمعلم"
+          subtitle={`تحديد طريقة احتساب الاستحقاقات والراتب والبدلات: ${t.name}`}
+          icon={Wallet}
+          tone="primary"
+          size="large"
         >
-          <div 
-            className="w-full max-w-xl rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150 p-6 space-y-4 my-8"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div>
-                <h3 className="font-black text-base text-foreground">تعديل الهيكل المالي ونظام الأجر للمعلم</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  تحديد طريقة احتساب الاستحقاقات: راتب شهري، بالحصة، بالساعة، أو أسبوعي/يومي
-                </p>
+          <form onSubmit={handleSaveFinance} className="space-y-4 text-xs font-bold">
+            {/* Payment Scheme Type */}
+            <div>
+              <label className="block text-foreground mb-1.5">نظام احتساب الأجر المعتمد:</label>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {[
+                  { id: "Monthly", label: "راتب شهري" },
+                  { id: "PerLesson", label: "بالحصص" },
+                  { id: "Hourly", label: "بالساعة" },
+                  { id: "Weekly", label: "أسبوعي" },
+                  { id: "Daily", label: "يومي" },
+                ].map(scheme => (
+                  <button
+                    key={scheme.id}
+                    type="button"
+                    onClick={() => setFinanceForm(prev => ({ ...prev, paymentType: scheme.id as any }))}
+                    className={`p-2.5 rounded-xl border text-center font-black transition-all cursor-pointer ${
+                      financeForm.paymentType === scheme.id
+                        ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                        : "border-border/70 bg-card hover:bg-muted text-foreground"
+                    }`}
+                  >
+                    {scheme.label}
+                  </button>
+                ))}
               </div>
-              <button 
-                type="button"
-                onClick={() => setIsFinanceModalOpen(false)}
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
 
-            <form onSubmit={handleSaveFinance} className="space-y-4 text-xs font-bold">
-              {/* Payment Scheme Type */}
+            {/* Main Amount according to scheme */}
+            {financeForm.paymentType === "Monthly" ? (
               <div>
-                <label className="block text-foreground mb-1.5">نظام احتساب الأجر المعتمد:</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {[
-                    { id: "Monthly", label: "راتب شهري" },
-                    { id: "PerLesson", label: "بالحصص" },
-                    { id: "Hourly", label: "بالساعة" },
-                    { id: "Weekly", label: "أسبوعي" },
-                    { id: "Daily", label: "يومي" },
-                  ].map(scheme => (
-                    <button
-                      key={scheme.id}
-                      type="button"
-                      onClick={() => setFinanceForm(prev => ({ ...prev, paymentType: scheme.id as any }))}
-                      className={`p-2.5 rounded-xl border text-center font-black transition-all cursor-pointer ${
-                        financeForm.paymentType === scheme.id
-                          ? "border-primary bg-primary text-primary-foreground shadow-xs"
-                          : "border-border/70 bg-card hover:bg-muted text-foreground"
-                      }`}
-                    >
-                      {scheme.label}
-                    </button>
-                  ))}
-                </div>
+                <label className="block text-foreground mb-1">الراتب الأساسي الشهري ({currency})</label>
+                <input
+                  type="number"
+                  value={financeForm.basicSalary}
+                  onChange={(e) => setFinanceForm(prev => ({ ...prev, basicSalary: Number(e.target.value) }))}
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
+                  required
+                />
               </div>
-
-              {/* Main Amount according to scheme */}
-              {financeForm.paymentType === "Monthly" ? (
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-foreground mb-1">الراتب الأساسي الشهري ({currency})</label>
+                  <label className="block text-foreground mb-1">
+                    سعر {financeForm.paymentType === "PerLesson" ? "الحصة الواحدة" : financeForm.paymentType === "Hourly" ? "الساعة التدريسية" : financeForm.paymentType === "Weekly" ? "الأسبوع" : "اليوم"} ({currency})
+                  </label>
+                  <input
+                    type="number"
+                    value={financeForm.rate}
+                    onChange={(e) => setFinanceForm(prev => ({ ...prev, rate: Number(e.target.value) }))}
+                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-foreground mb-1">الراتب الأساسي التكميلي (إن وجد)</label>
                   <input
                     type="number"
                     value={financeForm.basicSalary}
                     onChange={(e) => setFinanceForm(prev => ({ ...prev, basicSalary: Number(e.target.value) }))}
                     className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
-                    required
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-foreground mb-1">
-                      سعر {financeForm.paymentType === "PerLesson" ? "الحصة الواحدة" : financeForm.paymentType === "Hourly" ? "الساعة التدريسية" : financeForm.paymentType === "Weekly" ? "الأسبوع" : "اليوم"} ({currency})
-                    </label>
-                    <input
-                      type="number"
-                      value={financeForm.rate}
-                      onChange={(e) => setFinanceForm(prev => ({ ...prev, rate: Number(e.target.value) }))}
-                      className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-foreground mb-1">الراتب الأساسي التكميلي (إن وجد)</label>
-                    <input
-                      type="number"
-                      value={financeForm.basicSalary}
-                      onChange={(e) => setFinanceForm(prev => ({ ...prev, basicSalary: Number(e.target.value) }))}
-                      className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Multi-Stage Rates (for PerLesson model) */}
-              {financeForm.paymentType === "PerLesson" && (
-                <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/60 space-y-2.5">
-                  <span className="font-black text-foreground block">
-                    تخصيص سعر الحصة حسب المرحلة الدراسية ({currency} / حصة):
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[
-                      { key: "kindergarten", name: "رياض أطفال" },
-                      { key: "primary", name: "ابتدائي" },
-                      { key: "middle", name: "متوسط" },
-                      { key: "high", name: "ثانوي" },
-                    ].map(stg => (
-                      <div key={stg.key}>
-                        <label className="text-[10px] text-muted-foreground block mb-0.5">{stg.name}</label>
-                        <input
-                          type="number"
-                          value={financeForm.stageRates[stg.key] || financeForm.rate || 70}
-                          onChange={(e) => {
-                            const newRates = { ...financeForm.stageRates, [stg.key]: Number(e.target.value) };
-                            setFinanceForm(prev => ({ ...prev, stageRates: newRates }));
-                          }}
-                          className="w-full h-8 rounded-lg border border-input bg-background text-center text-xs font-bold tabular-nums"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Allowances & Deductions */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-foreground mb-1">إجمالي البدلات والمكافآت ({currency})</label>
-                  <input
-                    type="number"
-                    value={financeForm.allowance}
-                    onChange={(e) => setFinanceForm(prev => ({ ...prev, allowance: Number(e.target.value) }))}
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="block text-foreground mb-1">إجمالي الاستقطاعات والخصم ({currency})</label>
-                  <input
-                    type="number"
-                    value={financeForm.deduction}
-                    onChange={(e) => setFinanceForm(prev => ({ ...prev, deduction: Number(e.target.value) }))}
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
                   />
                 </div>
               </div>
+            )}
 
-              {/* Banking Details */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-foreground mb-1">اسم المصرف المعتمد</label>
-                  <input
-                    type="text"
-                    value={financeForm.bankName}
-                    onChange={(e) => setFinanceForm(prev => ({ ...prev, bankName: e.target.value }))}
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-foreground mb-1">رقم الآيبان (IBAN)</label>
-                  <input
-                    type="text"
-                    value={financeForm.iban}
-                    onChange={(e) => setFinanceForm(prev => ({ ...prev, iban: e.target.value }))}
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary font-mono"
-                    dir="ltr"
-                  />
+            {/* Multi-Stage Rates (for PerLesson model) */}
+            {financeForm.paymentType === "PerLesson" && (
+              <div className="p-3.5 rounded-2xl bg-muted/20 border border-border/60 space-y-2.5">
+                <span className="font-black text-foreground block">
+                  تخصيص سعر الحصة حسب المرحلة الدراسية ({currency} / حصة):
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { key: "kindergarten", name: "رياض أطفال" },
+                    { key: "primary", name: "ابتدائي" },
+                    { key: "middle", name: "متوسط" },
+                    { key: "high", name: "ثانوي" },
+                  ].map(stg => (
+                    <div key={stg.key}>
+                      <label className="text-[10px] text-muted-foreground block mb-0.5">{stg.name}</label>
+                      <input
+                        type="number"
+                        value={financeForm.stageRates[stg.key] || financeForm.rate || 70}
+                        onChange={(e) => {
+                          const newRates = { ...financeForm.stageRates, [stg.key]: Number(e.target.value) };
+                          setFinanceForm(prev => ({ ...prev, stageRates: newRates }));
+                        }}
+                        className="w-full h-8 rounded-lg border border-input bg-background text-center text-xs font-bold tabular-nums"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
+            )}
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-border/70">
-                <button
-                  type="button"
-                  onClick={() => setIsFinanceModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-input text-xs font-bold hover:bg-muted transition-all cursor-pointer"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md glow-primary cursor-pointer active:scale-95"
-                >
-                  حفظ الهيكل المالي
-                </button>
+            {/* Allowances & Deductions */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-foreground mb-1">إجمالي البدلات والمكافآت ({currency})</label>
+                <input
+                  type="number"
+                  value={financeForm.allowance}
+                  onChange={(e) => setFinanceForm(prev => ({ ...prev, allowance: Number(e.target.value) }))}
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
+                />
               </div>
-            </form>
-          </div>
-        </div>
+              <div>
+                <label className="block text-foreground mb-1">إجمالي الاستقطاعات والخصم ({currency})</label>
+                <input
+                  type="number"
+                  value={financeForm.deduction}
+                  onChange={(e) => setFinanceForm(prev => ({ ...prev, deduction: Number(e.target.value) }))}
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
+                />
+              </div>
+            </div>
+
+            {/* Banking Details */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-foreground mb-1">اسم المصرف المعتمد</label>
+                <input
+                  type="text"
+                  value={financeForm.bankName}
+                  onChange={(e) => setFinanceForm(prev => ({ ...prev, bankName: e.target.value }))}
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-foreground mb-1">رقم الآيبان (IBAN)</label>
+                <input
+                  type="text"
+                  value={financeForm.iban}
+                  onChange={(e) => setFinanceForm(prev => ({ ...prev, iban: e.target.value }))}
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary font-mono"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border/70">
+              <button
+                type="button"
+                onClick={() => setIsFinanceModalOpen(false)}
+                className="h-10 px-4 rounded-xl border border-input text-xs font-bold hover:bg-muted transition-all cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md glow-primary cursor-pointer active:scale-95 hover:bg-primary/90"
+              >
+                حفظ الهيكل المالي
+              </button>
+            </div>
+          </form>
+        </AdminModal>
       )}
 
       {/* 4. Modal: Treasury Direct Disbursement & Withdrawal */}
       {isDisburseModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
-          onClick={() => setIsDisburseModalOpen(false)}
-          dir="rtl"
+        <AdminModal
+          isOpen={true}
+          onClose={() => setIsDisburseModalOpen(false)}
+          title="صرف مستحقات وسحب من الخزينة"
+          subtitle={`المستفيد: ${t.name} (${t.employeeNo || t.id}) • الخصم المباشر من الصندوق`}
+          icon={DollarSign}
+          tone="success"
+          size="medium"
         >
-          <div 
-            className="w-full max-w-lg rounded-3xl border border-border/80 bg-card/98 dark:bg-card/95 backdrop-blur-2xl shadow-2xl animate-in zoom-in-95 duration-150 p-6 space-y-4 my-8"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 font-black">
-                  <DollarSign className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-base text-foreground">صرف مستحقات وسحب من الخزينة</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    المستفيد: <span className="font-black text-foreground">{t.name}</span> ({t.employeeNo || t.id})
-                  </p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setIsDisburseModalOpen(false)}
-                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+          <form onSubmit={handleExecuteDisbursement} className="space-y-4 text-xs font-bold">
+            {/* Amount */}
+            <div>
+              <label className="block text-foreground mb-1">المبلغ المطلوب صرفه ({currency})</label>
+              <input
+                type="number"
+                min="1"
+                value={disburseForm.amount}
+                onChange={(e) => setDisburseForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                className="w-full h-11 rounded-xl border border-input bg-background px-3.5 text-base font-black text-primary outline-none focus:border-primary tabular-nums"
+                required
+              />
+              <span className="text-[11px] text-muted-foreground mt-1 block">
+                الصافي المحسوب لهذا الشهر: {netSalary.toLocaleString()} {currency}
+              </span>
             </div>
 
-            <form onSubmit={handleExecuteDisbursement} className="space-y-4 text-xs font-bold">
-              {/* Amount */}
+            {/* Payment Method */}
+            <div>
+              <label className="block text-foreground mb-1.5">طريقة الصرف والسحب:</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "cash", label: "نقداً من الخزينة", icon: Wallet },
+                  { id: "bank_transfer", label: "تحويل بنكي", icon: CreditCard },
+                  { id: "cheque", label: "شيك مصرفي", icon: Receipt },
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setDisburseForm(prev => ({ ...prev, method: m.id as any }))}
+                    className={`p-2.5 rounded-xl border text-center font-black transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                      disburseForm.method === m.id
+                        ? "border-primary bg-primary/10 text-primary shadow-xs"
+                        : "border-border/70 bg-card hover:bg-muted text-foreground"
+                    }`}
+                  >
+                    <m.icon className="w-4 h-4" />
+                    <span>{m.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-foreground mb-1">المبلغ المطلوب صرفه ({currency})</label>
+                <label className="block text-foreground mb-1">شهر الاستحقاق</label>
                 <input
-                  type="number"
-                  min="1"
-                  value={disburseForm.amount}
-                  onChange={(e) => setDisburseForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                  className="w-full h-11 rounded-xl border border-input bg-background px-3.5 text-base font-black text-primary outline-none focus:border-primary tabular-nums"
+                  type="month"
+                  value={disburseForm.month}
+                  onChange={(e) => setDisburseForm(prev => ({ ...prev, month: e.target.value }))}
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
                   required
                 />
-                <span className="text-[11px] text-muted-foreground mt-1 block">
-                  الصافي المحسوب لهذا الشهر: {netSalary.toLocaleString()} {currency}
-                </span>
               </div>
-
-              {/* Payment Method */}
               <div>
-                <label className="block text-foreground mb-1.5">طريقة الصرف والسحب:</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "cash", label: "نقداً من الخزينة", icon: Wallet },
-                    { id: "bank_transfer", label: "تحويل بنكي", icon: CreditCard },
-                    { id: "cheque", label: "شيك مصرفي", icon: Receipt },
-                  ].map(m => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setDisburseForm(prev => ({ ...prev, method: m.id as any }))}
-                      className={`p-2.5 rounded-xl border text-center font-black transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                        disburseForm.method === m.id
-                          ? "border-primary bg-primary/10 text-primary shadow-xs"
-                          : "border-border/70 bg-card hover:bg-muted text-foreground"
-                      }`}
-                    >
-                      <m.icon className="w-4 h-4" />
-                      <span>{m.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-foreground mb-1">شهر الاستحقاق</label>
-                  <input
-                    type="month"
-                    value={disburseForm.month}
-                    onChange={(e) => setDisburseForm(prev => ({ ...prev, month: e.target.value }))}
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-foreground mb-1">رقم السند المالي المرجعي</label>
-                  <input
-                    type="text"
-                    value={disburseForm.referenceNo}
-                    onChange={(e) => setDisburseForm(prev => ({ ...prev, referenceNo: e.target.value }))}
-                    placeholder={`PAY-${t.employeeNo || t.id}-01`}
-                    className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary font-mono"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-foreground mb-1">بيان الصرف وملاحظات المحاسب</label>
+                <label className="block text-foreground mb-1">رقم السند المالي المرجعي</label>
                 <input
                   type="text"
-                  value={disburseForm.notes}
-                  onChange={(e) => setDisburseForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder={`صرف أجر ومستحقات شهر ${disburseForm.month} بنظام ${financeForm.paymentType}`}
-                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
+                  value={disburseForm.referenceNo}
+                  onChange={(e) => setDisburseForm(prev => ({ ...prev, referenceNo: e.target.value }))}
+                  placeholder={`PAY-${t.employeeNo || t.id}-01`}
+                  className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary font-mono"
+                  dir="ltr"
                 />
               </div>
+            </div>
 
-              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 font-semibold flex items-center gap-2">
-                <Sparkles className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span>
-                  سيتم خصم هذا المبلغ تلقائياً من رصيد الخزينة المدرسية وتسجيله في سجل المصروفات العام فور التأكيد.
-                </span>
-              </div>
+            <div>
+              <label className="block text-foreground mb-1">بيان الصرف وملاحظات المحاسب</label>
+              <input
+                type="text"
+                value={disburseForm.notes}
+                onChange={(e) => setDisburseForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder={`صرف أجر ومستحقات شهر ${disburseForm.month} بنظام ${financeForm.paymentType}`}
+                className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold outline-none focus:border-primary"
+              />
+            </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-border/70">
-                <button
-                  type="button"
-                  onClick={() => setIsDisburseModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-input text-xs font-bold hover:bg-muted transition-all cursor-pointer"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="h-10 px-7 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md glow-primary cursor-pointer active:scale-95"
-                >
-                  تأكيد الصرف والخصم من الخزينة
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 font-semibold flex items-center gap-2">
+              <Sparkles className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>
+                سيتم خصم هذا المبلغ تلقائياً من رصيد الخزينة المدرسية وتسجيله في سجل المصروفات العام فور التأكيد.
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border/70">
+              <button
+                type="button"
+                onClick={() => setIsDisburseModalOpen(false)}
+                className="h-10 px-4 rounded-xl border border-input text-xs font-bold hover:bg-muted transition-all cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                className="h-10 px-7 rounded-xl bg-primary text-primary-foreground text-xs font-black transition-all shadow-md glow-primary cursor-pointer active:scale-95 hover:bg-primary/90"
+              >
+                تأكيد الصرف والخصم من الخزينة
+              </button>
+            </div>
+          </form>
+        </AdminModal>
       )}
 
       {/* Advanced Print Engine Modal */}

@@ -51,8 +51,10 @@ import {
   FileText,
   FolderArchive,
   Smartphone,
-  UserCheck
+  UserCheck,
+  AlertTriangle
 } from "lucide-react";
+import { toast } from "sonner";
 import { useStage, EducationalStage } from "@/contexts/StageContext";
 
 /* =========================================================
@@ -315,6 +317,7 @@ export function AppShell({
   const { 
     systemSettings, 
     updateSettings,
+    toggleFeature,
     notifications,
     unreadNotificationsCount,
     markAllNotificationsAsRead,
@@ -323,6 +326,52 @@ export function AppShell({
     allExpenses,
     currency
   } = useGlobalStore();
+
+  // Check if current route is part of a disabled feature flag
+  const disabledFeatureInfo = useMemo(() => {
+    const f = systemSettings?.features;
+    if (!f) return null;
+    if ((pathname.startsWith("/attendance") || pathname.startsWith("/discipline")) && f.attendanceDiscipline === false) {
+      return { key: "attendanceDiscipline" as const, title: "الحضور والغياب والانضباط السلوكي" };
+    }
+    if ((pathname.startsWith("/teachers") || pathname.startsWith("/academic/assignments")) && f.teachingFaculty === false) {
+      return { key: "teachingFaculty" as const, title: "الهيئة التعليمية والمعلمون والأنصبة" };
+    }
+    if (pathname.startsWith("/academic/subjects") && f.academicCurriculum === false) {
+      return { key: "academicCurriculum" as const, title: "المواد والخطط الدراسية والمناهج" };
+    }
+    if (pathname.startsWith("/transport") && f.transport === false) {
+      return { key: "transport" as const, title: "النقل المدرسي والحافلات" };
+    }
+    if (pathname.startsWith("/clinic") && f.clinic === false) {
+      return { key: "clinic" as const, title: "العيادة الطبية والرعاية الصحية" };
+    }
+    if (pathname.startsWith("/library") && f.library === false) {
+      return { key: "library" as const, title: "المكتبة والمقررات المدرسية" };
+    }
+    if (pathname.startsWith("/inventory") && f.inventory === false) {
+      return { key: "inventory" as const, title: "المستودعات والعهد المدرسية" };
+    }
+    if (pathname.startsWith("/facilities") && f.facilities === false) {
+      return { key: "facilities" as const, title: "إدارة المرافق والمباني والصيانة" };
+    }
+    if (pathname.startsWith("/hr/payroll") && f.hrPayroll === false) {
+      return { key: "hrPayroll" as const, title: "مسير الرواتب والموارد البشرية" };
+    }
+    if (pathname.startsWith("/exams") && f.examsReports === false) {
+      return { key: "examsReports" as const, title: "الاختبارات والشهادات والتقارير" };
+    }
+    if (pathname.startsWith("/finance") && f.financeInvoicing === false) {
+      return { key: "financeInvoicing" as const, title: "المركز المالي والرسوم وسندات القبض" };
+    }
+    if (pathname.startsWith("/guardians") && f.parentPortal === false) {
+      return { key: "parentPortal" as const, title: "بوابة وتطبيق ولي الأمر" };
+    }
+    if (pathname === "/settings/trash" && f.trashBin === false) {
+      return { key: "trashBin" as const, title: "سلة المحذوفات المركزية" };
+    }
+    return null;
+  }, [pathname, systemSettings?.features]);
 
   const unreadCount = unreadNotificationsCount || 0;
   const netBalance = (allPayments || []).reduce((sum, p) => sum + p.amount, 0) - (allExpenses || []).reduce((sum, e) => sum + e.amount, 0);
@@ -883,6 +932,44 @@ export function AppShell({
           </div>
         </header>
 
+        {/* Feature disabled banner if current page's feature flag is turned off */}
+        {disabledFeatureInfo && (
+          <div className="mx-3 sm:mx-5 lg:mx-6 mt-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-black text-sm text-foreground flex items-center gap-2">
+                  <span>تنبيه تشغيلي: وحدة "{disabledFeatureInfo.title}" معطلة حالياً</span>
+                  <Badge tone="warning">معطلة في النظام</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5 font-bold">
+                  هذه الوحدة محجوبة عن القائمة الجانبية للمستخدمين. يمكنك تفعيلها فوراً من زر التحكم أدناه.
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  toggleFeature(disabledFeatureInfo.key, true);
+                  toast.success(`تم تفعيل وحدة "${disabledFeatureInfo.title}" بنجاح وإعادتها للقائمة الجانبية`);
+                }}
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-sm hover:bg-primary/90 transition-all glow-primary"
+              >
+                تفعيل الوحدة الآن
+              </button>
+              <Link
+                to="/admin/features"
+                className="px-3.5 py-2 rounded-xl border border-border bg-card text-xs font-bold hover:bg-accent transition-colors"
+              >
+                مركز الميزات
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Dynamic Page Content */}
         <main className="flex-1 p-3 sm:p-5 lg:p-6 pb-20 lg:pb-8 animate-in fade-in duration-300">
           {children}
@@ -944,6 +1031,7 @@ function Sidebar({
   const isItemAllowed = (to: string): boolean => {
     const f = systemSettings?.features;
     if (!f) return true;
+    if ((to.startsWith("/attendance") || to.startsWith("/discipline")) && f.attendanceDiscipline === false) return false;
     if (to.startsWith("/transport") && f.transport === false) return false;
     if (to.startsWith("/clinic") && f.clinic === false) return false;
     if (to.startsWith("/library") && f.library === false) return false;

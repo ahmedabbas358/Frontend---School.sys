@@ -612,6 +612,14 @@ export interface Subject {
   stage: EducationalStage | "all";
   grades?: string[]; // Array of grades this subject is taught in
   fee?: number; // Optional fee associated with the subject (e.g. lab fee)
+  department?: string; // e.g. "الرياضيات", "العلوم", "اللغات", "الدراسات الإسلامية", "الحاسب والذكاء الاصطناعي", "العلوم الاجتماعية", "الفنون والتربية البدنية"
+  type?: "mandatory" | "elective" | "extra"; // إجباري، اختياري، نشاط إضافي
+  maxScore?: number; // الدرجة العظمى (افتراضي 100)
+  passScore?: number; // درجة النجاح الصغرى (افتراضي 50)
+  description?: string; // وصف ومخرجات التعلم
+  textbookId?: string; // الكتاب المدرسي المرتبط من المكتبة
+  color?: string; // تمييز لوني
+  syllabusUnits?: Array<{ unitNumber: number; title: string; weeks: string; hours: number }>;
 }
 
 export interface MaintenanceRequest {
@@ -919,6 +927,9 @@ export interface SystemSettings {
 
 export interface SystemFeatures {
   // الأقسام والوحدات التشغيلية
+  attendanceDiscipline: boolean; // وحدة الحضور والغياب والانضباط السلوكي
+  teachingFaculty: boolean;    // وحدة الهيئة التعليمية والمعلمين والأنصبة التدريسية
+  academicCurriculum: boolean; // وحدة المواد والخطط الدراسية والمناهج
   transport: boolean;          // وحدة النقل المدرسي والحافلات
   library: boolean;            // وحدة المكتبة وتوزيع المقررات
   clinic: boolean;             // وحدة العيادة الطبية والرعاية الصحية
@@ -944,6 +955,9 @@ export interface SystemFeatures {
 }
 
 export const defaultFeatures: SystemFeatures = {
+  attendanceDiscipline: true,
+  teachingFaculty: true,
+  academicCurriculum: true,
   transport: true,
   library: true,
   clinic: true,
@@ -1494,14 +1508,148 @@ function generateFullEnterpriseSchoolData() {
 
   // --- 5. Subjects ---
   const generatedSubjects: Subject[] = [
-    { id: "SUB-101", name: "الرياضيات العامة", code: "MATH101", creditHours: 5, stage: "primary", grades: ["الصف الأول", "الصف الثاني", "الصف الثالث", "الصف الرابع", "الصف الخامس", "الصف السادس"] },
-    { id: "SUB-102", name: "العلوم والتكنولوجيا", code: "SCI101", creditHours: 4, stage: "primary", grades: ["الصف الرابع", "الصف الخامس", "الصف السادس"] },
-    { id: "SUB-103", name: "اللغة العربية واللغويات", code: "ARAB101", creditHours: 6, stage: "all" },
-    { id: "SUB-104", name: "القرآن الكريم والدراسات الإسلامية", code: "ISL101", creditHours: 4, stage: "all" },
-    { id: "SUB-105", name: "الفيزياء التطبيقية", code: "PHYS201", creditHours: 4, stage: "high", grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"] },
-    { id: "SUB-106", name: "الكيمياء العضوية", code: "CHEM201", creditHours: 4, stage: "high", grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"] },
-    { id: "SUB-107", name: "الحاسب الآلي والذكاء الاصطناعي", code: "CS101", creditHours: 3, stage: "high", grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"] },
-    { id: "SUB-108", name: "اللغة الإنجليزية المتقدمة", code: "ENG101", creditHours: 5, stage: "all" }
+    { 
+      id: "SUB-101", 
+      name: "الرياضيات العامة", 
+      code: "MATH101", 
+      creditHours: 5, 
+      stage: "primary", 
+      grades: ["الصف الأول", "الصف الثاني", "الصف الثالث", "الصف الرابع", "الصف الخامس", "الصف السادس"],
+      department: "الرياضيات",
+      type: "mandatory",
+      maxScore: 100,
+      passScore: 50,
+      fee: 0,
+      description: "تأسيس العمليات الحسابية الأساسية والهندسة والجبر التمهيدي والتفكير المنطقي.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "الأعداد والعمليات الحسابية", weeks: "الأسبوع 1 - 4", hours: 20 },
+        { unitNumber: 2, title: "الكسور العشرية والنسبة المئوية", weeks: "الأسبوع 5 - 8", hours: 20 },
+        { unitNumber: 3, title: "الهندسة والقياس والمساحات", weeks: "الأسبوع 9 - 12", hours: 20 },
+      ]
+    },
+    { 
+      id: "SUB-102", 
+      name: "العلوم والتكنولوجيا", 
+      code: "SCI101", 
+      creditHours: 4, 
+      stage: "primary", 
+      grades: ["الصف الرابع", "الصف الخامس", "الصف السادس"],
+      department: "العلوم الطبيعية",
+      type: "mandatory",
+      maxScore: 100,
+      passScore: 50,
+      fee: 150,
+      description: "المفاهيم العلمية الأساسية، التجارب المعملية التمهيدية، والكائنات الحية والبيئة.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "الخلايا والأنظمة الحية", weeks: "الأسبوع 1 - 5", hours: 20 },
+        { unitNumber: 2, title: "المادة والطاقة والتحولات", weeks: "الأسبوع 6 - 10", hours: 20 },
+      ]
+    },
+    { 
+      id: "SUB-103", 
+      name: "اللغة العربية واللغويات", 
+      code: "ARAB101", 
+      creditHours: 6, 
+      stage: "all",
+      department: "اللغة العربية",
+      type: "mandatory",
+      maxScore: 100,
+      passScore: 50,
+      fee: 0,
+      description: "القواعد النحوية، الإملاء، مهارات القراءة والاستيعاب، والبلاغة والتعبير الكتابي.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "النحو والقواعد الإعرابية", weeks: "الأسبوع 1 - 6", hours: 36 },
+        { unitNumber: 2, title: "البلاغة والنصوص الأدبية", weeks: "الأسبوع 7 - 12", hours: 36 },
+      ]
+    },
+    { 
+      id: "SUB-104", 
+      name: "القرآن الكريم والدراسات الإسلامية", 
+      code: "ISL101", 
+      creditHours: 4, 
+      stage: "all",
+      department: "الدراسات الإسلامية",
+      type: "mandatory",
+      maxScore: 100,
+      passScore: 50,
+      fee: 0,
+      description: "حفظ وتلاوة وتجويد القرآن الكريم، الفقه الميسر، العقيدة، والسيرة النبوية الشريفة.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "التلاوة والحفظ المنهجي", weeks: "الأسبوع 1 - 6", hours: 24 },
+        { unitNumber: 2, title: "الفقه والسيرة النبوية", weeks: "الأسبوع 7 - 12", hours: 24 },
+      ]
+    },
+    { 
+      id: "SUB-105", 
+      name: "الفيزياء التطبيقية", 
+      code: "PHYS201", 
+      creditHours: 4, 
+      stage: "high", 
+      grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
+      department: "العلوم الطبيعية",
+      type: "mandatory",
+      maxScore: 100,
+      passScore: 50,
+      fee: 200,
+      description: "ميكانيكا الحركة، قوانين نيوتن، الكهرباء والمغناطيسية، وتطبيقات المعمل الفيزيائي.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "الميكانيكا والديناميكا الحركية", weeks: "الأسبوع 1 - 5", hours: 20 },
+        { unitNumber: 2, title: "الكهرباء والتيار والدوائر", weeks: "الأسبوع 6 - 10", hours: 20 },
+      ]
+    },
+    { 
+      id: "SUB-106", 
+      name: "الكيمياء العضوية وغير العضوية", 
+      code: "CHEM201", 
+      creditHours: 4, 
+      stage: "high", 
+      grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
+      department: "العلوم الطبيعية",
+      type: "mandatory",
+      maxScore: 100,
+      passScore: 50,
+      fee: 250,
+      description: "الروابط الكيميائية، التفاعلات، الكيمياء العضوية، والتجارب المعملية الآمنة.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "الجدول الدوري والروابط", weeks: "الأسبوع 1 - 5", hours: 20 },
+        { unitNumber: 2, title: "الكيمياء العضوية والتفاعلات", weeks: "الأسبوع 6 - 10", hours: 20 },
+      ]
+    },
+    { 
+      id: "SUB-107", 
+      name: "الحاسب الآلي والذكاء الاصطناعي", 
+      code: "CS101", 
+      creditHours: 3, 
+      stage: "high", 
+      grades: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
+      department: "الحاسب والتقنية",
+      type: "elective",
+      maxScore: 100,
+      passScore: 50,
+      fee: 300,
+      description: "مبادئ البرمجة بلغة بايثون، تصميم الخوارزميات، وتطبيقات الذكاء الاصطناعي والأمن السيبراني.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "أساسيات بايثون وهياكل البيانات", weeks: "الأسبوع 1 - 6", hours: 18 },
+        { unitNumber: 2, title: "مقدمة في الذكاء الاصطناعي وتعلم الآلة", weeks: "الأسبوع 7 - 12", hours: 18 },
+      ]
+    },
+    { 
+      id: "SUB-108", 
+      name: "اللغة الإنجليزية المتقدمة", 
+      code: "ENG101", 
+      creditHours: 5, 
+      stage: "all",
+      department: "اللغات والترجمة",
+      type: "mandatory",
+      maxScore: 100,
+      passScore: 50,
+      fee: 0,
+      description: "تنمية مهارات التحدث والاستماع الأكاديمي، القراءة النقدية، والكتابة المقالية.",
+      syllabusUnits: [
+        { unitNumber: 1, title: "Academic Reading & Writing", weeks: "الأسبوع 1 - 6", hours: 30 },
+        { unitNumber: 2, title: "Grammar & Communication Skills", weeks: "الأسبوع 7 - 12", hours: 30 },
+      ]
+    }
   ];
 
   // --- 6. Books & Library ---
@@ -2554,7 +2702,7 @@ interface GlobalStoreContextType {
   updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
   deleteInventoryItem: (id: string) => void;
   processInventoryTransaction: (transaction: Omit<InventoryTransaction, "id" | "date" | "itemName">) => void;
-  addStaff: (staff: Omit<Staff, "id">) => void;
+  addStaff: (staff: Omit<Staff, "id"> & { id?: string }) => Staff;
   updateStaff: (id: string, updates: Partial<Staff>) => void;
   deleteStaff: (id: string) => void;
   upsertStaffAttendance: (record: StaffAttendanceRecord) => void;
@@ -2597,6 +2745,7 @@ interface GlobalStoreContextType {
     gateSupervisor?: string;
   }) => StaffAttendanceRecord;
   addBehaviorTransaction: (transaction: Omit<BehaviorTransaction, "id">) => void;
+  deleteBehaviorTransaction: (id: string) => void;
   addSection: (section: Omit<Section, "id">) => void;
   updateSection: (id: string, updates: Partial<Section>) => void;
   deleteSection: (id: string) => void;
@@ -4070,13 +4219,15 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const addStaff = (staffData: Omit<Staff, "id">) => {
-    const existingStaff = staff.find(s => s.employeeNo && s.employeeNo === staffData.employeeNo);
-    const newStaffId = existingStaff ? existingStaff.id : `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
+  const addStaff = (staffData: Omit<Staff, "id"> & { id?: string }): Staff => {
+    const existingStaff = staff.find(s => (staffData.id && s.id === staffData.id) || (s.employeeNo && s.employeeNo === staffData.employeeNo));
+    const newStaffId = staffData.id || (existingStaff ? existingStaff.id : `EMP-${Math.floor(1000 + Math.random() * 9000)}`);
+    const finalStaff = { ...staffData, id: newStaffId } as Staff;
 
     if (!existingStaff) {
-      const newStaff = { ...staffData, id: newStaffId } as Staff;
-      setStaff(prev => [newStaff, ...prev]);
+      setStaff(prev => [finalStaff, ...prev]);
+    } else {
+      setStaff(prev => prev.map(s => s.id === existingStaff.id ? { ...s, ...staffData, id: existingStaff.id } : s));
     }
 
     const newAssignment: EmployeeAssignment = {
@@ -4096,6 +4247,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       sections: staffData.sections
     };
     setEmployeeAssignments(prev => [newAssignment, ...prev]);
+    return finalStaff;
   };
 
   const upsertStaffAttendance = (record: StaffAttendanceRecord) => {
@@ -4445,6 +4597,10 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       id: `BTX-${Math.floor(1000 + Math.random() * 9000)}`,
     };
     setBehaviorTransactions(prev => [newTransaction, ...prev]);
+  };
+
+  const deleteBehaviorTransaction = (id: string) => {
+    setBehaviorTransactions(prev => prev.filter(t => t.id !== id));
   };
 
   const addSection = (sectionData: Omit<Section, "id">) => {
@@ -5685,7 +5841,7 @@ export function GlobalStoreProvider({ children }: { children: ReactNode }) {
       allVendors: vendors, addVendor, updateVendor, deleteVendor, payVendor, addBankAccount, updateBankAccount, deleteBankAccount,
       addAccount, updateAccount, deleteAccount, toggleAccountStatus,
       addBook, issueBook, returnBook, addInventoryItem, updateInventoryItem, deleteInventoryItem,
-      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, quickCheckInStaff, addStaffAdvance, disburseStaffSalary, addClinicVisit, addDisciplineIncident, addAttendanceSession, bulkRecordStudentAttendance, addBehaviorTransaction,
+      processInventoryTransaction, addStaff, updateStaff, deleteStaff: hardDeleteStaff, upsertStaffAttendance, quickCheckInStaff, addStaffAdvance, disburseStaffSalary, addClinicVisit, addDisciplineIncident, addAttendanceSession, bulkRecordStudentAttendance, addBehaviorTransaction, deleteBehaviorTransaction,
       addSection, updateSection, deleteSection, 
 
       currency,

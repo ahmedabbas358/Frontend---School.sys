@@ -25,6 +25,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FacilitiesNavTabs } from "@/components/facilities/facilities-nav";
 
 export const Route = createFileRoute("/library/textbooks")({
   head: () => ({ meta: [{ title: "مستودع الكتب والمقررات الدراسية | منصة مدارس" }] }),
@@ -249,6 +251,8 @@ function LibraryTextbooks() {
       }
     >
       <div className="space-y-6">
+        <FacilitiesNavTabs activeTab="library-textbooks" />
+
         {/* Metric Cards */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
@@ -420,179 +424,158 @@ function LibraryTextbooks() {
       </div>
 
       {/* ADD / EDIT TEXTBOOK MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">
-                    {editingId ? "تعديل بيانات المقرر الدراسي" : "إضافة كتاب جديد للمستودع"}
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">تسجيل المناهج المدرسية وتحديد النسخ المتوفرة</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setIsModalOpen(false); reset(); }}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      <AdminModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          reset();
+        }}
+        title={editingId ? "تعديل بيانات المقرر الدراسي" : "إضافة كتاب جديد للمستودع"}
+        description="تسجيل المناهج المدرسية وتحديد النسخ المتوفرة بالمستودع"
+        icon={BookOpen}
+        tone="primary"
+        maxWidth="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                reset();
+              }}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit(onSubmit)}
+              className="rounded-xl bg-primary px-7 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+            >
+              {editingId ? "تحديث الكتاب" : "إضافة للمستودع"}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">عنوان الكتاب / المقرر <span className="text-destructive">*</span></label>
+            <input
+              {...register("title")}
+              placeholder="مثال: لغتي الجميلة - كتاب الطالب"
+              className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+            />
+            {errors.title && <p className="text-xs font-bold text-destructive">{errors.title.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">المادة التعليمية <span className="text-destructive">*</span></label>
+              <input
+                {...register("subject")}
+                placeholder="اللغة العربية، الرياضيات..."
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              />
+              {errors.subject && <p className="text-xs font-bold text-destructive">{errors.subject.message}</p>}
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">عنوان الكتاب / المقرر <span className="text-destructive">*</span></label>
-                <input
-                  {...register("title")}
-                  placeholder="مثال: لغتي الجميلة - كتاب الطالب"
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                />
-                {errors.title && <p className="text-xs font-bold text-destructive">{errors.title.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">المادة التعليمية <span className="text-destructive">*</span></label>
-                  <input
-                    {...register("subject")}
-                    placeholder="اللغة العربية، الرياضيات..."
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                  />
-                  {errors.subject && <p className="text-xs font-bold text-destructive">{errors.subject.message}</p>}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">الصف الدراسي <span className="text-destructive">*</span></label>
-                  <select
-                    {...register("gradeId")}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
-                  >
-                    <option value="">-- اختر الصف --</option>
-                    {grades.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                  {errors.gradeId && <p className="text-xs font-bold text-destructive">{errors.gradeId.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">الفصل الدراسي <span className="text-destructive">*</span></label>
-                  <select
-                    {...register("term")}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
-                  >
-                    <option value="الفصل الأول">الفصل الأول</option>
-                    <option value="الفصل الثاني">الفصل الثاني</option>
-                    <option value="الفصل الثالث">الفصل الثالث</option>
-                  </select>
-                  {errors.term && <p className="text-xs font-bold text-destructive">{errors.term.message}</p>}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">إجمالي النسخ المطبوعة <span className="text-destructive">*</span></label>
-                  <input
-                    type="number"
-                    {...register("copies")}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums"
-                  />
-                  {errors.copies && <p className="text-xs font-bold text-destructive">{errors.copies.message}</p>}
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => { setIsModalOpen(false); reset(); }}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-primary px-7 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
-                >
-                  {editingId ? "تحديث الكتاب" : "إضافة للمستودع"}
-                </button>
-              </div>
-            </form>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">الصف الدراسي <span className="text-destructive">*</span></label>
+              <select
+                {...register("gradeId")}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+              >
+                <option value="">-- اختر الصف --</option>
+                {grades.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+              {errors.gradeId && <p className="text-xs font-bold text-destructive">{errors.gradeId.message}</p>}
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">الفصل الدراسي <span className="text-destructive">*</span></label>
+              <select
+                {...register("term")}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+              >
+                <option value="الفصل الأول">الفصل الأول</option>
+                <option value="الفصل الثاني">الفصل الثاني</option>
+                <option value="الفصل الثالث">الفصل الثالث</option>
+              </select>
+              {errors.term && <p className="text-xs font-bold text-destructive">{errors.term.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">إجمالي النسخ المطبوعة <span className="text-destructive">*</span></label>
+              <input
+                type="number"
+                {...register("copies")}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums"
+              />
+              {errors.copies && <p className="text-xs font-bold text-destructive">{errors.copies.message}</p>}
+            </div>
+          </div>
+        </form>
+      </AdminModal>
 
       {/* DELETE CONFIRMATION MODAL */}
-      {deleteConfirmBook && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-destructive/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center shadow-inner border border-destructive/20">
-                  <Trash2 className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">تأكيد حذف الكتاب</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">حذف المقرر وإلغاء ارتباطه بسجلات التوزيع</p>
-                </div>
+      <AdminModal
+        isOpen={!!deleteConfirmBook}
+        onClose={() => setDeleteConfirmBook(null)}
+        title="تأكيد حذف المقرر الدراسي"
+        description="حذف المقرر وإلغاء ارتباطه بسجلات التوزيع بالمستودع"
+        icon={Trash2}
+        tone="danger"
+        maxWidth="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmBook(null)}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              تراجع
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
+            >
+              تأكيد الحذف
+            </button>
+          </>
+        }
+      >
+        {deleteConfirmBook && (
+          <div className="space-y-4">
+            <p className="text-sm font-bold text-foreground">
+              هل أنت متأكد من رغبتك في حذف هذا المقرر من المستودع نهائياً؟
+            </p>
+
+            <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">عنوان الكتاب:</span>
+                <span className="font-bold text-foreground">{deleteConfirmBook.title}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmBook(null)}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <p className="text-sm font-bold text-foreground">
-                هل أنت متأكد من رغبتك في حذف هذا المقرر من المستودع؟
-              </p>
-
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">عنوان الكتاب:</span>
-                  <span className="font-bold text-foreground">{deleteConfirmBook.title}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">الصف:</span>
-                  <span className="font-bold text-foreground">{deleteConfirmBook.gradeId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">المادة:</span>
-                  <span className="font-bold text-foreground">{deleteConfirmBook.subject}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">إجمالي النسخ:</span>
-                  <span className="font-black text-primary">{deleteConfirmBook.copies} نسخة</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">الصف:</span>
+                <span className="font-bold text-foreground">{deleteConfirmBook.gradeId}</span>
               </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirmBook(null)}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  تراجع
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
-                >
-                  تأكيد الحذف
-                </button>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">المادة:</span>
+                <span className="font-bold text-foreground">{deleteConfirmBook.subject}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">إجمالي النسخ:</span>
+                <span className="font-black text-primary">{deleteConfirmBook.copies} نسخة</span>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminModal>
 
       <AdvancedPrintEngine
         isOpen={isPrintOpen}

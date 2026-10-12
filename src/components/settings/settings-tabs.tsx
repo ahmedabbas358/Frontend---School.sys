@@ -46,7 +46,7 @@ export interface SettingsTabProps {
   setFeatureCategoryFilter?: (v: any) => void;
   searchQuery?: string;
   toggleFeature?: (key: any, checked: boolean) => void;
-  handleApplyPreset?: (preset: "enterprise" | "academic" | "minimal" | "default") => void;
+  handleApplyPreset?: (preset: "enterprise" | "academic" | "private" | "minimal" | "default") => void;
   setIsImporterOpen?: (v: boolean) => void;
   setIsExporterOpen?: (v: boolean) => void;
   setIsBackupOpen?: (v: boolean) => void;
@@ -259,6 +259,14 @@ export function FeaturesTab(props: SettingsTabProps) {
             </button>
             <button
               type="button"
+              onClick={() => handleApplyPreset("private")}
+              className="px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+            >
+              <CreditCard className="h-3.5 w-3.5 text-primary" />
+              <span>حزمة المدارس الخاصة والأهلية (رسوم ونقل وبوابات)</span>
+            </button>
+            <button
+              type="button"
               onClick={() => handleApplyPreset("minimal")}
               className="px-3 py-1.5 rounded-xl bg-card border border-border hover:border-primary text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
             >
@@ -276,28 +284,69 @@ export function FeaturesTab(props: SettingsTabProps) {
           </div>
         </div>
 
-        {/* Category Filters */}
-        <div className="flex flex-wrap gap-1.5 border-b border-border pb-3">
-          {[
-            { id: "all", label: "كافة الميزات (20)" },
-            { id: "core", label: "الوحدات التشغيلية الأساسية (9)" },
-            { id: "portals", label: "البوابات والتطبيقات والاتصال (4)" },
-            { id: "tech", label: "التقنية والتكامل الذكي (5)" },
-            { id: "security", label: "الأمان وحماية البيانات (2)" },
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setFeatureCategoryFilter(cat.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                featureCategoryFilter === cat.id
-                  ? "bg-primary text-primary-foreground font-black shadow-xs"
-                  : "bg-card border border-border hover:bg-accent text-muted-foreground"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+        {/* Category Filters & Bulk Actions */}
+        <div className="space-y-3 border-b border-border pb-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: "all", label: "كافة الميزات (20)" },
+                { id: "core", label: "الوحدات التشغيلية الأساسية (9)" },
+                { id: "portals", label: "البوابات والتطبيقات والاتصال (4)" },
+                { id: "tech", label: "التقنية والتكامل الذكي (5)" },
+                { id: "security", label: "الأمان وحماية البيانات (2)" },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setFeatureCategoryFilter(cat.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    featureCategoryFilter === cat.id
+                      ? "bg-primary text-primary-foreground font-black shadow-xs"
+                      : "bg-card border border-border hover:bg-accent text-muted-foreground"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Category Bulk Toggle Buttons */}
+            <div className="flex items-center gap-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  filteredFeaturesList.forEach((f) => toggleFeature(f.key, true));
+                  toast.success(`تم تفعيل كافة الميزات المعروضة (${filteredFeaturesList.length}) بنجاح`);
+                }}
+                className="px-2.5 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold hover:bg-emerald-500/20 text-[11px] transition-all flex items-center gap-1"
+                title="تفعيل كافة الميزات المعروضة حالياً"
+              >
+                <Check className="h-3 w-3" />
+                <span>تفعيل القسم</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  filteredFeaturesList.forEach((f) => toggleFeature(f.key, false));
+                  toast.success(`تم تعطيل كافة الميزات المعروضة (${filteredFeaturesList.length})`);
+                }}
+                className="px-2.5 py-1 rounded-lg border border-border bg-card text-muted-foreground font-bold hover:bg-accent text-[11px] transition-all flex items-center gap-1"
+                title="تعطيل كافة الميزات المعروضة حالياً"
+              >
+                <X className="h-3 w-3" />
+                <span>تعطيل القسم</span>
+              </button>
+            </div>
+          </div>
+
+          {(searchQuery || featureCategoryFilter !== "all") && (
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
+              <span>عرض {filteredFeaturesList.length} ميزة مطابقة للفلترة</span>
+              <span className="font-mono">
+                {filteredFeaturesList.filter((f) => systemSettings.features[f.key]).length} نشطة من أصل {filteredFeaturesList.length}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Features Grid */}
@@ -312,7 +361,7 @@ export function FeaturesTab(props: SettingsTabProps) {
                 className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${
                   isEnabled
                     ? "bg-card border-border hover:border-primary/50 shadow-xs"
-                    : "bg-muted/20 border-border/60 opacity-75"
+                    : "bg-muted/20 border-border/60 opacity-80"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -323,13 +372,23 @@ export function FeaturesTab(props: SettingsTabProps) {
                       <IconComponent className="h-5 w-5" />
                     </div>
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-black text-xs text-foreground">{feat.name}</h3>
                         {feat.badge && (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
                             {feat.badge}
                           </span>
                         )}
+                        <span
+                          className={`text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 ${
+                            isEnabled
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : "bg-muted text-muted-foreground border border-border"
+                          }`}
+                        >
+                          <span className={`w-1 h-1 rounded-full ${isEnabled ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+                          {isEnabled ? "نشطة" : "معطلة"}
+                        </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
                         {feat.desc}

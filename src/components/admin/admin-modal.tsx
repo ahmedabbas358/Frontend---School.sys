@@ -10,8 +10,8 @@ export interface AdminModalProps {
   subtitle?: string;
   icon?: LucideIcon | React.ReactNode;
   tone?: "primary" | "danger" | "warning" | "success" | "amber" | "purple" | "info";
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
@@ -63,6 +63,8 @@ const MAX_WIDTHS: Record<string, string> = {
   "2xl": "max-w-2xl",
   "3xl": "max-w-3xl",
   "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  full: "max-w-[96vw]",
 };
 
 export function AdminModal({
@@ -81,11 +83,19 @@ export function AdminModal({
 }: AdminModalProps) {
   useEffect(() => {
     if (!isOpen) return;
+
+    // Lock body scroll while modal is active
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -124,7 +134,7 @@ export function AdminModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/70 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
       dir="rtl"
     >
@@ -160,7 +170,7 @@ export function AdminModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-8 w-8 rounded-full bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-all active:scale-95 shrink-0 ms-2 cursor-pointer"
+            className="h-8 w-8 rounded-full bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-all active:scale-95 shrink-0 ms-2 cursor-pointer shadow-2xs"
             title="إغلاق النافذة (Esc)"
           >
             <X className="h-4 w-4" />
@@ -174,7 +184,7 @@ export function AdminModal({
 
         {/* Sticky Footer */}
         {footer && (
-          <div className="p-4 sm:p-5 border-t border-border/70 bg-muted/15 flex items-center justify-end gap-2.5 shrink-0 flex-wrap">
+          <div className="p-4 sm:p-5 border-t border-border/70 bg-muted/20 backdrop-blur-xs flex items-center justify-end gap-2.5 shrink-0 flex-wrap">
             {footer}
           </div>
         )}

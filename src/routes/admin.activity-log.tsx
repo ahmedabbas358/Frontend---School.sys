@@ -3,6 +3,7 @@ import { AppShell, Badge, PageCard } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { useGlobalStore } from "@/contexts/GlobalStoreContext";
 import { AdminModal } from "@/components/admin/admin-modal";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   Activity,
   Download,
@@ -191,6 +192,9 @@ function ActivityLogPage() {
       }
     >
       <div className="space-y-5" dir="rtl">
+        {/* Unified Admin Sub-Navigation */}
+        <AdminNav activeTab="/admin/activity-log" />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-4">
           <div className="flex items-center gap-4">

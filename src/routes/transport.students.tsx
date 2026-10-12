@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FacilitiesNavTabs } from "@/components/facilities/facilities-nav";
 import { useGlobalStore, TransportSubscription } from "@/contexts/GlobalStoreContext";
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
@@ -305,6 +307,8 @@ function TransportStudents() {
       }
     >
       <div className="space-y-6">
+        <FacilitiesNavTabs activeTab="transport-students" />
+
         {/* Metric Cards */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
@@ -526,169 +530,141 @@ function TransportStudents() {
       </div>
 
       {/* SUBSCRIPTION ADD / EDIT MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-xl rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
-                  <Bus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">
-                    {editingId ? "تعديل اشتراك النقل المدرسي" : "تسجيل طالب في النقل المدرسي"}
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">تحديد مسار الحافلة ونوع الاشتراك وحساب التكلفة تلقائياً</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+      <AdminModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingId ? "تعديل اشتراك النقل المدرسي" : "تسجيل طالب في النقل المدرسي"}
+        description="تحديد مسار الحافلة ونوع الاشتراك وحساب التكلفة تلقائياً"
+        icon={Bus}
+        tone="primary"
+        maxWidth="xl"
+        footer={
+          <>
+            <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors">
+              إلغاء
+            </button>
+            <button type="button" onClick={handleSubmit(onSubmit)} className="rounded-xl bg-primary px-7 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]">
+              {editingId ? "تحديث الاشتراك" : "تأكيد تسجيل الاشتراك"}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الطالب المراد تسجيله <span className="text-destructive">*</span></label>
+            <select 
+              {...register("studentId")} 
+              className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer disabled:opacity-60"
+              disabled={!!editingId || !!watch("studentId")}
+            >
+              <option value="">-- اختر الطالب --</option>
+              {modalStudents.map((st: any) => (
+                <option key={st.id} value={st.id}>{st.name} ({getSectionLabel(st)})</option>
+              ))}
+            </select>
+            {errors.studentId && <p className="text-xs font-bold text-destructive">{errors.studentId.message}</p>}
+            {selectedStudent && <p className="text-xs font-bold text-primary mt-1">الفصل الحالي: {getSectionLabel(selectedStudent)}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">مسار حافلة النقل <span className="text-destructive">*</span></label>
+            <select 
+              {...register("routeId")} 
+              className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+            >
+              <option value="">-- اختر المسار المناسب --</option>
+              {transportRoutes.map((rt: any) => (
+                <option key={rt.id} value={rt.id}>{rt.name} - تكلفة الاشتراك الكامل: {rt.feeAmount} {currency}</option>
+              ))}
+            </select>
+            {errors.routeId && <p className="text-xs font-bold text-destructive">{errors.routeId.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">نوع الاشتراك / الاتجاه</label>
+              <select 
+                {...register("direction")} 
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
               >
-                <X className="h-4 w-4" />
-              </button>
+                <option value="round-trip">ذهاب وعودة (100% من الرسوم)</option>
+                <option value="going">ذهاب فقط (60% من الرسوم)</option>
+                <option value="returning">عودة فقط (60% من الرسوم)</option>
+              </select>
+              {errors.direction && <p className="text-xs font-bold text-destructive">{errors.direction.message}</p>}
             </div>
             
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">الطالب المراد تسجيله <span className="text-destructive">*</span></label>
-                <select 
-                  {...register("studentId")} 
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer disabled:opacity-60"
-                  disabled={!!editingId || !!watch("studentId")}
-                >
-                  <option value="">-- اختر الطالب --</option>
-                  {modalStudents.map((st: any) => (
-                    <option key={st.id} value={st.id}>{st.name} ({getSectionLabel(st)})</option>
-                  ))}
-                </select>
-                {errors.studentId && <p className="text-xs font-bold text-destructive">{errors.studentId.message}</p>}
-                {selectedStudent && <p className="text-xs font-bold text-primary mt-1">الفصل الحالي: {getSectionLabel(selectedStudent)}</p>}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">الرسوم المستحقة المحسوبة</label>
+              <div className="h-11 w-full rounded-xl border border-border/80 bg-primary/5 px-4 flex items-center justify-between text-sm font-bold text-primary">
+                <span className="text-base font-black">{selectedRoute ? calculatedFee.toLocaleString() : '0'}</span>
+                <span className="text-xs opacity-75">{currency}</span>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">مسار حافلة النقل <span className="text-destructive">*</span></label>
-                <select 
-                  {...register("routeId")} 
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
-                >
-                  <option value="">-- اختر المسار المناسب --</option>
-                  {transportRoutes.map((rt: any) => (
-                    <option key={rt.id} value={rt.id}>{rt.name} - تكلفة الاشتراك الكامل: {rt.feeAmount} {currency}</option>
-                  ))}
-                </select>
-                {errors.routeId && <p className="text-xs font-bold text-destructive">{errors.routeId.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">نوع الاشتراك / الاتجاه</label>
-                  <select 
-                    {...register("direction")} 
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
-                  >
-                    <option value="round-trip">ذهاب وعودة (100% من الرسوم)</option>
-                    <option value="going">ذهاب فقط (60% من الرسوم)</option>
-                    <option value="returning">عودة فقط (60% من الرسوم)</option>
-                  </select>
-                  {errors.direction && <p className="text-xs font-bold text-destructive">{errors.direction.message}</p>}
-                </div>
-                
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">الرسوم المستحقة المحسوبة</label>
-                  <div className="h-11 w-full rounded-xl border border-border/80 bg-primary/5 px-4 flex items-center justify-between text-sm font-bold text-primary">
-                    <span className="text-base font-black">{selectedRoute ? calculatedFee.toLocaleString() : '0'}</span>
-                    <span className="text-xs opacity-75">{currency}</span>
-                  </div>
-                  {selectedRoute && (
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      دورة الفوترة: {selectedRoute.feeMode === 'monthly' ? 'شهرياً' : selectedRoute.feeMode === 'term' ? 'نصف سنوي' : 'سنوياً'}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors">
-                  إلغاء
-                </button>
-                <button type="submit" className="rounded-xl bg-primary px-7 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]">
-                  {editingId ? "تحديث الاشتراك" : "تأكيد تسجيل الاشتراك"}
-                </button>
-              </div>
-            </form>
+              {selectedRoute && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  دورة الفوترة: {selectedRoute.feeMode === 'monthly' ? 'شهرياً' : selectedRoute.feeMode === 'term' ? 'نصف سنوي' : 'سنوياً'}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </AdminModal>
 
       {/* CANCEL CONFIRMATION MODAL */}
-      {cancelConfirmSub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-destructive/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center shadow-inner border border-destructive/20">
-                  <Trash2 className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">تأكيد إلغاء اشتراك النقل</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">إلغاء تسجيل الطالب من حافلة الترحيل</p>
-                </div>
+      <AdminModal
+        isOpen={Boolean(cancelConfirmSub)}
+        onClose={() => setCancelConfirmSub(null)}
+        title="تأكيد إلغاء اشتراك النقل"
+        description="إلغاء تسجيل الطالب من حافلة الترحيل المدرسية"
+        icon={Trash2}
+        tone="danger"
+        maxWidth="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setCancelConfirmSub(null)}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              تراجع
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelSubscription}
+              className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
+            >
+              تأكيد إلغاء الاشتراك
+            </button>
+          </>
+        }
+      >
+        {cancelConfirmSub && (
+          <div className="space-y-4">
+            <p className="text-sm font-bold text-foreground">
+              هل أنت متأكد من رغبتك في إلغاء اشتراك النقل المدرسي للطالب التالي؟
+            </p>
+
+            <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">اسم الطالب:</span>
+                <span className="font-bold text-foreground">{cancelConfirmSub.student.name}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setCancelConfirmSub(null)}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <p className="text-sm font-bold text-foreground">
-                هل أنت متأكد من رغبتك في إلغاء اشتراك النقل المدرسي للطالب التالي؟
-              </p>
-
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">اسم الطالب:</span>
-                  <span className="font-bold text-foreground">{cancelConfirmSub.student.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">الصف:</span>
-                  <span className="font-bold text-foreground">{getSectionLabel(cancelConfirmSub.student)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">المسار:</span>
-                  <span className="font-bold text-primary">{cancelConfirmSub.route?.name || "غير محدد"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">الرسوم الدورية:</span>
-                  <span className="font-black text-foreground">{cancelConfirmSub.subscription.fee} {currency}</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">الصف:</span>
+                <span className="font-bold text-foreground">{getSectionLabel(cancelConfirmSub.student)}</span>
               </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setCancelConfirmSub(null)}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  تراجع
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelSubscription}
-                  className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
-                >
-                  تأكيد إلغاء الاشتراك
-                </button>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">المسار:</span>
+                <span className="font-bold text-primary">{cancelConfirmSub.route?.name || "غير محدد"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">الرسوم الدورية:</span>
+                <span className="font-black text-foreground">{cancelConfirmSub.subscription.fee} {currency}</span>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminModal>
 
       <AdvancedPrintEngine
         isOpen={isPrintOpen}

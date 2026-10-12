@@ -1,6 +1,7 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { AppShell, Badge, PageCard } from "@/components/app-shell";
 import { AdminModal } from "@/components/admin/admin-modal";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   ShieldCheck,
   Save,
@@ -433,6 +434,9 @@ function RBACBuilderPage() {
       }
     >
       <div className="space-y-5" dir="rtl">
+        {/* Unified Admin Sub-Navigation */}
+        <AdminNav activeTab="/admin/permissions" />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-4">
           <div className="flex items-center gap-4">

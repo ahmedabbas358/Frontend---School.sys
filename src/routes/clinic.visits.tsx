@@ -27,6 +27,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FacilitiesNavTabs } from "@/components/facilities/facilities-nav";
 
 export const Route = createFileRoute("/clinic/visits")({
   head: () => ({ meta: [{ title: "العيادة المدرسية والرعاية الصحية | منصة مدارس" }] }),
@@ -192,6 +194,8 @@ function ClinicVisits() {
       }
     >
       <div className="space-y-6">
+        <FacilitiesNavTabs activeTab="clinic" />
+
         {/* KPI Summary Cards */}
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
@@ -320,242 +324,223 @@ function ClinicVisits() {
       </div>
 
       {/* ADD VISIT MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
-                  <Stethoscope className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">تسجيل مراجعة عيادة جديدة</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">توثيق الفحص السريري والإجراء العلاجي للطلاب</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setIsModalOpen(false); reset(); }}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+      <AdminModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          reset();
+        }}
+        title="تسجيل مراجعة عيادة جديدة"
+        description="توثيق الفحص السريري والإجراء العلاجي للطلاب"
+        icon={Stethoscope}
+        tone="primary"
+        maxWidth="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                reset();
+              }}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit(onSubmit)}
+              className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+            >
+              حفظ الزيارة الطبية
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Student Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الطالب المراجع ({getStageLabel(stage)}) <span className="text-destructive">*</span></label>
+            
+            <div className="relative">
+              <div 
+                className="flex h-11 w-full items-center justify-between rounded-xl border border-border/80 bg-background/80 px-3.5 text-xs font-bold cursor-pointer hover:border-primary/50 transition-all focus:ring-4 focus:ring-primary/15"
+                onClick={() => setIsStudentDropdownOpen(!isStudentDropdownOpen)}
               >
-                <X className="h-4 w-4" />
-              </button>
+                <span className={selectedStudentId ? "text-foreground font-black" : "text-muted-foreground"}>
+                  {selectedStudent ? `${selectedStudent.id} - ${selectedStudent.name} (${selectedStudent.grade})` : "-- اختر الطالب --"}
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </div>
+              
+              {isStudentDropdownOpen && (
+                <div className="absolute top-full start-0 end-0 z-50 mt-1.5 max-h-60 overflow-y-auto custom-scrollbar-modal rounded-2xl border border-border/80 bg-card/98 backdrop-blur-2xl shadow-2xl p-2 animate-in zoom-in-95 duration-100">
+                  <div className="sticky top-0 bg-card/95 backdrop-blur-md p-1 pb-2">
+                    <div className="relative">
+                      <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input 
+                        autoFocus
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        placeholder="ابحث بالاسم أو الرقم..."
+                        className="h-9 w-full rounded-xl border border-border/80 bg-background/80 ps-8 pe-3 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-1 space-y-1">
+                    {filteredStudents.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-muted-foreground">لا توجد نتائج مطابقة</div>
+                    ) : (
+                      filteredStudents.map(st => (
+                        <div 
+                          key={st.id} 
+                          className="cursor-pointer rounded-xl px-3 py-2 text-xs hover:bg-accent transition-all flex items-center justify-between"
+                          onClick={() => {
+                            setValue("studentId", st.id, { shouldValidate: true });
+                            setStudentSearch("");
+                            setIsStudentDropdownOpen(false);
+                          }}
+                        >
+                          <div className="font-bold text-foreground">{st.name}</div>
+                          <span className="text-[11px] font-mono text-muted-foreground">{st.grade} • {st.id}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            {errors.studentId && <p className="text-xs text-destructive font-bold">{errors.studentId.message}</p>}
+          </div>
+
+          {/* Temperature and Urgency */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                <Thermometer className="h-3.5 w-3.5 text-amber-500" /> درجة الحرارة (°C)
+              </label>
+              <input
+                {...register("temperature")}
+                placeholder="مثال: 37.2"
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums"
+              />
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              {/* Student Selector */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">الطالب المراجع ({getStageLabel(stage)}) <span className="text-destructive">*</span></label>
-                
-                <div className="relative">
-                  <div 
-                    className="flex h-11 w-full items-center justify-between rounded-xl border border-border/80 bg-background/80 px-3.5 text-xs font-bold cursor-pointer hover:border-primary/50 transition-all focus:ring-4 focus:ring-primary/15"
-                    onClick={() => setIsStudentDropdownOpen(!isStudentDropdownOpen)}
-                  >
-                    <span className={selectedStudentId ? "text-foreground font-black" : "text-muted-foreground"}>
-                      {selectedStudent ? `${selectedStudent.id} - ${selectedStudent.name} (${selectedStudent.grade})` : "-- اختر الطالب --"}
-                    </span>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  
-                  {isStudentDropdownOpen && (
-                    <div className="absolute top-full start-0 end-0 z-50 mt-1.5 max-h-60 overflow-y-auto custom-scrollbar-modal rounded-2xl border border-border/80 bg-card/98 backdrop-blur-2xl shadow-2xl p-2 animate-in zoom-in-95 duration-100">
-                      <div className="sticky top-0 bg-card/95 backdrop-blur-md p-1 pb-2">
-                        <div className="relative">
-                          <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <input 
-                            autoFocus
-                            value={studentSearch}
-                            onChange={(e) => setStudentSearch(e.target.value)}
-                            placeholder="ابحث بالاسم أو الرقم..."
-                            className="h-9 w-full rounded-xl border border-border/80 bg-background/80 ps-8 pe-3 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-1 space-y-1">
-                        {filteredStudents.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-muted-foreground">لا توجد نتائج مطابقة</div>
-                        ) : (
-                          filteredStudents.map(st => (
-                            <div 
-                              key={st.id} 
-                              className="cursor-pointer rounded-xl px-3 py-2 text-xs hover:bg-accent transition-all flex items-center justify-between"
-                              onClick={() => {
-                                setValue("studentId", st.id, { shouldValidate: true });
-                                setStudentSearch("");
-                                setIsStudentDropdownOpen(false);
-                              }}
-                            >
-                              <div className="font-bold text-foreground">{st.name}</div>
-                              <span className="text-[11px] font-mono text-muted-foreground">{st.grade} • {st.id}</span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {errors.studentId && <p className="text-xs text-destructive font-bold">{errors.studentId.message}</p>}
-              </div>
-
-              {/* Temperature and Urgency */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-                    <Thermometer className="h-3.5 w-3.5 text-amber-500" /> درجة الحرارة (°C)
-                  </label>
-                  <input
-                    {...register("temperature")}
-                    placeholder="مثال: 37.2"
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 tabular-nums"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">درجة خطورة الحالة</label>
-                  <select
-                    {...register("urgency")}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
-                  >
-                    <option value="normal">🟢 حالة عادية / بسيطة</option>
-                    <option value="urgent">🟡 متوسطة تتطلب إشعار ولي الأمر</option>
-                    <option value="emergency">🔴 طارئة / تحويل مستشفى</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Symptoms */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">الأعراض الظاهرة <span className="text-destructive">*</span></label>
-                <input
-                  {...register("symptoms")}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                  placeholder="مثال: صداع، مغص، ارتفاع حرارة، إجهاد، دوخة..."
-                />
-                {errors.symptoms && <p className="text-xs text-destructive font-bold">{errors.symptoms.message}</p>}
-              </div>
-
-              {/* Diagnosis */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">التشخيص الطبي المبدئي <span className="text-destructive">*</span></label>
-                <input
-                  {...register("diagnosis")}
-                  placeholder="مثال: نزلة برد، هبوط ضغط بسيط، جفاف خفيف..."
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                />
-                {errors.diagnosis && <p className="text-xs text-destructive font-bold">{errors.diagnosis.message}</p>}
-              </div>
-
-              {/* Action Taken */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">الإجراء والعلاج المتخذ <span className="text-destructive">*</span></label>
-                <textarea
-                  {...register("actionTaken")}
-                  className="w-full rounded-xl border border-border/80 bg-background/80 p-3 text-xs font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 resize-none"
-                  rows={3}
-                  placeholder="تم إعطاء خافض حرارة، الراحة لمدة 20 دقيقة، وإشعار ولي الأمر..."
-                />
-                {errors.actionTaken && <p className="text-xs text-destructive font-bold">{errors.actionTaken.message}</p>}
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => { setIsModalOpen(false); reset(); }}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
-                >
-                  حفظ الزيارة الطبية
-                </button>
-              </div>
-            </form>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">درجة خطورة الحالة</label>
+              <select
+                {...register("urgency")}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 cursor-pointer"
+              >
+                <option value="normal">🟢 حالة عادية / بسيطة</option>
+                <option value="urgent">🟡 متوسطة تتطلب إشعار ولي الأمر</option>
+                <option value="emergency">🔴 طارئة / تحويل مستشفى</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+
+          {/* Symptoms */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الأعراض الظاهرة <span className="text-destructive">*</span></label>
+            <input
+              {...register("symptoms")}
+              className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              placeholder="مثال: صداع، مغص، ارتفاع حرارة، إجهاد، دوخة..."
+            />
+            {errors.symptoms && <p className="text-xs text-destructive font-bold">{errors.symptoms.message}</p>}
+          </div>
+
+          {/* Diagnosis */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">التشخيص الطبي المبدئي <span className="text-destructive">*</span></label>
+            <input
+              {...register("diagnosis")}
+              placeholder="مثال: نزلة برد، هبوط ضغط بسيط، جفاف خفيف..."
+              className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+            />
+            {errors.diagnosis && <p className="text-xs text-destructive font-bold">{errors.diagnosis.message}</p>}
+          </div>
+
+          {/* Action Taken */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">الإجراء والعلاج المتخذ <span className="text-destructive">*</span></label>
+            <textarea
+              {...register("actionTaken")}
+              className="w-full rounded-xl border border-border/80 bg-background/80 p-3 text-xs font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 resize-none"
+              rows={3}
+              placeholder="تم إعطاء خافض حرارة، الراحة لمدة 20 دقيقة، وإشعار ولي الأمر..."
+            />
+            {errors.actionTaken && <p className="text-xs text-destructive font-bold">{errors.actionTaken.message}</p>}
+          </div>
+        </form>
+      </AdminModal>
 
       {/* REFERRAL / EMERGENCY SLIP MODAL */}
-      {referralVisit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
-                  <FileText className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">إشعار إحالة طبية رسمي</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">سند فحص صادر من العيادة المدرسية</p>
-                </div>
+      <AdminModal
+        isOpen={!!referralVisit}
+        onClose={() => setReferralVisit(null)}
+        title="إشعار إحالة طبية رسمي"
+        description="سند فحص صادر من العيادة المدرسية"
+        icon={FileText}
+        tone="primary"
+        maxWidth="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setReferralVisit(null)}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              إغلاق
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                window.print();
+              }}
+              className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98] flex items-center gap-1.5"
+            >
+              <Printer className="h-4 w-4" /> طباعة الإشعار
+            </button>
+          </>
+        }
+      >
+        {referralVisit && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-2.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">رقم القيد:</span>
+                <span className="font-mono font-bold">{referralVisit.id}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setReferralVisit(null)}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">اسم الطالب:</span>
+                <span className="font-bold text-foreground">{referralVisit.studentName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">تاريخ المراجعة:</span>
+                <span className="font-bold tabular-nums">{referralVisit.date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">الأعراض:</span>
+                <span className="font-bold text-foreground">{referralVisit.symptoms}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">التشخيص المبدئي:</span>
+                <span className="font-black text-primary">{referralVisit.diagnosis}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">الإجراء المتخذ:</span>
+                <span className="font-bold text-foreground">{referralVisit.actionTaken}</span>
+              </div>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-2.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">رقم القيد:</span>
-                  <span className="font-mono font-bold">{referralVisit.id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">اسم الطالب:</span>
-                  <span className="font-bold text-foreground">{referralVisit.studentName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">تاريخ المراجعة:</span>
-                  <span className="font-bold tabular-nums">{referralVisit.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">الأعراض:</span>
-                  <span className="font-bold text-foreground">{referralVisit.symptoms}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">التشخيص المبدئي:</span>
-                  <span className="font-black text-primary">{referralVisit.diagnosis}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">الإجراء المتخذ:</span>
-                  <span className="font-bold text-foreground">{referralVisit.actionTaken}</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-bold text-amber-800 dark:text-amber-300">
-                ملاحظة لولي الأمر / الطبيب المعالج: يرجى مراجعة المركز الطبي المختص وإعادة هذا الإشعار بعد توقيع الطبيب.
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setReferralVisit(null)}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  إغلاق
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.print();
-                  }}
-                  className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98] flex items-center gap-1.5"
-                >
-                  <Printer className="h-4 w-4" /> طباعة الإشعار
-                </button>
-              </div>
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-bold text-amber-800 dark:text-amber-300">
+              ملاحظة لولي الأمر / الطبيب المعالج: يرجى مراجعة المركز الطبي المختص وإعادة هذا الإشعار بعد توقيع الطبيب.
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminModal>
 
       <AdvancedPrintEngine
         isOpen={isPrintOpen}

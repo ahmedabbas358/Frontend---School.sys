@@ -40,6 +40,8 @@ import {
   Shield,
   Layers3,
   Calendar,
+  Upload,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -49,6 +51,7 @@ import {
 } from "@/contexts/GlobalStoreContext";
 import { Switch } from "@/components/ui/switch";
 import { AdminModal } from "@/components/admin/admin-modal";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 export const Route = createFileRoute("/admin/features")({
   head: () => ({ meta: [{ title: "التحكم بميزات النظام والوحدات التشغيلية | منصة مدارس" }] }),
@@ -71,6 +74,45 @@ interface FeatureItem {
 
 const ALL_FEATURES: FeatureItem[] = [
   // 1. Operational Modules
+  {
+    key: "attendanceDiscipline",
+    title: "الحضور والانضباط السلوكي للطلاب",
+    category: "operational",
+    categoryLabel: "الوحدات التشغيلية",
+    desc: "رصد الحضور اليومي وبالحصص، سجل المخالفات السلوكية، نقاط التميز والمكافآت، وتحليلات الغياب والتسرب الدراسي.",
+    icon: UserCheck,
+    tone: "success",
+    route: "/attendance",
+    routeLabel: "مركز الحضور",
+    dependencies: ["الصفوف والشعب", "قوائم الطلاب"],
+    roles: ["مشرف دور", "وكيل شؤون طلاب", "معلم", "مدير مدرسة"],
+  },
+  {
+    key: "teachingFaculty",
+    title: "الهيئة التعليمية والمعلمون والأنصبة",
+    category: "operational",
+    categoryLabel: "الوحدات التشغيلية",
+    desc: "إدارة الكوادر التعليمية، الأنصبة التدريسية الأسبوعية، الإسناد الأكاديمي، وملفات المعلمين المتكاملة.",
+    icon: Users,
+    tone: "info",
+    route: "/teachers",
+    routeLabel: "قائمة المعلمين",
+    dependencies: ["سجل الموظفين", "المواد الدراسية"],
+    roles: ["وكيل شؤون معلمين", "مدير مدرسة", "إداري"],
+  },
+  {
+    key: "academicCurriculum",
+    title: "المواد والخطط الدراسية والمناهج",
+    category: "operational",
+    categoryLabel: "الوحدات التشغيلية",
+    desc: "إدارة المقررات والمناهج الدراسية، الخطة الأسبوعية، توزيع الحصص، وتعيين الكوادر التعليمية والشعب والكتب المدرسية.",
+    icon: BookOpen,
+    tone: "primary",
+    route: "/academic/subjects",
+    routeLabel: "المواد التعليمية",
+    dependencies: ["الصفوف والشعب", "الكوادر التعليمية"],
+    roles: ["وكيل شؤون تعليمية", "منسق المواد", "مدير مدرسة"],
+  },
   {
     key: "transport",
     title: "النقل المدرسي والحافلات",
@@ -349,8 +391,31 @@ export function AdminFeaturesPage() {
 
   // Interactive Modals
   const [selectedFeatureDetail, setSelectedFeatureDetail] = useState<FeatureItem | null>(null);
-  const [presetModal, setPresetModal] = useState<"enterprise" | "academic" | "private" | "default" | null>(null);
+  const [presetModal, setPresetModal] = useState<"enterprise" | "academic" | "private" | "minimal" | "default" | null>(null);
   const [exportModal, setExportModal] = useState(false);
+  const [importModal, setImportModal] = useState(false);
+  const [importText, setImportText] = useState("");
+
+  const handleApplyImport = () => {
+    try {
+      const parsed = JSON.parse(importText);
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error("Invalid format");
+      }
+      updateFeatures(parsed);
+      addActivityLog({
+        user: "مدير النظام",
+        action: "استيراد ملف ميزات",
+        entity: "التحكم بالميزات",
+        details: "تم تطبيق مانيفست إعدادات الميزات المستورد بنجاح",
+      });
+      toast.success("تم استيراد وتطبيق إعدادات الميزات بنجاح");
+      setImportModal(false);
+      setImportText("");
+    } catch (err) {
+      toast.error("الملف أو النص غير صالح، يرجى التأكد من صياغة JSON الصحيحة");
+    }
+  };
 
   // Statistics
   const stats = useMemo(() => {
@@ -423,6 +488,9 @@ export function AdminFeaturesPage() {
       toast.success("تم تفعيل حزمة Enterprise الشاملة (كافة ميزات النظام نشطة)");
     } else if (preset === "academic") {
       const academicOnly: SystemFeatures = {
+        attendanceDiscipline: true,
+        teachingFaculty: true,
+        academicCurriculum: true,
         transport: false,
         library: true,
         clinic: false,
@@ -454,6 +522,9 @@ export function AdminFeaturesPage() {
       toast.success("تم تطبيق الحزمة الأكاديمية المبسطة");
     } else if (preset === "private") {
       const privateSchoolPack: SystemFeatures = {
+        attendanceDiscipline: true,
+        teachingFaculty: true,
+        academicCurriculum: true,
         transport: true,
         library: true,
         clinic: true,
@@ -483,6 +554,40 @@ export function AdminFeaturesPage() {
         details: "تم تطبيق حزمة المدارس الأهلية والخاصة المتكاملة",
       });
       toast.success("تم تطبيق حزمة المدارس الأهلية والخاصة بنجاح");
+    } else if (preset === "minimal") {
+      const minimalPack: SystemFeatures = {
+        attendanceDiscipline: true,
+        teachingFaculty: true,
+        academicCurriculum: true,
+        transport: false,
+        library: false,
+        clinic: false,
+        facilities: false,
+        inventory: false,
+        hrPayroll: false,
+        examsReports: true,
+        financeInvoicing: false,
+        admissionRegistration: true,
+        parentPortal: false,
+        teacherApp: true,
+        smsAlerts: false,
+        whatsappAlerts: false,
+        onlinePayments: false,
+        qrVerification: true,
+        noorIntegration: true,
+        webhooksApi: false,
+        twoFactorAuth: true,
+        smartAnalyticsAi: false,
+        trashBin: true,
+      };
+      updateFeatures(minimalPack);
+      addActivityLog({
+        user: "مدير النظام",
+        action: "تطبيق قالب الميزات",
+        entity: "التحكم بالميزات",
+        details: "تم تطبيق الوضع الأكاديمي المصغر (الصفوف، الطلاب والدرجات فقط)",
+      });
+      toast.success("تم تطبيق الوضع الأكاديمي المصغر بنجاح");
     } else if (preset === "default") {
       updateFeatures(defaultFeatures);
       addActivityLog({
@@ -496,6 +601,30 @@ export function AdminFeaturesPage() {
     setPresetModal(null);
   };
 
+  // Bulk Category Toggle
+  const handleToggleCategory = (category: "operational" | "apps" | "tech", enable: boolean) => {
+    const categoryFeatures = ALL_FEATURES.filter((f) => f.category === category);
+    const updates: Partial<SystemFeatures> = {};
+    categoryFeatures.forEach((f) => {
+      updates[f.key] = enable;
+    });
+    updateFeatures(updates);
+    const catLabel =
+      category === "operational"
+        ? "الوحدات التشغيلية"
+        : category === "apps"
+        ? "التطبيقات والتواصل"
+        : "التقنيات الذكية والتكامل";
+
+    addActivityLog({
+      user: "مدير النظام",
+      action: enable ? "تفعيل قسم ميزات" : "تعطيل قسم ميزات",
+      entity: "التحكم بالميزات",
+      details: `تم ${enable ? "تفعيل" : "تعطيل"} كافة ميزات قسم: ${catLabel}`,
+    });
+    toast.success(`تم ${enable ? "تفعيل" : "تعطيل"} كافة ميزات ${catLabel} بنجاح`);
+  };
+
   return (
     <AppShell
       breadcrumb={[
@@ -505,6 +634,13 @@ export function AdminFeaturesPage() {
       ]}
       actions={
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setImportModal(true)}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border/70 px-3.5 text-xs font-black shadow-xs hover:bg-accent transition-colors"
+          >
+            <Upload className="h-3.5 w-3.5 text-primary" />
+            <span>استيراد مانيفست</span>
+          </button>
           <button
             onClick={() => setExportModal(true)}
             className="inline-flex h-9 items-center gap-2 rounded-xl bg-card border border-border/70 px-3.5 text-xs font-black shadow-xs hover:bg-accent transition-colors"
@@ -523,6 +659,9 @@ export function AdminFeaturesPage() {
       }
     >
       <div className="space-y-6" dir="rtl">
+        {/* Unified Admin Sub-Navigation */}
+        <AdminNav activeTab="/admin/features" />
+
         {/* Hero Banner & Executive Summary */}
         <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card/90 to-primary/5 p-6 sm:p-8 shadow-sm">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
@@ -568,6 +707,46 @@ export function AdminFeaturesPage() {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Quick Presets Bar */}
+        <div className="p-3 rounded-2xl bg-muted/30 border border-border/70 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-xs font-black text-foreground">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span>قوالب التكوين السريع الموصى بها:</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => handleApplyPreset("enterprise")}
+              className="px-3 py-1.5 rounded-xl bg-card hover:bg-primary/10 border border-border/80 text-xs font-bold text-foreground hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <span>كامل الميزات (Enterprise)</span>
+            </button>
+            <button
+              onClick={() => handleApplyPreset("academic")}
+              className="px-3 py-1.5 rounded-xl bg-card hover:bg-primary/10 border border-border/80 text-xs font-bold text-foreground hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <span>أكاديمية فقط</span>
+            </button>
+            <button
+              onClick={() => handleApplyPreset("private")}
+              className="px-3 py-1.5 rounded-xl bg-card hover:bg-primary/10 border border-border/80 text-xs font-bold text-foreground hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <span>مدارس أهلية (مالية ونقل)</span>
+            </button>
+            <button
+              onClick={() => handleApplyPreset("minimal")}
+              className="px-3 py-1.5 rounded-xl bg-card hover:bg-primary/10 border border-border/80 text-xs font-bold text-foreground hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <span>الوضع المصغر</span>
+            </button>
+            <button
+              onClick={() => handleApplyPreset("default")}
+              className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-xs font-bold text-primary transition-colors flex items-center gap-1"
+            >
+              <span>الافتراضي القياسي</span>
+            </button>
           </div>
         </div>
 
@@ -682,6 +861,38 @@ export function AdminFeaturesPage() {
               <option value="disabled">الميزات المعطلة فقط ({stats.disabled})</option>
             </select>
           </div>
+
+          {/* Bulk Category Action Buttons */}
+          {selectedCategory !== "all" && (
+            <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+              <span className="font-bold text-muted-foreground">
+                إجراءات جماعية لقسم{" "}
+                <strong className="text-foreground">
+                  {selectedCategory === "operational"
+                    ? "الوحدات التشغيلية"
+                    : selectedCategory === "apps"
+                    ? "التطبيقات والتواصل"
+                    : "التقنيات والتكامل"}
+                </strong>:
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleCategory(selectedCategory, true)}
+                  className="px-3 py-1 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black transition-colors"
+                >
+                  تفعيل كافة وحدات هذا القسم
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleCategory(selectedCategory, false)}
+                  className="px-3 py-1 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive font-black transition-colors"
+                >
+                  تعطيل كافة وحدات هذا القسم
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Features Cards Grid */}
@@ -988,6 +1199,27 @@ export function AdminFeaturesPage() {
               </div>
             </div>
 
+            {/* Minimal Preset */}
+            <div
+              onClick={() => handleApplyPreset("minimal")}
+              className="p-4 rounded-2xl border border-border/80 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer transition-all duration-200 space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-black text-sm text-foreground group-hover:text-primary">
+                  الوضع الأكاديمي المصغر (Minimal)
+                </span>
+                <Badge tone="warning">تعليم أساسي</Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                تشغيل الصفوف والطلاب ورصد الدرجات فقط، وإيقاف كافة الوحدات المتقدمة لتسهيل التجربة.
+              </p>
+              <div className="pt-2 flex justify-end">
+                <span className="text-xs font-black text-primary group-hover:underline flex items-center gap-1">
+                  تطبيق هذا القالب <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                </span>
+              </div>
+            </div>
+
             {/* Recommended Default Preset */}
             <div
               onClick={() => handleApplyPreset("default")}
@@ -997,7 +1229,7 @@ export function AdminFeaturesPage() {
                 <span className="font-black text-sm text-foreground group-hover:text-primary">
                   التهيئة القياسية الموصى بها
                 </span>
-                <Badge tone="warning">افتراضي المصنع</Badge>
+                <Badge tone="purple">افتراضي المصنع</Badge>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 استعادة الإعدادات التلقائية الموصى بها من فريق التطوير لتشغيل المنظومة بتوازن وأمان فائق.
@@ -1074,6 +1306,83 @@ export function AdminFeaturesPage() {
 
             <div className="p-3 rounded-xl bg-card border border-border/80 font-mono text-[11px] max-h-48 overflow-y-auto custom-scrollbar" dir="ltr">
               <pre>{JSON.stringify(currentFeatures, null, 2)}</pre>
+            </div>
+          </div>
+        </AdminModal>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          4. MODAL: IMPORT CONFIGURATION MANIFEST
+         ───────────────────────────────────────────────────────────── */}
+      {importModal && (
+        <AdminModal
+          isOpen={importModal}
+          onClose={() => setImportModal(false)}
+          title="استيراد وتطبيق ملف تكوين الميزات"
+          description="ارفع أو الصق مانيفست JSON لتطبيق حالة الميزات والتكاملات دفعة واحدة."
+          icon={Upload}
+          tone="primary"
+          maxWidth="md"
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <button
+                type="button"
+                onClick={() => setImportModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-input font-bold text-xs hover:bg-accent"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyImport}
+                disabled={!importText.trim()}
+                className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-xs hover:bg-primary/90 shadow-md glow-primary inline-flex items-center gap-2 disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" /> تطبيق الإعدادات الآن
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div className="border-2 border-dashed border-border/80 hover:border-primary/50 rounded-2xl p-4 text-center cursor-pointer bg-muted/10 transition-colors">
+              <input
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                      const content = evt.target?.result as string;
+                      setImportText(content);
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+                className="hidden"
+                id="feature-manifest-upload"
+              />
+              <label htmlFor="feature-manifest-upload" className="cursor-pointer block">
+                <Upload className="h-8 w-8 mx-auto text-primary mb-1.5" />
+                <span className="font-bold text-xs text-foreground block">
+                  اضغط لاختيار ملف JSON أو اسحب الملف هنا
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  يدعم ملفات JSON المصدرة من مركز الميزات
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-foreground block mb-1">أو الصق كود JSON مباشرة:</label>
+              <textarea
+                rows={6}
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder='{\n  "transport": true,\n  "library": true,\n  ...\n}'
+                className="w-full rounded-xl border border-input bg-card p-2.5 text-xs font-mono outline-none focus:border-primary resize-none"
+                dir="ltr"
+              />
             </div>
           </div>
         </AdminModal>

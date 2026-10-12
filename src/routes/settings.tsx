@@ -1,17 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo, useRef, useEffect } from "react";
-import { AppShell, PageCard } from "@/components/app-shell";
+import { useState, useMemo } from "react";
+import { AppShell } from "@/components/app-shell";
 import { 
   Save, Upload, Languages, Palette, BellRing, School as SchoolIcon,
   Calendar, DollarSign, Users, UserPlus, ShieldCheck, HardDrive, 
   Link as LinkIcon, Lock, Database, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Settings, Building,
   Smartphone, KeyRound, Webhook, Copy, RefreshCcw, FileText, QrCode, Search, Trash2, Check,
   AlertTriangle, Eye, Plus, X, Globe, Phone, Mail, MapPin, ExternalLink, Sparkles, SlidersHorizontal, ShieldAlert,
-  Compass, BookOpen, Layers, CheckSquare, Zap, Activity, Info, MessageSquare, Download
+  Compass, BookOpen, Layers, CheckSquare, Zap, Activity, Info, MessageSquare, Download, CheckCheck, UserCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGlobalStore, defaultSettings, SystemFeatures, defaultFeatures } from "@/contexts/GlobalStoreContext";
-import { Switch } from "@/components/ui/switch";
 import {
   SmartImporterModal,
   SystemExporterModal,
@@ -25,6 +24,7 @@ import {
 } from "@/components/settings/settings-modals";
 
 import {
+  SettingsTabProps,
   FeaturesTab, SchoolTab, BrandTab, FacilitiesTab, AcademicTab, AdmissionTab, HRTab, FinanceTab, ThemeTab, LangTab, PrintTab, NotifTab, RolesTab, BackupTab, IntegrationsTab, MobileTab, APITab, SecurityTab, DataIOTab,
 } from "@/components/settings/settings-tabs";
 
@@ -38,66 +38,55 @@ const TAB_GROUPS = [
   {
     category: "التحكم بالميزات والوحدات",
     tabs: [
-      { id: "features", label: "التحكم بميزات النظام والوحدات", icon: SlidersHorizontal, badge: "مركز الميزات" },
+      { id: "features", label: "التحكم بميزات النظام والوحدات", icon: SlidersHorizontal, badge: "مركز الميزات", keywords: ["ميزات", "وحدات", "ترخيص", "نقل", "مكتبة", "عيادة"] },
     ]
   },
   {
     category: "المؤسسة والبيانات الأساسية",
     tabs: [
-      { id: "school", label: "بيانات وهوية المدرسة", icon: SchoolIcon, badge: "أساسي" },
-      { id: "brand", label: "الهوية البصرية والمطبوعات", icon: Palette, badge: "شعار وختم" },
-      { id: "facilities", label: "إدارة المرافق والأصول", icon: Building },
+      { id: "school", label: "بيانات وهوية المدرسة", icon: SchoolIcon, badge: "أساسي", keywords: ["اسم", "ترخيص", "مدير", "عنوان", "هاتف", "بريد"] },
+      { id: "brand", label: "الهوية البصرية والمطبوعات", icon: Palette, badge: "شعار وختم", keywords: ["شعار", "ختم", "علامة مائية", "هوية", "ألوان"] },
+      { id: "facilities", label: "إدارة المرافق والأصول", icon: Building, keywords: ["قاعات", "معامل", "أصول", "مستودع", "صيانة"] },
     ]
   },
   {
     category: "السياسات والتشغيل الأكاديمي",
     tabs: [
-      { id: "academic", label: "السنوات والتقويم الدراسي", icon: Calendar, badge: "التقويم" },
-      { id: "admission", label: "سياسات القبول والتسجيل", icon: UserPlus },
-      { id: "hr", label: "سياسات الموارد البشرية", icon: Users },
-      { id: "finance", label: "السياسات والعمليات المالية", icon: DollarSign, badge: "العملة" },
+      { id: "academic", label: "السنوات والتقويم الدراسي", icon: Calendar, badge: "التقويم", keywords: ["سنة", "فصول", "طابور", "غياب", "انضباط"] },
+      { id: "admission", label: "سياسات القبول والتسجيل", icon: UserPlus, keywords: ["قبول", "مستجدين", "سعة", "مقابلة", "أوراق"] },
+      { id: "hr", label: "سياسات الموارد البشرية", icon: Users, keywords: ["رواتب", "إجازات", "نصاب", "دوام", "ساعات"] },
+      { id: "finance", label: "السياسات والعمليات المالية", icon: DollarSign, badge: "العملة", keywords: ["عملة", "رسوم", "ضريبة", "فواتير", "أقساط"] },
     ]
   },
   {
     category: "المظهر والتخصيص",
     tabs: [
-      { id: "theme", label: "الثيم والألوان والواجهة", icon: Palette, badge: "ألوان" },
-      { id: "lang", label: "اللغة والتقويم والاتجاه", icon: Languages },
-      { id: "print", label: "قوالب ومحددات الطباعة", icon: FileText },
+      { id: "theme", label: "الثيم والألوان والواجهة", icon: Palette, badge: "ألوان", keywords: ["ثيم", "ألوان", "مظلم", "واجهة", "خط"] },
+      { id: "lang", label: "اللغة والتقويم والاتجاه", icon: Languages, keywords: ["لغة", "عربي", "هجري", "تقويم", "اتجاه"] },
+      { id: "print", label: "قوالب ومحددات الطباعة", icon: FileText, keywords: ["طباعة", "A4", "شهادات", "باركود", "QR"] },
     ]
   },
   {
     category: "الربط والاتصالات الذكية",
     tabs: [
-      { id: "notif", label: "قواعد الإشعارات والرسائل", icon: BellRing, badge: "SMS/واتساب" },
-      { id: "mobile", label: "تطبيق الهاتف وبوابة ولي الأمر", icon: Smartphone },
-      { id: "integrations", label: "تطبيقات الربط والطرف الثالث", icon: LinkIcon, badge: "نور/بوابات" },
-      { id: "api", label: "API والربط المتقدم (Webhooks)", icon: KeyRound },
+      { id: "notif", label: "قواعد الإشعارات والرسائل", icon: BellRing, badge: "SMS/واتساب", keywords: ["إشعارات", "واتساب", "رسائل", "SMS", "تنبيهات"] },
+      { id: "mobile", label: "تطبيق الهاتف وبوابة ولي الأمر", icon: Smartphone, keywords: ["تطبيق", "ولي الأمر", "معلم", "ربط", "PIN"] },
+      { id: "integrations", label: "تطبيقات الربط والطرف الثالث", icon: LinkIcon, badge: "نور/بوابات", keywords: ["نور", "دفع", "مدى", "بوابات", "ربط"] },
+      { id: "api", label: "API والربط المتقدم (Webhooks)", icon: KeyRound, keywords: ["API", "مفاتيح", "Webhook", "مطورين"] },
     ]
   },
   {
     category: "الأمان وإدارة البيانات",
     tabs: [
-      { id: "security", label: "الأمان وسياسات الدخول", icon: Lock },
-      { id: "roles", label: "الصلاحيات الافتراضية", icon: ShieldCheck },
-      { id: "backup", label: "النسخ الاحتياطي والحفظ", icon: HardDrive },
-      { id: "data_io", label: "المستورد والمصدر الذكي", icon: Database, badge: "نظام نور" },
+      { id: "security", label: "الأمان وسياسات الدخول", icon: Lock, keywords: ["كلمة مرور", "2FA", "جلسة", "حماية"] },
+      { id: "roles", label: "الصلاحيات الافتراضية", icon: ShieldCheck, keywords: ["أدوار", "صلاحيات", "أذونات"] },
+      { id: "backup", label: "النسخ الاحتياطي والحفظ", icon: HardDrive, keywords: ["نسخ", "استرجاع", "سحابي", "حفظ"] },
+      { id: "data_io", label: "المستورد والمصدر الذكي", icon: Database, badge: "نظام نور", keywords: ["استيراد", "تصدير", "إكسل", "CSV", "نور"] },
     ]
   }
 ] as const;
 
 type TabId = typeof TAB_GROUPS[number]["tabs"][number]["id"];
-
-const THEME_PALETTES = [
-  { id: "blue", name: "أزرق ملكي", hex: "#2563eb", border: "border-blue-600" },
-  { id: "sky", name: "سماوي عصري", hex: "#0ea5e9", border: "border-sky-500" },
-  { id: "emerald", name: "زمردي تعليمي", hex: "#10b981", border: "border-emerald-500" },
-  { id: "indigo", name: "نيلي وقور", hex: "#4f46e5", border: "border-indigo-600" },
-  { id: "violet", name: "بنفسجي ابتكاري", hex: "#8b5cf6", border: "border-violet-500" },
-  { id: "rose", name: "ياقوتي راقٍ", hex: "#e11d48", border: "border-rose-600" },
-  { id: "amber", name: "عنبري دافئ", hex: "#d97706", border: "border-amber-600" },
-  { id: "teal", name: "كحلي بحري", hex: "#0f766e", border: "border-teal-700" },
-];
 
 // Definition of All 20 Platform Modules & Features
 interface FeatureDefinition {
@@ -118,6 +107,42 @@ interface FeatureDefinition {
 }
 
 const ALL_FEATURES: FeatureDefinition[] = [
+  {
+    key: "attendanceDiscipline",
+    name: "وحدة الحضور والغياب والانضباط السلوكي",
+    desc: "رصد الحضور اليومي وبالحصص، سجل المخالفات السلوكية، نقاط التميز والمكافآت، وتحليلات الغياب للطلاب",
+    category: "core",
+    categoryLabel: "وحدات تشغيلية",
+    icon: UserCheck,
+    route: "/attendance",
+    routeLabel: "فتح الحضور",
+    dependency: "مرتبط بالصفوف والشعب وقوائم الطلاب",
+    badge: "حضور",
+  },
+  {
+    key: "teachingFaculty",
+    name: "وحدة الهيئة التعليمية والمعلمون والأنصبة",
+    desc: "إدارة الكوادر التعليمية، الأنصبة التدريسية، الإسناد الأكاديمي، وجداول الحصص للمعلمين",
+    category: "core",
+    categoryLabel: "وحدات تشغيلية",
+    icon: Users,
+    route: "/teachers",
+    routeLabel: "فتح المعلمين",
+    dependency: "مرتبط بالمواد والصفوف والشعب",
+    badge: "كادر",
+  },
+  {
+    key: "academicCurriculum",
+    name: "وحدة المواد والخطط الدراسية والمناهج",
+    desc: "إدارة المقررات الدراسية، الخطة الأسبوعية، توزيع الحصص، وتعيين الكوادر والشعب المقررة",
+    category: "core",
+    categoryLabel: "وحدات تشغيلية",
+    icon: BookOpen,
+    route: "/academic/subjects",
+    routeLabel: "فتح المواد الدراسية",
+    dependency: "مرتبط بالصفوف والشعب وتعيينات الكادر",
+    badge: "مناهج",
+  },
   {
     key: "transport",
     name: "وحدة النقل المدرسي والحافلات",
@@ -396,11 +421,35 @@ const ALL_FEATURES: FeatureDefinition[] = [
   },
 ];
 
+// Map of all tab panels to their components
+const TAB_COMPONENTS: Record<TabId, React.ComponentType<SettingsTabProps>> = {
+  features: FeaturesTab,
+  school: SchoolTab,
+  brand: BrandTab,
+  facilities: FacilitiesTab,
+  academic: AcademicTab,
+  admission: AdmissionTab,
+  hr: HRTab,
+  finance: FinanceTab,
+  theme: ThemeTab,
+  lang: LangTab,
+  print: PrintTab,
+  notif: NotifTab,
+  roles: RolesTab,
+  backup: BackupTab,
+  integrations: IntegrationsTab,
+  mobile: MobileTab,
+  api: APITab,
+  security: SecurityTab,
+  data_io: DataIOTab,
+};
+
 function SettingsPage() {
   const [tab, setTab] = useState<TabId>("features");
   const [searchQuery, setSearchQuery] = useState("");
   const [featureCategoryFilter, setFeatureCategoryFilter] = useState<"all" | "core" | "portals" | "tech" | "security">("all");
   const [isSavedRecently, setIsSavedRecently] = useState(false);
+  const [activePresetName, setActivePresetName] = useState<string>("مخصص");
 
   // Global Store bindings
   const { 
@@ -467,7 +516,8 @@ function SettingsPage() {
     return TAB_GROUPS.map(group => {
       const matched = group.tabs.filter(t => 
         t.label.toLowerCase().includes(q) || 
-        group.category.toLowerCase().includes(q)
+        group.category.toLowerCase().includes(q) ||
+        (t.keywords && t.keywords.some(k => k.toLowerCase().includes(q)))
       );
       return {
         ...group,
@@ -553,13 +603,14 @@ function SettingsPage() {
   };
 
   // Presets for features
-  const handleApplyPreset = (preset: "enterprise" | "academic" | "minimal" | "default") => {
+  const handleApplyPreset = (preset: "enterprise" | "academic" | "private" | "minimal" | "default") => {
     if (preset === "enterprise") {
       const allOn = Object.keys(defaultFeatures).reduce((acc, k) => {
         acc[k as keyof SystemFeatures] = true;
         return acc;
       }, {} as SystemFeatures);
       updateFeatures(allOn);
+      setActivePresetName("Enterprise الشاملة");
       toast.success("تم تفعيل حزمة Enterprise الشاملة (كافة الميزات نشطة)");
     } else if (preset === "academic") {
       updateFeatures({
@@ -569,9 +620,25 @@ function SettingsPage() {
         clinic: false,
         onlinePayments: false,
       });
+      setActivePresetName("النمط الأكاديمي");
       toast.success("تم تفعيل نمط التشغيل الأكاديمي الأساسي (بدون خدمات المرافق والنقل)");
+    } else if (preset === "private") {
+      updateFeatures({
+        ...defaultFeatures,
+        transport: true,
+        financeInvoicing: true,
+        onlinePayments: true,
+        parentPortal: true,
+        smsAlerts: true,
+        whatsappAlerts: true,
+      });
+      setActivePresetName("المدارس الخاصة والأهلية");
+      toast.success("تم تفعيل حزمة المدارس الخاصة والأهلية (الرسوم، النقل، بوابات الدفع والتواصل)");
     } else if (preset === "minimal") {
       const minimal: SystemFeatures = {
+        attendanceDiscipline: true,
+        teachingFaculty: true,
+        academicCurriculum: true,
         transport: false,
         library: false,
         clinic: false,
@@ -594,9 +661,11 @@ function SettingsPage() {
         trashBin: true,
       };
       updateFeatures(minimal);
+      setActivePresetName("الوضع المبسط");
       toast.success("تم تفعيل الوضع المصغر (الصفوف، الطلاب، والدرجات فقط)");
     } else {
       updateFeatures(defaultFeatures);
+      setActivePresetName("الافتراضي");
       toast.success("تمت استعادة التهيئة الافتراضية لكافة ميزات النظام");
     }
   };
@@ -623,6 +692,47 @@ function SettingsPage() {
     });
   }, [featureCategoryFilter, searchQuery]);
 
+  // Unified Props for Tab Panels
+  const tabProps: SettingsTabProps = {
+    settings: systemSettings,
+    update: updateSettings,
+    currency,
+    setCurrency,
+    allAcademicYears,
+    onSelectYear: handleSelectAcademicYear,
+    onAddYear: () => setIsAddYearOpen(true),
+    onLogoUpload: handleLogoUpload,
+    onStampUpload: handleStampUpload,
+    onPrintPreview: () => setIsPrintPreviewOpen(true),
+    onOpenBackup: () => setIsBackupOpen(true),
+    onImporter: () => setIsImporterOpen(true),
+    onExporter: () => setIsExporterOpen(true),
+    onWebhookTester: () => setIsWebhookTesterOpen(true),
+    onOpenTester: () => setIsNotifTesterOpen(true),
+    onMobileConnect: () => setIsMobileConnectOpen(true),
+    filteredFeaturesList,
+    activeFeaturesCount,
+    totalFeaturesCount,
+    activePercentage,
+    featureCategoryFilter,
+    setFeatureCategoryFilter,
+    searchQuery,
+    toggleFeature,
+    handleApplyPreset,
+    setIsImporterOpen,
+    setIsExporterOpen,
+    setIsBackupOpen,
+    setIsPrintPreviewOpen,
+    setIsWebhookTesterOpen,
+    setIsNotifTesterOpen,
+    setIsMobileConnectOpen,
+    setIsFactoryResetOpen,
+    setIsAddYearOpen,
+    setTab,
+  };
+
+  const ActiveTabComponent = TAB_COMPONENTS[tab] || FeaturesTab;
+
   return (
     <AppShell breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الإعدادات المركزية وميزات النظام" }]}>
       {/* Top Banner & Quick Controls */}
@@ -637,6 +747,9 @@ function SettingsPage() {
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-black flex items-center gap-1.5 shadow-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {activeFeaturesCount} ميزة نشطة ({activePercentage}%)
               </span>
+              <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-bold">
+                الحزمة: {activePresetName}
+              </span>
             </div>
             <p className="text-xs font-bold text-muted-foreground mt-0.5">
               لوحة التحكم الشاملة بسياسات المؤسسة، ترخيص الوحدات، الهوية الرسمية، والربط البرمجي
@@ -644,7 +757,7 @@ function SettingsPage() {
           </div>
         </div>
 
-        {/* Global Action Tools */}
+        {/* Global Action Tools Toolbar */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Quick Jump to Features Tab */}
           <button
@@ -699,26 +812,6 @@ function SettingsPage() {
             <span>معاينة A4</span>
           </button>
 
-          {/* Settings JSON Export */}
-          <button
-            onClick={handleExportSettingsJson}
-            title="تصدير الإعدادات كملف JSON"
-            className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs"
-          >
-            <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
-            <span>تصدير Config</span>
-          </button>
-
-          {/* Settings JSON Import */}
-          <label
-            title="استيراد إعدادات من ملف JSON"
-            className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs cursor-pointer"
-          >
-            <input type="file" accept=".json" onChange={handleImportSettingsJson} className="hidden" />
-            <ArrowUpFromLine className="h-3.5 w-3.5 text-primary" />
-            <span>استيراد Config</span>
-          </label>
-
           {/* Instant Backup Shortcut */}
           <button
             onClick={() => setIsBackupOpen(true)}
@@ -728,6 +821,26 @@ function SettingsPage() {
             <HardDrive className="h-3.5 w-3.5 text-primary" />
             <span>نسخ فوري</span>
           </button>
+
+          {/* Settings JSON Export */}
+          <button
+            onClick={handleExportSettingsJson}
+            title="تصدير الإعدادات كملف JSON"
+            className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs"
+          >
+            <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
+            <span className="hidden xl:inline">تصدير Config</span>
+          </button>
+
+          {/* Settings JSON Import */}
+          <label
+            title="استيراد إعدادات من ملف JSON"
+            className="inline-flex h-9 items-center gap-1.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-accent text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <input type="file" accept=".json" onChange={handleImportSettingsJson} className="hidden" />
+            <Upload className="h-3.5 w-3.5 text-primary" />
+            <span className="hidden xl:inline">استيراد Config</span>
+          </label>
 
           {/* System Trash Button with counter */}
           <Link
@@ -824,8 +937,9 @@ function SettingsPage() {
             ) : (
               filteredGroups.map((group) => (
                 <div key={group.category} className="space-y-1">
-                  <div className="px-2.5 py-1 text-[11px] font-black text-muted-foreground/80 tracking-wide">
-                    {group.category}
+                  <div className="px-2.5 py-1 text-[11px] font-black text-muted-foreground/80 tracking-wide flex items-center justify-between">
+                    <span>{group.category}</span>
+                    <span className="text-[10px] font-normal font-mono opacity-60">({group.tabs.length})</span>
                   </div>
                   {group.tabs.map((t) => {
                     const Icon = t.icon;
@@ -869,770 +983,8 @@ function SettingsPage() {
         {/* Dynamic Settings Content Canvas */}
         <div className="space-y-6">
           
-          {/* ========================================================================= */}
-          {/* TAB 0: Features & Modules Control Center (التحكم بالميزات والوحدات) */}
-          {/* ========================================================================= */}
-
-          {/* ─── Tab Panels (extracted to settings-tabs.tsx) ─── */}
-          {tab === "features" && (
-            <FeaturesTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "school" && (
-            <SchoolTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "brand" && (
-            <BrandTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "facilities" && (
-            <FacilitiesTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "academic" && (
-            <AcademicTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "admission" && (
-            <AdmissionTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "hr" && (
-            <HRTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "finance" && (
-            <FinanceTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "theme" && (
-            <ThemeTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "lang" && (
-            <LangTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "print" && (
-            <PrintTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "notif" && (
-            <NotifTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "roles" && (
-            <RolesTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "backup" && (
-            <BackupTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "integrations" && (
-            <IntegrationsTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "mobile" && (
-            <MobileTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "api" && (
-            <APITab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "security" && (
-            <SecurityTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
-
-          {tab === "data_io" && (
-            <DataIOTab
-            settings={systemSettings}
-            update={updateSettings}
-            currency={currency}
-            setCurrency={setCurrency}
-            allAcademicYears={allAcademicYears}
-            onSelectYear={handleSelectAcademicYear}
-            onAddYear={() => setIsAddYearOpen(true)}
-            onLogoUpload={handleLogoUpload}
-            onStampUpload={handleStampUpload}
-            onPrintPreview={() => setIsPrintPreviewOpen(true)}
-            onOpenBackup={() => setIsBackupOpen(true)}
-            onImporter={() => setIsImporterOpen(true)}
-            onExporter={() => setIsExporterOpen(true)}
-            onWebhookTester={() => setIsWebhookTesterOpen(true)}
-            onOpenTester={() => setIsNotifTesterOpen(true)}
-            onMobileConnect={() => setIsMobileConnectOpen(true)}
-            filteredFeaturesList={filteredFeaturesList}
-            activeFeaturesCount={activeFeaturesCount}
-            totalFeaturesCount={totalFeaturesCount}
-            activePercentage={activePercentage}
-            featureCategoryFilter={featureCategoryFilter}
-            setFeatureCategoryFilter={setFeatureCategoryFilter}
-            searchQuery={searchQuery}
-            toggleFeature={toggleFeature}
-            handleApplyPreset={handleApplyPreset}
-            setIsImporterOpen={setIsImporterOpen}
-            setIsExporterOpen={setIsExporterOpen}
-            setIsBackupOpen={setIsBackupOpen}
-            setIsPrintPreviewOpen={setIsPrintPreviewOpen}
-            setIsWebhookTesterOpen={setIsWebhookTesterOpen}
-            setIsNotifTesterOpen={setIsNotifTesterOpen}
-            setIsMobileConnectOpen={setIsMobileConnectOpen}
-            setIsFactoryResetOpen={setIsFactoryResetOpen}
-            setIsAddYearOpen={setIsAddYearOpen}
-            setTab={setTab}
-            />
-          )}
+          {/* Active Tab Component Rendered with All Synchronized Props */}
+          <ActiveTabComponent {...tabProps} />
 
           {/* Sticky Bottom Save Actions Bar */}
           <div className="sticky bottom-4 z-30">
@@ -1724,4 +1076,3 @@ function SettingsPage() {
     </AppShell>
   );
 }
-

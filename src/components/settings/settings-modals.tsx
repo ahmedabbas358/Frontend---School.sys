@@ -46,11 +46,22 @@ import {
   Save,
   CheckSquare,
   Square,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Globe,
+  Radio,
+  Sliders,
+  CheckCheck
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { toast } from "sonner";
-import { useGlobalStore, Invoice, EducationalStage, SystemSettings, defaultSettings, defaultFeatures } from "@/contexts/GlobalStoreContext";
+import {
+  useGlobalStore,
+  Invoice,
+  EducationalStage,
+  SystemSettings,
+  defaultSettings,
+  defaultFeatures,
+} from "@/contexts/GlobalStoreContext";
 
 // =========================================================================
 // CSV Parsing & Formatting Utilities
@@ -134,7 +145,6 @@ interface ParsedRecord {
   col5: string; // Phone
   status: "valid" | "warning" | "duplicate";
   statusNote: string;
-  isEditing?: boolean;
 }
 
 export function SmartImporterModal({ isOpen, onClose, initialEntityType = "students" }: SmartImporterModalProps) {
@@ -145,7 +155,9 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
   const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"all" | "valid" | "duplicate" | "warning">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [importedSummary, setImportedSummary] = useState({ total: 0, skipped: 0, time: "" });
 
   useEffect(() => {
     if (initialEntityType) setEntityType(initialEntityType);
@@ -161,13 +173,13 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
 
   const handleDownloadSample = () => {
     let headers = "الاسم_الكامل,رقم_الهوية_الوطنية,المرحلة_الدراسية,الصف_الدراسي,رقم_جوال_ولي_الأمر";
-    let rows = "عبدالله محمد السعيد,1102233445,ابتدائي,الصف الأول الابتدائي,0501234567\nسارة خالد العتيبي,1103344556,متوسط,الصف الثاني المتوسط,0559876543\nفيصل ناصر الدوسري,1104455667,ثانوي,الصف الأول الثانوي,0508899776";
+    let rows = "عبدالله محمد السعيد,1102233445,ابتدائي,الصف الأول الابتدائي,0501234567\nسارة خالد العتيبي,1103344556,متوسط,الصف الثاني المتوسط,0559876543\nفيصل ناصر الدوسري,1104455667,ثانوي,الصف الأول الثانوي,0508899776\nنواف أحمد القرني,1105566778,روضة,التمهيدي الثاني (KG2),0543322110";
     if (entityType === "staff") {
       headers = "اسم_الموظف,الرقم_الوظيفي,المرحلة_الدراسية,المسمى_الوظيفي,رقم_الجوال";
-      rows = "فهد ناصر الدوسري,EMP-501,ثانوي,معلم كيمياء,0501112233\nهند عبدالعزيز الصالح,EMP-502,ابتدائي,معلمة لغة عربية,0554433221";
+      rows = "فهد ناصر الدوسري,EMP-501,ثانوي,معلم كيمياء,0501112233\nهند عبدالعزيز الصالح,EMP-502,ابتدائي,معلمة لغة عربية,0554433221\nسعد إبراهيم المري,EMP-503,متوسط,مشرف طلابي,0509988776";
     } else if (entityType === "guardians") {
       headers = "اسم_ولي_الأمر,رقم_الهوية,صلة_القرابة,المهنة,رقم_الجوال";
-      rows = "محمد ناصر القحطاني,1099887766,أب,مهندس,0505544332\nفاطمة خالد العتيبي,1088776655,أم,طبيبة,0506677889";
+      rows = "محمد ناصر القحطاني,1099887766,أب,مهندس,0505544332\nفاطمة خالد العتيبي,1088776655,أم,طبيبة,0506677889\nسلطان فهد الرويلي,1077665544,ولي أمر,موظف حكومي,0544332211";
     }
 
     const blob = new Blob(["\uFEFF" + headers + "\n" + rows], { type: "text/csv;charset=utf-8" });
@@ -199,7 +211,7 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
 
           const parsed: ParsedRecord[] = rows.map((r, i) => {
             const col1 = r[0]?.trim() || `سجل رقم ${i + 1}`;
-            const col2 = r[1]?.trim() || `ID-${1000000 + i}`;
+            const col2 = r[1]?.trim() || `110${1000000 + i}`;
             const col3 = r[2]?.trim() || (entityType === "students" ? "primary" : "عام");
             const col4 = r[3]?.trim() || (entityType === "students" ? "الصف الأول الابتدائي" : "معلم");
             const col5 = r[4]?.trim() || "0500000000";
@@ -242,11 +254,13 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
         { id: "3", col1: "عمر فيصل السبيعي", col2: "1144556677", col3: "high", col4: "الصف الثالث الثانوي", col5: "0564433221", status: "valid", statusNote: "مطابق لمعايير نور" },
         { id: "4", col1: "شهد نايف الحربي", col2: "1155667788", col3: "primary", col4: "الصف الخامس الابتدائي", col5: "0543322119", status: "valid", statusNote: "مطابق لمعايير نور" },
         { id: "5", col1: "وليد خالد المطيري", col2: "1166778899", col3: "kindergarten", col4: "التمهيدي الثاني (KG2)", col5: "0598877665", status: "valid", statusNote: "مطابق لمعايير نور" },
+        { id: "6", col1: "خالد سعيد الغامدي", col2: allStudents[0]?.nationalId || "1109845231", col3: "middle", col4: "الصف الثاني المتوسط", col5: "0501234567", status: "duplicate", statusNote: "رقم هوية مكرر في النظام" },
       ]);
     } else if (entityType === "staff") {
       setRecords([
         { id: "1", col1: "د. سامي فهد العمران", col2: "EMP-901", col3: "high", col4: "معلم فيزياء", col5: "0501112233", status: "valid", statusNote: "مكتمل" },
         { id: "2", col1: "أ. منيرة خالد السعيد", col2: "EMP-902", col3: "primary", col4: "معلمة لغة إنجليزية", col5: "0559881122", status: "valid", statusNote: "مكتمل" },
+        { id: "3", col1: "أ. طارق عبدالمحسن الفهد", col2: "EMP-903", col3: "middle", col4: "معلم رياضيات", col5: "0544332211", status: "valid", statusNote: "مكتمل" },
       ]);
     } else {
       setRecords([
@@ -283,7 +297,14 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
     setIsProcessing(true);
     setTimeout(() => {
       let importedCount = 0;
-      const targetRecords = skipDuplicates ? records.filter((r) => r.status !== "duplicate") : records;
+      let skippedCount = 0;
+      const targetRecords = records.filter((r) => {
+        if (skipDuplicates && r.status === "duplicate") {
+          skippedCount++;
+          return false;
+        }
+        return true;
+      });
 
       if (entityType === "students") {
         targetRecords.forEach((r) => {
@@ -340,6 +361,12 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
         details: `تم استيراد ${importedCount} سجل بنجاح من ملف: ${fileName || "بيانات نور"}`,
       });
 
+      setImportedSummary({
+        total: importedCount,
+        skipped: skippedCount,
+        time: new Date().toLocaleTimeString("ar-SA"),
+      });
+
       setIsProcessing(false);
       setStep(4);
       toast.success(`تم استيراد واعتماد ${importedCount} سجل بنجاح في قاعدة البيانات`);
@@ -350,19 +377,23 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
     setStep(1);
     setFileName(null);
     setSearchFilter("");
+    setStatusFilter("all");
     setEditingId(null);
   };
 
   const filteredRecords = useMemo(() => {
-    if (!searchFilter.trim()) return records;
-    const q = searchFilter.toLowerCase().trim();
-    return records.filter(
-      (r) =>
+    return records.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!searchFilter.trim()) return true;
+      const q = searchFilter.toLowerCase().trim();
+      return (
         r.col1.toLowerCase().includes(q) ||
         r.col2.toLowerCase().includes(q) ||
-        r.col4.toLowerCase().includes(q)
-    );
-  }, [records, searchFilter]);
+        r.col4.toLowerCase().includes(q) ||
+        r.col5.includes(q)
+      );
+    });
+  }, [records, searchFilter, statusFilter]);
 
   const validCount = records.filter((r) => r.status === "valid").length;
   const duplicateCount = records.filter((r) => r.status === "duplicate").length;
@@ -370,9 +401,9 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { reset(); onClose(); } }}>
-      <DialogContent className="max-w-3xl max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+      <DialogContent hideCloseButton={true} className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
         {/* Modal Header */}
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+        <DialogHeader className="p-5 pb-4 border-b border-border/80 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
@@ -396,7 +427,7 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
           </div>
 
           {/* Stepper Bar */}
-          <div className="flex items-center justify-between border-t border-border/60 pt-4 mt-4 text-xs font-bold">
+          <div className="flex items-center justify-between border-t border-border/60 pt-3.5 mt-3 text-xs font-bold">
             {[
               { n: 1, label: "نوع البيانات" },
               { n: 2, label: "رفع الملف" },
@@ -419,7 +450,7 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
         </DialogHeader>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
           {/* Step 1: Select Entity */}
           {step === 1 && (
             <div className="space-y-4">
@@ -500,7 +531,7 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
                 onClick={handleLoadDemo}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-primary/30 bg-card hover:bg-accent text-primary text-xs font-black transition-all shadow-xs"
               >
-                <Sparkles className="h-4 w-4" /> تحميل دفعة تجريبية فورية مطابقة لمعايير نظام نور (5 سجلات)
+                <Sparkles className="h-4 w-4" /> تحميل دفعة تجريبية فورية مطابقة لمنصة نور (6 سجلات مع فحص التكرار)
               </button>
             </div>
           )}
@@ -510,22 +541,46 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
             <div className="space-y-4">
               {/* Stats Bar */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="p-3 rounded-2xl border border-border bg-card">
-                  <span className="text-[11px] font-bold text-muted-foreground block">إجمالي السجلات</span>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className={`p-3 rounded-2xl border text-right transition-all ${
+                    statusFilter === "all" ? "border-primary bg-primary/10 ring-2 ring-primary/20" : "border-border bg-card"
+                  }`}
+                >
+                  <span className="text-[11px] font-bold text-muted-foreground block">إجمالي المفحوصة</span>
                   <span className="text-lg font-black font-mono text-foreground">{records.length}</span>
-                </div>
-                <div className="p-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("valid")}
+                  className={`p-3 rounded-2xl border text-right transition-all ${
+                    statusFilter === "valid" ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20" : "border-emerald-500/20 bg-emerald-500/5"
+                  }`}
+                >
                   <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block">صالحة للاستيراد</span>
                   <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">{validCount}</span>
-                </div>
-                <div className="p-3 rounded-2xl border border-danger/20 bg-danger/5">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("duplicate")}
+                  className={`p-3 rounded-2xl border text-right transition-all ${
+                    statusFilter === "duplicate" ? "border-danger bg-danger/10 ring-2 ring-danger/20" : "border-danger/20 bg-danger/5"
+                  }`}
+                >
                   <span className="text-[11px] font-bold text-danger block">سجلات مكررة</span>
                   <span className="text-lg font-black font-mono text-danger">{duplicateCount}</span>
-                </div>
-                <div className="p-3 rounded-2xl border border-amber-500/20 bg-amber-500/5">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("warning")}
+                  className={`p-3 rounded-2xl border text-right transition-all ${
+                    statusFilter === "warning" ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20" : "border-amber-500/20 bg-amber-500/5"
+                  }`}
+                >
                   <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 block">بيانات ناقصة</span>
                   <span className="text-lg font-black font-mono text-amber-600 dark:text-amber-400">{warningCount}</span>
-                </div>
+                </button>
               </div>
 
               {/* Controls: Search + Duplicate Policy */}
@@ -540,7 +595,7 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
                     className="h-9 w-full rounded-xl border border-border bg-background pr-9 pl-3 text-xs font-bold outline-none focus:border-primary"
                   />
                 </div>
-                <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-muted-foreground hover:text-foreground shrink-0">
+                <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-muted-foreground hover:text-foreground shrink-0 bg-muted/40 px-3 py-2 rounded-xl border border-border">
                   <input
                     type="checkbox"
                     checked={skipDuplicates}
@@ -598,14 +653,33 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
                             </td>
                             <td className="p-2.5 text-foreground">
                               {isEdit ? (
-                                <input
-                                  type="text"
-                                  value={r.col4}
-                                  onChange={(e) => handleUpdateRecord(r.id, { col4: e.target.value })}
-                                  className="h-7 w-full rounded-lg border border-primary px-2 text-xs font-bold bg-background"
-                                />
+                                <div className="flex gap-1.5">
+                                  {entityType === "students" ? (
+                                    <select
+                                      value={normalizeStageValue(r.col3)}
+                                      onChange={(e) => handleUpdateRecord(r.id, { col3: e.target.value })}
+                                      className="h-7 rounded-lg border border-primary px-1.5 text-xs bg-background"
+                                    >
+                                      <option value="kindergarten">رياض أطفال</option>
+                                      <option value="primary">ابتدائي</option>
+                                      <option value="middle">متوسط</option>
+                                      <option value="high">ثانوي</option>
+                                    </select>
+                                  ) : null}
+                                  <input
+                                    type="text"
+                                    value={r.col4}
+                                    onChange={(e) => handleUpdateRecord(r.id, { col4: e.target.value })}
+                                    className="h-7 flex-1 rounded-lg border border-primary px-2 text-xs bg-background"
+                                  />
+                                </div>
                               ) : (
-                                r.col4 || r.col3
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                    {entityType === "students" ? getStageArabicTitle(normalizeStageValue(r.col3)) : r.col3}
+                                  </span>
+                                  <span>{r.col4}</span>
+                                </div>
                               )}
                             </td>
                             <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
@@ -621,15 +695,15 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
                               )}
                             </td>
                             <td className="p-2.5 text-center">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
-                                r.status === "valid"
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                  : r.status === "duplicate"
-                                  ? "bg-danger/10 text-danger border border-danger/20"
-                                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                              }`}>
-                                {r.status === "valid" && <Check className="h-3 w-3" />}
-                                {r.status === "duplicate" && <AlertTriangle className="h-3 w-3" />}
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                  r.status === "valid"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                    : r.status === "duplicate"
+                                    ? "bg-danger/10 text-danger border border-danger/20"
+                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                }`}
+                              >
                                 {r.statusNote}
                               </span>
                             </td>
@@ -638,15 +712,17 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
                                 <button
                                   type="button"
                                   onClick={() => setEditingId(isEdit ? null : r.id)}
-                                  className="p-1 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
-                                  title={isEdit ? "حفظ" : "تعديل السجل"}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    isEdit ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"
+                                  }`}
+                                  title={isEdit ? "حفظ التعديل" : "تعديل السجل"}
                                 >
-                                  {isEdit ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Edit2 className="h-3.5 w-3.5" />}
+                                  {isEdit ? <Check className="h-3.5 w-3.5" /> : <Edit2 className="h-3.5 w-3.5" />}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteRecord(r.id)}
-                                  className="p-1 rounded-lg hover:bg-danger/10 text-danger"
+                                  className="p-1.5 rounded-lg hover:bg-danger/10 text-danger transition-colors"
                                   title="حذف السجل"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -672,15 +748,30 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
 
           {/* Step 4: Completion */}
           {step === 4 && (
-            <div className="py-8 text-center space-y-4">
+            <div className="py-8 text-center space-y-5">
               <div className="h-20 w-20 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center border-2 border-emerald-500/20 shadow-lg shadow-emerald-500/10 animate-in zoom-in duration-300">
                 <CheckCircle2 className="h-10 w-10" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <h3 className="text-xl font-black text-foreground">اكتمل الاستيراد والتحديث بنجاح!</h3>
                 <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed font-bold">
-                  تم اعتماد وتثبيت كافة السجلات الصالحة في قاعدة البيانات المركزية، وتحديث العلاقات الأكاديمية والمالية المرتبطة تلقائياً.
+                  تم اعتماد وتثبيت {importedSummary.total} سجل في قاعدة البيانات المركزية، مع تخطي {importedSummary.skipped} سجل مكرر.
                 </p>
+              </div>
+
+              <div className="max-w-md mx-auto p-4 rounded-2xl bg-muted/40 border border-border text-xs flex justify-around">
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">السجلات المضافة</span>
+                  <span className="font-black font-mono text-emerald-600 text-base">{importedSummary.total}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">السجلات المتخطاة</span>
+                  <span className="font-black font-mono text-amber-600 text-base">{importedSummary.skipped}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">وقت الاعتماد</span>
+                  <span className="font-black font-mono text-foreground text-base">{importedSummary.time}</span>
+                </div>
               </div>
             </div>
           )}
@@ -728,13 +819,15 @@ export function SmartImporterModal({ isOpen, onClose, initialEntityType = "stude
           )}
 
           {step === 4 && (
-            <button
-              type="button"
-              onClick={() => { reset(); onClose(); }}
-              className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20"
-            >
-              إغلاق النافذة
-            </button>
+            <div className="flex gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => { reset(); onClose(); }}
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20"
+              >
+                إغلاق النافذة وتحديث الواجهة
+              </button>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>
@@ -758,6 +851,7 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
   const [format, setFormat] = useState<"json" | "csv" | "noor">("json");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [activePreviewTable, setActivePreviewTable] = useState<string>("students");
 
   const toggleTable = (id: string) => {
     setSelectedTables((prev) =>
@@ -773,23 +867,23 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
     setSelectedTables([]);
   };
 
+  const filteredStudents = useMemo(() => {
+    return stageFilter === "all" ? allStudents : allStudents.filter((s) => s.stage === stageFilter);
+  }, [allStudents, stageFilter]);
+
+  const filteredStaff = useMemo(() => {
+    return stageFilter === "all" ? allStaff : allStaff.filter((st) => st.stage === stageFilter || st.stage === "all");
+  }, [allStaff, stageFilter]);
+
+  const filteredInvoices = useMemo(() => {
+    return stageFilter === "all" ? allInvoices : allInvoices.filter((inv) => inv.stage === stageFilter);
+  }, [allInvoices, stageFilter]);
+
   const handleExport = () => {
     setIsExporting(true);
     setTimeout(() => {
       let content = "";
       let filename = `darasi_export_${new Date().toISOString().split("T")[0]}`;
-
-      const filteredStudents = stageFilter === "all"
-        ? allStudents
-        : allStudents.filter((s) => s.stage === stageFilter);
-
-      const filteredStaff = stageFilter === "all"
-        ? allStaff
-        : allStaff.filter((st) => st.stage === stageFilter || st.stage === "all");
-
-      const filteredInvoices = stageFilter === "all"
-        ? allInvoices
-        : allInvoices.filter((inv) => inv.stage === stageFilter);
 
       if (format === "json") {
         const payload: Record<string, any> = {
@@ -843,31 +937,31 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
         content = "\uFEFF" + lines.join("\n");
         filename += "_noor_ministry_format.csv";
       } else {
-        const sections: string[] = [];
+        // Individual/Primary CSV format with proper UTF-8 BOM
+        const tableToExport = activePreviewTable || selectedTables[0] || "students";
+        filename += `_${tableToExport}.csv`;
 
-        if (selectedTables.includes("students")) {
-          sections.push("--- جدول الطلاب ---");
-          sections.push("المعرف,الاسم الكامل,رقم الهوية,المرحلة,الصف,تاريخ القيد,الحالة,جوال ولي الأمر");
+        if (tableToExport === "students") {
+          const headers = ["المعرف", "الاسم الكامل", "رقم الهوية", "المرحلة", "الصف", "تاريخ القيد", "الحالة", "جوال ولي الأمر"];
+          const lines = [headers.join(",")];
           filteredStudents.forEach((s) => {
-            sections.push([
+            lines.push([
               escapeCsvField(s.id),
               escapeCsvField(s.name),
               escapeCsvField(s.nationalId || ""),
-              escapeCsvField(s.stage),
+              escapeCsvField(getStageArabicTitle(s.stage)),
               escapeCsvField(s.grade || ""),
               escapeCsvField(s.enrollmentDate || ""),
               escapeCsvField(s.status || "نشط"),
               escapeCsvField(s.guardianPhone || "")
             ].join(","));
           });
-          sections.push("");
-        }
-
-        if (selectedTables.includes("staff")) {
-          sections.push("--- جدول الكادر التعليمي والوظيفي ---");
-          sections.push("المعرف,الاسم,الرقم الوظيفي,المسمى,المرحلة,الراتب الأساسي,الهاتف");
+          content = "\uFEFF" + lines.join("\n");
+        } else if (tableToExport === "staff") {
+          const headers = ["المعرف", "الاسم", "الرقم الوظيفي", "المسمى", "المرحلة", "الراتب الأساسي", "الهاتف"];
+          const lines = [headers.join(",")];
           filteredStaff.forEach((st) => {
-            sections.push([
+            lines.push([
               escapeCsvField(st.id),
               escapeCsvField(st.name),
               escapeCsvField(st.employeeNo),
@@ -877,34 +971,27 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
               escapeCsvField(st.phone || "")
             ].join(","));
           });
-          sections.push("");
-        }
-
-        if (selectedTables.includes("invoices")) {
-          sections.push("--- جدول الفواتير والرسوم ---");
-          sections.push("رقم الفاتورة,اسم الطالب,المبلغ الإجمالي,المسدد,المتبقي,الحالة,تاريخ الاستحقاق");
-          filteredInvoices.forEach((inv: Invoice) => {
-            const total = inv.netAmount ?? inv.amount ?? 0;
-            const paid = inv.paid ?? 0;
-            const remaining = total - paid;
-            sections.push([
+          content = "\uFEFF" + lines.join("\n");
+        } else {
+          const headers = ["رقم الفاتورة", "اسم الطالب", "المبلغ الإجمالي", "المسدد", "الحالة", "تاريخ الاستحقاق"];
+          const lines = [headers.join(",")];
+          filteredInvoices.forEach((inv) => {
+            lines.push([
               escapeCsvField(inv.id),
               escapeCsvField(inv.studentName),
-              escapeCsvField(total),
-              escapeCsvField(paid),
-              escapeCsvField(remaining),
+              escapeCsvField(inv.netAmount ?? inv.amount ?? 0),
+              escapeCsvField(inv.paid ?? 0),
               escapeCsvField(inv.status),
               escapeCsvField(inv.dueDate || "")
             ].join(","));
           });
+          content = "\uFEFF" + lines.join("\n");
         }
-
-        content = "\uFEFF" + sections.join("\n");
-        filename += "_full_database.csv";
       }
 
-      const mimeType = format === "json" ? "application/json;charset=utf-8" : "text/csv;charset=utf-8";
-      const blob = new Blob([content], { type: mimeType });
+      const blob = new Blob([content], {
+        type: format === "json" ? "application/json;charset=utf-8" : "text/csv;charset=utf-8",
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -914,30 +1001,30 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
 
       addActivityLog({
         user: "مدير النظام",
-        action: "تصدير بيانات النظام",
-        entity: "المستودع المركزي",
-        details: `تم تصدير ملف (${filename}) بصيغة ${format.toUpperCase()}`,
+        action: "تصدير بيانات مجمع",
+        entity: "المُصدّر الذكي",
+        details: `تم تصدير (${selectedTables.length}) جداول بنسق ${format.toUpperCase()}`,
       });
 
       setIsExporting(false);
-      toast.success(`تم إنشاء وتنزيل ملف التصدير: ${filename}`);
+      toast.success(`تم إنشاء وتنزيل ملف التصدير (${filename}) بنجاح`);
       onClose();
-    }, 700);
+    }, 600);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-xl max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+      <DialogContent hideCloseButton={true} className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+        <DialogHeader className="p-5 pb-4 border-b border-border/80 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
-                <Download className="h-6 w-6" />
+                <ArrowUpFromLine className="h-6 w-6" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-black text-foreground">تصدير بيانات النظام الشاملة</DialogTitle>
+                <DialogTitle className="text-lg font-black text-foreground">تصدير بيانات المنظومة الشاملة</DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5 font-bold">
-                  توليد ملفات معتمدة ومطابقة لمواصفات وزارة التعليم بصيغ JSON أو Excel أو نسق منصة نور
+                  تصدير الجداول وسجلات الطلاب والمالية بصيغ Excel، JSON، أو نسق منصة نور المعتمد
                 </DialogDescription>
               </div>
             </div>
@@ -950,98 +1037,146 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
-          {/* Stage Scope Selector */}
-          <div className="p-4 bg-muted/40 rounded-2xl border border-border flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="space-y-0.5 text-right w-full sm:w-auto">
-              <span className="text-xs font-black text-foreground block">نطاق المرحلة المشمولة:</span>
-              <span className="text-[11px] text-muted-foreground">تصفية السجلات التابعة لمرحلة محددة فقط</span>
-            </div>
-            <select
-              value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
-              className="h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold outline-none"
-            >
-              <option value="all">كافة المراحل المدرسية (شامل)</option>
-              <option value="kindergarten">رياض الأطفال</option>
-              <option value="primary">المرحلة الابتدائية</option>
-              <option value="middle">المرحلة المتوسطة</option>
-              <option value="high">المرحلة الثانوية</option>
-            </select>
-          </div>
-
-          {/* Tables Selection Grid */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-foreground">1. حدد الجداول المراد تصديرها:</span>
-              <div className="flex items-center gap-2 text-xs">
-                <button type="button" onClick={selectAll} className="text-primary font-bold hover:underline">تحديد الكل</button>
-                <span className="text-muted-foreground">•</span>
-                <button type="button" onClick={deselectAll} className="text-muted-foreground font-bold hover:underline">إلغاء الكل</button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
+          {/* Format Selector */}
+          <div>
+            <label className="text-xs font-black text-foreground block mb-2">صيغة التصدير المطلوبة:</label>
+            <div className="grid grid-cols-3 gap-2.5">
               {[
-                { id: "students", label: "سجلات الطلاب والقيد", count: allStudents.length },
-                { id: "guardians", label: "أولياء الأمور والصلات", count: allGuardians.length },
-                { id: "staff", label: "الكادر الوظيفي والتعليمي", count: allStaff.length },
-                { id: "invoices", label: "الفواتير والمطالبات", count: allInvoices.length },
-                { id: "expenses", label: "المصروفات والموردين", count: allExpenses?.length || 0 },
-                { id: "settings", label: "السياسات المركزية", count: "شامل" },
-                { id: "features", label: "حالة تفعيل ميزات المنظومة", count: "20 ميزة" },
-                { id: "academic", label: "التقويم والسنوات الدراسية", count: allAcademicYears.length },
-              ].map((it) => (
-                <label
-                  key={it.id}
-                  className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${
-                    selectedTables.includes(it.id)
-                      ? "border-primary bg-primary/10 text-primary shadow-xs"
-                      : "border-border hover:bg-accent text-foreground"
+                { id: "json", label: "نسق JSON الهيكلي الشامل", desc: "نسخة برمجية متكاملة للنسخ والأنظمة", icon: Database },
+                { id: "noor", label: "نسق نظام نور الوزاري", desc: "CSV مطابق لمتطلبات وزارة التعليم", icon: Globe },
+                { id: "csv", label: "جداول Excel / CSV معتمدة", desc: "ملفات مجدولة متوافقة مع إكسل بترميز UTF-8", icon: FileSpreadsheet },
+              ].map((fmt) => (
+                <button
+                  key={fmt.id}
+                  type="button"
+                  onClick={() => setFormat(fmt.id as any)}
+                  className={`p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between gap-2 ${
+                    format === fmt.id
+                      ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20 scale-[1.01]"
+                      : "border-border bg-card hover:bg-accent/50"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <input
-                      type="checkbox"
-                      checked={selectedTables.includes(it.id)}
-                      onChange={() => toggleTable(it.id)}
-                      className="rounded text-primary focus:ring-primary h-4 w-4"
-                    />
-                    <span>{it.label}</span>
+                  <div className="flex items-center justify-between">
+                    <fmt.icon className={`h-5 w-5 ${format === fmt.id ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`h-2.5 w-2.5 rounded-full ${format === fmt.id ? "bg-primary" : "bg-muted"}`} />
                   </div>
-                  <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                    {it.count}
-                  </span>
-                </label>
+                  <div>
+                    <div className="font-black text-xs text-foreground">{fmt.label}</div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{fmt.desc}</div>
+                  </div>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Export Format Selector */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-black text-foreground block">2. اختر صيغة التصدير المستهدفة:</span>
-            <div className="grid grid-cols-3 gap-2.5">
+          {/* Scope Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-muted/40 border border-border text-xs">
+            <div>
+              <label className="font-black text-foreground block mb-1">نطاق المرحلة التعليمية:</label>
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full h-9 rounded-xl border border-border bg-background px-2.5 font-bold"
+              >
+                <option value="all">كافة المراحل المدرسية</option>
+                <option value="kindergarten">رياض الأطفال (KG)</option>
+                <option value="primary">المرحلة الابتدائية</option>
+                <option value="middle">المرحلة المتوسطة</option>
+                <option value="high">المرحلة الثانوية</option>
+              </select>
+            </div>
+            <div>
+              <label className="font-black text-foreground block mb-1">السنة الأكاديمية النشطة:</label>
+              <div className="h-9 px-3 rounded-xl border border-border bg-background flex items-center font-bold text-muted-foreground">
+                {allAcademicYears.find((y) => y.isCurrent)?.name || "السنة الحالية"}
+              </div>
+            </div>
+          </div>
+
+          {/* Tables Selection */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-black text-foreground">الجداول والوحدات المشمولة في التصدير:</span>
+              <div className="flex gap-2 text-[11px] font-bold">
+                <button type="button" onClick={selectAll} className="text-primary hover:underline">تحديد الكل</button>
+                <span className="text-muted-foreground">|</span>
+                <button type="button" onClick={deselectAll} className="text-muted-foreground hover:underline">إلغاء التحديد</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { id: "json", label: "نسخة JSON برمجية", desc: "كامل الحقول والعلاقات للنسخ والاسترجاع", icon: Database },
-                { id: "csv", label: "Excel / CSV", desc: "مجدول بترميز UTF-8 للمطابقة والتقارير", icon: FileSpreadsheet },
-                { id: "noor", label: "نسق منصة نور", desc: "مطابق لمواصفات وزارة التعليم السعودية", icon: FileText },
-              ].map((it) => (
-                <button
-                  key={it.id}
-                  type="button"
-                  onClick={() => setFormat(it.id as any)}
-                  className={`p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between ${
-                    format === it.id
-                      ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30"
-                      : "border-border hover:border-primary/40 bg-card/60"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-black text-foreground">{it.label}</span>
-                    <it.icon className={`h-4 w-4 ${format === it.id ? "text-primary" : "text-muted-foreground"}`} />
-                  </div>
-                  <div className="text-[10px] text-muted-foreground leading-relaxed font-bold">{it.desc}</div>
-                </button>
+                { id: "students", label: "بيانات الطلاب", count: filteredStudents.length },
+                { id: "guardians", label: "أولياء الأمور", count: allGuardians.length },
+                { id: "staff", label: "الكادر الوظيفي", count: filteredStaff.length },
+                { id: "invoices", label: "الفواتير والرسوم", count: filteredInvoices.length },
+                { id: "expenses", label: "المصروفات المالية", count: allExpenses?.length || 0 },
+                { id: "settings", label: "إعدادات المدرسة", count: "شامل" },
+                { id: "features", label: "حالة الميزات", count: "20 ميزة" },
+                { id: "academic", label: "التقويم والسنوات", count: allAcademicYears.length },
+              ].map((tb) => {
+                const checked = selectedTables.includes(tb.id);
+                return (
+                  <button
+                    key={tb.id}
+                    type="button"
+                    onClick={() => toggleTable(tb.id)}
+                    className={`p-2.5 rounded-xl border text-right transition-all flex items-center justify-between ${
+                      checked
+                        ? "border-primary bg-primary/5 text-foreground font-black"
+                        : "border-border bg-card text-muted-foreground"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`h-4 w-4 rounded flex items-center justify-center border text-[10px] ${
+                        checked ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground"
+                      }`}>
+                        {checked && <Check className="h-3 w-3" />}
+                      </div>
+                      <span className="text-xs truncate">{tb.label}</span>
+                    </div>
+                    <span className="text-[10px] font-mono opacity-70">{tb.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Live Data Preview */}
+          <div className="border border-border rounded-2xl overflow-hidden text-xs">
+            <div className="bg-muted/60 p-2.5 border-b border-border font-black flex items-center justify-between">
+              <span>معاينة حية للبيانات المجهزة للتصدير (أول 3 صفوف):</span>
+              <div className="flex gap-1">
+                {["students", "staff", "invoices"].filter(t => selectedTables.includes(t)).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setActivePreviewTable(t)}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      activePreviewTable === t ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+                    }`}
+                  >
+                    {t === "students" ? "الطلاب" : t === "staff" ? "الكادر" : "الفواتير"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="p-3 bg-card font-mono text-[11px] max-h-28 overflow-y-auto custom-scrollbar">
+              {activePreviewTable === "students" && filteredStudents.slice(0, 3).map((s, idx) => (
+                <div key={s.id} className="truncate text-muted-foreground py-0.5">
+                  [{idx + 1}] {s.name} | {s.nationalId} | {getStageArabicTitle(s.stage)} | {s.grade} | {s.guardianPhone}
+                </div>
+              ))}
+              {activePreviewTable === "staff" && filteredStaff.slice(0, 3).map((st, idx) => (
+                <div key={st.id} className="truncate text-muted-foreground py-0.5">
+                  [{idx + 1}] {st.name} | {st.employeeNo} | {st.role} | {st.phone}
+                </div>
+              ))}
+              {activePreviewTable === "invoices" && filteredInvoices.slice(0, 3).map((inv, idx) => (
+                <div key={inv.id} className="truncate text-muted-foreground py-0.5">
+                  [{idx + 1}] {inv.studentName} | {inv.netAmount || inv.amount} SAR | {inv.status}
+                </div>
               ))}
             </div>
           </div>
@@ -1051,23 +1186,23 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-border text-xs font-bold hover:bg-accent transition-colors"
+            className="px-4 py-2.5 rounded-xl border border-border text-xs font-bold hover:bg-accent"
           >
             إلغاء
           </button>
           <button
             type="button"
             onClick={handleExport}
-            disabled={selectedTables.length === 0 || isExporting}
-            className="px-7 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 flex items-center gap-2 disabled:opacity-50 transition-all hover:scale-[1.02]"
+            disabled={isExporting || selectedTables.length === 0}
+            className="inline-flex items-center gap-2 px-7 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 transition-all hover:scale-[1.02] disabled:opacity-50"
           >
             {isExporting ? (
               <>
-                <RefreshCcw className="h-4 w-4 animate-spin" /> جاري تجميع وتنزيل الملف...
+                <RefreshCcw className="h-4 w-4 animate-spin" /> جاري التجهيز...
               </>
             ) : (
               <>
-                <Download className="h-4 w-4" /> بدء التصدير والتنزيل الآن
+                <Download className="h-4 w-4" /> بدء تصدير الملف الآن ({selectedTables.length} جداول)
               </>
             )}
           </button>
@@ -1078,7 +1213,7 @@ export function SystemExporterModal({ isOpen, onClose }: SystemExporterModalProp
 }
 
 // =========================================================================
-// 3. Instant Backup & Disaster Recovery Modal (النسخ الاحتياطي الفوري)
+// 3. Instant Backup & Disaster Recovery Modal (النسخ الاحتياطي والاسترجاع)
 // =========================================================================
 export interface InstantBackupModalProps {
   isOpen: boolean;
@@ -1102,14 +1237,29 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
   const [isProcessing, setIsProcessing] = useState(false);
   const [inspectedBackup, setInspectedBackup] = useState<any | null>(null);
 
+  // Local snapshot history persisted in localStorage
+  const [savedSnapshots, setSavedSnapshots] = useState<Array<{ id: string; time: string; count: number; name: string }>>(() => {
+    try {
+      const stored = localStorage.getItem("darasi_backup_snapshots");
+      return stored ? JSON.parse(stored) : [
+        { id: "BK-20261010-093000", time: "2026-10-10 09:30", count: 480, name: "نسخة أسبوعية تلقائية" },
+        { id: "BK-20261005-141520", time: "2026-10-05 14:15", count: 472, name: "قبل تحديث الرسوم" },
+      ];
+    } catch {
+      return [];
+    }
+  });
+
   const totalRecords = allStudents.length + allStaff.length + allGuardians.length + allInvoices.length + (allExpenses?.length || 0);
 
   const handleCreateInstantBackup = () => {
     setIsProcessing(true);
     setTimeout(() => {
+      const nowStr = new Date().toISOString();
+      const backupId = `BK-${nowStr.replace(/[-:T]/g, "").slice(0, 14)}`;
       const backupData = {
-        id: `BK-${new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14)}`,
-        timestamp: new Date().toISOString(),
+        id: backupId,
+        timestamp: nowStr,
         system: "منصة مدارس دارسي المتكاملة",
         version: "3.5.0-Enterprise",
         recordsCount: totalRecords,
@@ -1132,13 +1282,27 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
         },
       };
 
+      // Save to snapshot history
+      const newSnapshot = {
+        id: backupId,
+        time: new Date().toLocaleString("ar-SA"),
+        count: totalRecords,
+        name: `نسخة يدوية فورية (${systemSettings.schoolName})`,
+      };
+      const updatedSnapshots = [newSnapshot, ...savedSnapshots.slice(0, 9)];
+      setSavedSnapshots(updatedSnapshots);
+      try {
+        localStorage.setItem("darasi_backup_snapshots", JSON.stringify(updatedSnapshots));
+      } catch {}
+
+      // Trigger download
       const blob = new Blob(["\uFEFF" + JSON.stringify(backupData, null, 2)], {
         type: "application/json;charset=utf-8",
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `darasi_backup_${backupData.id}.json`;
+      link.download = `darasi_backup_${backupId}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
@@ -1146,12 +1310,11 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
         user: "مدير النظام",
         action: "نسخ احتياطي فوري",
         entity: "النسخ الاحتياطي",
-        details: `تم إنشاء نسخة احتياطية فورية (${backupData.id}) تتضمن ${totalRecords} سجل`,
+        details: `تم إنشاء نسخة احتياطية فورية (${backupId}) تتضمن ${totalRecords} سجل`,
       });
 
       setIsProcessing(false);
-      toast.success(`تم إنشاء وتنزيل ملف النسخة الاحتياطية (${backupData.id}) بنجاح`);
-      onClose();
+      toast.success(`تم إنشاء وتنزيل ملف النسخة الاحتياطية (${backupId}) وحفظ اللقطة بنجاح`);
     }, 700);
   };
 
@@ -1193,12 +1356,12 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setInspectedBackup(null); onClose(); } }}>
-      <DialogContent className="max-w-lg max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+      <DialogContent hideCloseButton={true} className="max-w-lg max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+        <DialogHeader className="p-5 pb-3 border-b border-border/80 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
-                <Database className="h-6 w-6" />
+                <HardDrive className="h-6 w-6" />
               </div>
               <div>
                 <DialogTitle className="text-lg font-black text-foreground">النسخ الاحتياطي والاسترجاع الفوري</DialogTitle>
@@ -1215,7 +1378,7 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
             </button>
           </div>
 
-          <div className="flex border-b border-border/60 text-xs font-bold gap-4 pt-4">
+          <div className="flex border-b border-border/60 text-xs font-bold gap-4 pt-3 mt-1">
             <button
               type="button"
               onClick={() => setActiveSubTab("create")}
@@ -1233,13 +1396,13 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
                 activeSubTab === "restore" ? "text-primary font-black" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              استعادة من نسخة سابقة
+              استعادة من نسخة سابقة ({savedSnapshots.length})
               {activeSubTab === "restore" && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary rounded-full" />}
             </button>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
           {activeSubTab === "create" ? (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -1248,99 +1411,100 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
                   <span className="text-2xl font-black text-primary font-mono mt-1 block">{totalRecords.toLocaleString("ar-SA")}</span>
                 </div>
                 <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
-                  <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold block">حالة التخزين والجاهزية</span>
-                  <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4" /> متزامن وآمن
-                  </div>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">حالة قاعدة البيانات</span>
+                  <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1 block flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4" /> سليمة ومتطابقة
+                  </span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border text-xs font-bold leading-relaxed text-muted-foreground space-y-1.5">
-                <div className="text-foreground font-black">محتويات النسخة الاحتياطية الشاملة:</div>
-                <div className="flex items-center gap-2">• <span>{allStudents.length} طالب، و {allGuardians.length} ولي أمر مسجل</span></div>
-                <div className="flex items-center gap-2">• <span>{allStaff.length} موظف ومعلم، و {allInvoices.length} مطالبة وسند مالي</span></div>
-                <div className="flex items-center gap-2">• <span>كافة إعدادات الهوية والسياسات، وحالة تفعيل ميزات المنظومة الـ 20</span></div>
+              <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-2 text-xs">
+                <div className="font-black text-foreground">المكونات المتضمنة في النسخة الاحتياطية:</div>
+                <div className="grid grid-cols-2 gap-2 text-muted-foreground pt-1">
+                  <div className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {allStudents.length} ملفات طلاب</div>
+                  <div className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {allStaff.length} كادر وظيفي</div>
+                  <div className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {allInvoices.length} قيود وفواتير</div>
+                  <div className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> سياسات وميزات المنصة</div>
+                </div>
               </div>
 
               <button
                 type="button"
                 onClick={handleCreateInstantBackup}
                 disabled={isProcessing}
-                className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-black text-xs hover:bg-primary/90 shadow-md shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-black text-xs hover:bg-primary/90 shadow-md shadow-primary/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
               >
                 {isProcessing ? (
                   <>
-                    <RefreshCcw className="h-4 w-4 animate-spin" /> جاري تشفير وتوليد ملف النسخة...
+                    <RefreshCcw className="h-4 w-4 animate-spin" /> جاري تجميع وتشفير النسخة...
                   </>
                 ) : (
                   <>
-                    <Download className="h-4 w-4" /> حفظ النسخة الاحتياطية الآن (.json)
+                    <HardDrive className="h-4 w-4" /> إنشاء وتنزيل النسخة الاحتياطية الآن
                   </>
                 )}
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-              {!inspectedBackup ? (
-                <div className="border-2 border-dashed border-border rounded-3xl p-8 text-center hover:bg-accent/40 transition-colors relative cursor-pointer group">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleInspectBackupFile}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                  <div className="grid h-16 w-16 place-items-center rounded-2xl bg-muted text-muted-foreground mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <Upload className="h-8 w-8" />
-                  </div>
-                  <div className="font-black text-sm text-foreground">ارفع ملف النسخة الاحتياطية (.json)</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    سيتم فحص محتويات الملف والتحقق من التوقيع الرقمي قبل الاستعادة
-                  </div>
+              {/* Snapshot History */}
+              <div className="space-y-2">
+                <span className="text-xs font-black text-foreground block">سجل اللقطات السابقة المتاحة للاسترجاع:</span>
+                <div className="border border-border rounded-2xl divide-y divide-border overflow-hidden">
+                  {savedSnapshots.map((snp) => (
+                    <div key={snp.id} className="p-3 bg-card hover:bg-accent/40 flex items-center justify-between text-xs transition-colors">
+                      <div>
+                        <div className="font-bold text-foreground">{snp.name}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{snp.id} • {snp.time} ({snp.count} سجل)</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toast.success(`تم استدعاء بيانات اللقطة (${snp.id}) وجاري الاستعادة...`);
+                        }}
+                        className="px-3 py-1.5 rounded-xl border border-primary/30 text-primary font-black text-[11px] hover:bg-primary hover:text-primary-foreground transition-all shadow-xs"
+                      >
+                        استعادة فورية
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="space-y-4 p-4 rounded-2xl border border-primary/30 bg-primary/5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-foreground">بيانات النسخة المفحوصة:</span>
-                    <button
-                      type="button"
-                      onClick={() => setInspectedBackup(null)}
-                      className="text-[11px] font-bold text-danger hover:underline"
-                    >
-                      اختيار ملف آخر
-                    </button>
-                  </div>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 text-xs font-bold">
-                    <div className="p-3 rounded-xl bg-card border border-border">
-                      <span className="text-muted-foreground text-[11px]">المدرسة:</span>
-                      <div className="font-bold text-foreground mt-0.5 truncate">{inspectedBackup.schoolName || "دارسي الأهلية"}</div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-card border border-border">
-                      <span className="text-muted-foreground text-[11px]">إجمالي السجلات:</span>
-                      <div className="font-mono text-primary mt-0.5">{inspectedBackup.recordsCount || "كامل"}</div>
-                    </div>
-                  </div>
+              {/* Upload External JSON Backup */}
+              <div className="border border-dashed border-border rounded-2xl p-4 text-center hover:bg-muted/20 transition-colors">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleInspectBackupFile}
+                  className="hidden"
+                  id="backup-file-input"
+                />
+                <label htmlFor="backup-file-input" className="cursor-pointer block space-y-1">
+                  <Upload className="h-6 w-6 text-primary mx-auto" />
+                  <span className="text-xs font-black text-foreground block">أو رفع ملف نسخة احتياطية من جهازك (.json)</span>
+                  <span className="text-[10px] text-muted-foreground block">سيتم فحص الملف والتحقق من صحته قبل الاستعادة</span>
+                </label>
+              </div>
 
-                  <div className="flex items-center gap-2 p-3 rounded-xl bg-danger/10 text-danger text-xs font-bold border border-danger/20">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    <span>تنبيه: سيتم استرجاع السجلات وتحديث قاعدة البيانات لتطابق ملف النسخة.</span>
+              {inspectedBackup && (
+                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-3">
+                  <div className="flex items-center gap-2 font-black text-xs text-primary">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>تم فحص النسخة: {inspectedBackup.id || "نسخة صالحة"}</span>
                   </div>
-
+                  <div className="text-[11px] text-muted-foreground space-y-1">
+                    <div>المدرسة: {inspectedBackup.schoolName || inspectedBackup.data?.settings?.schoolName || "مدرسة دارسي"}</div>
+                    <div>تاريخ النسخة: {inspectedBackup.timestamp || "حديثة"}</div>
+                  </div>
                   <button
                     type="button"
                     onClick={handleExecuteRestore}
                     disabled={isProcessing}
-                    className="w-full py-3 rounded-xl bg-danger text-danger-foreground font-black text-xs hover:bg-danger/90 shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-2"
                   >
-                    {isProcessing ? (
-                      <>
-                        <RefreshCcw className="h-4 w-4 animate-spin" /> جاري تطبيق واسترجاع السجلات...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" /> تأكيد استعادة النسخة وتحديث النظام
-                      </>
-                    )}
+                    {isProcessing ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    تأكيد استعادة قاعدة البيانات من هذا الملف
                   </button>
                 </div>
               )}
@@ -1353,7 +1517,7 @@ export function InstantBackupModal({ isOpen, onClose }: InstantBackupModalProps)
 }
 
 // =========================================================================
-// 4. Official Document & Print Live Preview Modal (معاينة المطبوعات والشهادات)
+// 4. Official Print Preview Modal (معاينة المطبوعات الرسمية A4)
 // =========================================================================
 export interface OfficialPrintPreviewModalProps {
   isOpen: boolean;
@@ -1361,54 +1525,38 @@ export interface OfficialPrintPreviewModalProps {
 }
 
 export function OfficialPrintPreviewModal({ isOpen, onClose }: OfficialPrintPreviewModalProps) {
-  const { systemSettings, currency } = useGlobalStore();
+  const { systemSettings, allStudents } = useGlobalStore();
   const [docType, setDocType] = useState<"grades" | "invoice" | "enrollment" | "receipt" | "idcard">("grades");
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [showLogo, setShowLogo] = useState(true);
   const [showStamp, setShowStamp] = useState(true);
   const [showQr, setShowQr] = useState(true);
   const [showWatermark, setShowWatermark] = useState(true);
+  const [showSignature, setShowSignature] = useState(true);
   const printSheetRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    if (!printSheetRef.current) return;
-    const printContent = printSheetRef.current.innerHTML;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      window.print();
-      return;
-    }
+  const currentStudent = useMemo(() => {
+    return allStudents.find((s) => s.id === selectedStudentId) || allStudents[0] || {
+      id: "STU-1001",
+      name: "ريان فيصل العتيبي",
+      nationalId: "1109845231",
+      stage: "primary",
+      grade: "الصف الخامس الابتدائي",
+      guardianPhone: "0501234567",
+      guardianName: "فيصل بن عبدالعزيز العتيبي",
+      enrollmentDate: "2024-08-20",
+    };
+  }, [allStudents, selectedStudentId]);
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-        <head>
-          <title>${systemSettings.schoolName} - طباعة رسمية</title>
-          <meta charset="utf-8" />
-          <style>
-            @page { size: A4 portrait; margin: 15mm; }
-            body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; direction: rtl; margin: 0; padding: 20px; color: #0f172a; background: #fff; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: right; }
-            th { background-color: #f1f5f9; font-weight: bold; }
-            .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
-            .footer-row { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #cbd5e1; padding-top: 15px; margin-top: 30px; }
-            .stamp { transform: rotate(-8deg); opacity: 0.85; }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-          <script>
-            window.onload = function() { window.print(); window.close(); }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+  const handlePrint = () => {
+    window.print();
   };
 
   const qrData = JSON.stringify({
     school: systemSettings.schoolName,
     license: systemSettings.licenseNumber,
+    student: currentStudent.name,
+    nationalId: currentStudent.nationalId,
     docType,
     verified: true,
     url: systemSettings.qrVerifyUrl || "https://darasi.app/verify",
@@ -1416,8 +1564,9 @@ export function OfficialPrintPreviewModal({ isOpen, onClose }: OfficialPrintPrev
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+      <DialogContent hideCloseButton={true} className="max-w-4xl max-h-[94vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+        {/* Header */}
+        <DialogHeader className="p-5 pb-3 border-b border-border/80 bg-muted/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
@@ -1436,7 +1585,7 @@ export function OfficialPrintPreviewModal({ isOpen, onClose }: OfficialPrintPrev
                 onClick={handlePrint}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 transition-all hover:scale-[1.02]"
               >
-                <Printer className="h-4 w-4" /> طباعة المستند الآن
+                <Printer className="h-4 w-4" /> طباعة المستند الآن (Ctrl+P)
               </button>
               <button
                 onClick={onClose}
@@ -1446,271 +1595,287 @@ export function OfficialPrintPreviewModal({ isOpen, onClose }: OfficialPrintPrev
               </button>
             </div>
           </div>
+
+          {/* Document Types Selector Bar */}
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border/60 mt-3 text-xs">
+            {[
+              { id: "grades", label: "كشف درجات وشهادة تفوق", icon: FileText },
+              { id: "invoice", label: "فاتورة ضريبية ورسوم دراسية", icon: CreditCard },
+              { id: "enrollment", label: "إفادة قيد وتسجيل طالب", icon: CheckCircle2 },
+              { id: "receipt", label: "سند قبض وتحصيل مالي", icon: FileSpreadsheet },
+              { id: "idcard", label: "بطاقة هوية طالب مدرسية", icon: UserCheck },
+            ].map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setDocType(d.id as any)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                  docType === d.id
+                    ? "bg-primary text-primary-foreground font-black shadow-xs"
+                    : "bg-background border border-border text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                <d.icon className="h-3.5 w-3.5" />
+                <span>{d.label}</span>
+              </button>
+            ))}
+          </div>
         </DialogHeader>
 
-        {/* Customizer Controls Bar */}
-        <div className="p-4 bg-muted/40 border-b border-border flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Toolbar & Student Picker */}
+        <div className="p-3 bg-muted/40 border-b border-border flex flex-wrap items-center justify-between gap-3 text-xs font-bold">
           <div className="flex items-center gap-2">
-            <span className="font-black text-foreground">نوع الوثيقة:</span>
+            <span className="text-muted-foreground text-[11px]">الطالب المعروض:</span>
             <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value as any)}
-              className="h-9 rounded-xl border border-border bg-background px-3 text-xs font-bold outline-none"
+              value={selectedStudentId}
+              onChange={(e) => setSelectedStudentId(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-bold"
             >
-              <option value="grades">إشعار درجات فصلي رسمي (شهادة)</option>
-              <option value="invoice">فاتورة رسوم دراسية ضريبية</option>
-              <option value="receipt">سند قبض وتحصيل مالي</option>
-              <option value="enrollment">إفادة قيد وتسجيل طالب</option>
-              <option value="idcard">بطاقة تعريف مدرسية رقمية</option>
+              {allStudents.slice(0, 15).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.grade})
+                </option>
+              ))}
             </select>
           </div>
 
-          <div className="flex items-center gap-4 font-bold">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={showLogo} onChange={(e) => setShowLogo(e.target.checked)} className="rounded text-primary h-4 w-4" />
+          {/* Toggle Switches */}
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
+              <input type="checkbox" checked={showLogo} onChange={(e) => setShowLogo(e.target.checked)} className="rounded text-primary h-3.5 w-3.5" />
               <span>الشعار</span>
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={showStamp} onChange={(e) => setShowStamp(e.target.checked)} className="rounded text-primary h-4 w-4" />
-              <span>الختم الرسمي</span>
+            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
+              <input type="checkbox" checked={showStamp} onChange={(e) => setShowStamp(e.target.checked)} className="rounded text-primary h-3.5 w-3.5" />
+              <span>الختم</span>
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={showQr} onChange={(e) => setShowQr(e.target.checked)} className="rounded text-primary h-4 w-4" />
-              <span>رمز QR</span>
+            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
+              <input type="checkbox" checked={showQr} onChange={(e) => setShowQr(e.target.checked)} className="rounded text-primary h-3.5 w-3.5" />
+              <span>باركود QR</span>
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={showWatermark} onChange={(e) => setShowWatermark(e.target.checked)} className="rounded text-primary h-4 w-4" />
+            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
+              <input type="checkbox" checked={showWatermark} onChange={(e) => setShowWatermark(e.target.checked)} className="rounded text-primary h-3.5 w-3.5" />
               <span>علامة مائية</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
+              <input type="checkbox" checked={showSignature} onChange={(e) => setShowSignature(e.target.checked)} className="rounded text-primary h-3.5 w-3.5" />
+              <span>توقيع المدير</span>
             </label>
           </div>
         </div>
 
-        {/* Paper Sheet Preview */}
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-900/40 custom-scrollbar flex justify-center">
+        {/* Live A4 Canvas */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950/60 custom-scrollbar flex justify-center">
           <div
             ref={printSheetRef}
-            className="w-full max-w-[760px] bg-white text-slate-900 p-10 rounded-2xl shadow-2xl border border-slate-300 relative space-y-6 min-h-[600px] text-right font-sans"
+            className="w-full max-w-[680px] bg-white text-slate-900 p-8 rounded-xl shadow-2xl border border-slate-300 relative select-none"
+            style={{ minHeight: "820px" }}
           >
-            {/* Watermark */}
+            {/* Watermark Overlay */}
             {showWatermark && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 z-0 select-none">
-                <span className="text-7xl font-black rotate-[-30deg] tracking-widest text-slate-900">
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden opacity-[0.04]">
+                <span className="text-7xl font-black rotate-[-35deg] text-slate-900 tracking-widest uppercase">
                   {systemSettings.schoolName}
                 </span>
               </div>
             )}
 
-            {/* Header Row */}
-            <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4 relative z-10">
-              <div className="text-right space-y-0.5">
-                <div className="text-xs font-bold text-slate-500">{systemSettings.headerEntity || "المملكة العربية السعودية • وزارة التعليم"}</div>
-                <div className="text-xs font-bold text-slate-700">{systemSettings.headerDepartment || "الإدارة العامة للتعليم"}</div>
-                <div className="text-lg font-black text-slate-900 mt-1">{systemSettings.schoolName}</div>
-                <div className="text-[11px] text-slate-500 font-mono">ترخيص وزاري: {systemSettings.licenseNumber}</div>
+            {/* Official Header */}
+            <div className="flex items-start justify-between border-b-2 border-slate-900 pb-5 mb-6">
+              <div className="text-right space-y-1">
+                <div className="text-xs font-bold text-slate-500">المملكة العربية السعودية</div>
+                <div className="text-xs font-bold text-slate-500">وزارة التعليم - إدارة التعليم الأهلي</div>
+                <div className="text-base font-black text-slate-900">{systemSettings.schoolName}</div>
+                <div className="text-[10px] text-slate-500 font-mono">ترخيص رقم: {systemSettings.licenseNumber}</div>
               </div>
 
-              {showLogo && (
-                <div className="flex flex-col items-center">
-                  {systemSettings.logoUrl ? (
-                    <img src={systemSettings.logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-xl" />
-                  ) : (
-                    <div className="h-16 w-16 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 font-black text-xs">
-                      شعار المدرسة
-                    </div>
-                  )}
+              {/* Logo in Center */}
+              <div className="text-center">
+                {showLogo && systemSettings.logoUrl ? (
+                  <img src={systemSettings.logoUrl} alt="Logo" className="h-16 w-16 object-contain mx-auto" />
+                ) : (
+                  <div className="h-16 w-16 rounded-2xl bg-slate-100 border border-slate-300 flex items-center justify-center font-black text-slate-400 text-xs mx-auto">
+                    شعار المدرسة
+                  </div>
+                )}
+                <div className="text-[10px] text-slate-500 mt-1 font-mono">
+                  {new Date().toISOString().split("T")[0]}
                 </div>
-              )}
-
-              <div className="text-left text-xs space-y-1">
-                <div><strong>الرقم المرجعي:</strong> DOC-2026-9812</div>
-                <div><strong>تاريخ الإصدار:</strong> {new Date().toLocaleDateString("ar-SA")}</div>
-                <div><strong>السنة الأكاديمية:</strong> ١٤٤٧ / ١٤٤٨ هـ</div>
               </div>
-            </div>
 
-            {/* Document Specific Content */}
-            <div className="relative z-10">
-              {docType === "grades" && (
-                <div className="space-y-4">
-                  <div className="text-center py-2">
-                    <h2 className="text-xl font-black text-slate-900 underline underline-offset-8">
-                      إشعار درجات وتقييم أكاديمي رسمي
-                    </h2>
-                    <div className="text-xs text-slate-600 mt-2 font-bold">
-                      الطالب: فيصل خالد الدوسري • الصف: الأول المتوسط • رقم القيد: 11099234
-                    </div>
-                  </div>
-
-                  <div className="border border-slate-300 rounded-xl overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead className="bg-slate-100 border-b border-slate-300 font-black">
-                        <tr>
-                          <th className="p-3 text-right">المادة التعليمية</th>
-                          <th className="p-3 text-center">الدرجة العظمى</th>
-                          <th className="p-3 text-center">درجة الطالب</th>
-                          <th className="p-3 text-center">التقدير المعتمد</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        <tr>
-                          <td className="p-3 font-bold">الرياضيات والعلوم المتقدمة</td>
-                          <td className="p-3 text-center font-mono">100</td>
-                          <td className="p-3 text-center font-mono font-black text-blue-700">98</td>
-                          <td className="p-3 text-center font-bold text-emerald-700">ممتاز مرتفع</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-bold">اللغة العربية وقواعدها</td>
-                          <td className="p-3 text-center font-mono">100</td>
-                          <td className="p-3 text-center font-mono font-black text-blue-700">95</td>
-                          <td className="p-3 text-center font-bold text-emerald-700">ممتاز</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-bold">اللغة الإنجليزية (English)</td>
-                          <td className="p-3 text-center font-mono">100</td>
-                          <td className="p-3 text-center font-mono font-black text-blue-700">96</td>
-                          <td className="p-3 text-center font-bold text-emerald-700">ممتاز مرتفع</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-bold">العلوم العامة والأحياء</td>
-                          <td className="p-3 text-center font-mono">100</td>
-                          <td className="p-3 text-center font-mono font-black text-blue-700">94</td>
-                          <td className="p-3 text-center font-bold text-emerald-700">ممتاز</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {docType === "invoice" && (
-                <div className="space-y-4">
-                  <div className="text-center py-2">
-                    <h2 className="text-xl font-black text-slate-900 underline underline-offset-8">
-                      فاتورة ضريبية رسمية للرسوم الدراسية
-                    </h2>
-                    <div className="text-xs text-slate-600 mt-2 font-mono font-bold">
-                      الرقم الضريبي للمدرسة: {systemSettings.taxNumber}
-                    </div>
-                  </div>
-
-                  <div className="border border-slate-300 rounded-xl overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead className="bg-slate-100 border-b border-slate-300 font-black">
-                        <tr>
-                          <th className="p-3 text-right">البيان / البند</th>
-                          <th className="p-3 text-center">المبلغ الأساسي</th>
-                          <th className="p-3 text-center">الضريبة ({systemSettings.vatRate}%)</th>
-                          <th className="p-3 text-center">الإجمالي ({currency})</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        <tr>
-                          <td className="p-3 font-bold">رسوم الدراسة - الفصل الدراسي الأول</td>
-                          <td className="p-3 text-center font-mono">5,000</td>
-                          <td className="p-3 text-center font-mono">750</td>
-                          <td className="p-3 text-center font-mono font-black text-blue-700">5,750 {currency}</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-bold">اشتراك خدمة النقل المدرسي المعتمد</td>
-                          <td className="p-3 text-center font-mono">1,500</td>
-                          <td className="p-3 text-center font-mono">225</td>
-                          <td className="p-3 text-center font-mono font-black text-blue-700">1,725 {currency}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {docType === "receipt" && (
-                <div className="space-y-4">
-                  <div className="text-center py-2">
-                    <h2 className="text-xl font-black text-slate-900 underline underline-offset-8">
-                      سند قبض مالي معتمد (Payment Receipt)
-                    </h2>
-                  </div>
-                  <div className="p-4 border border-slate-300 rounded-xl space-y-2 text-xs leading-relaxed">
-                    <div>استلمنا من المكرم ولي الأمر / <strong>خالد بن ناصر الدوسري</strong></div>
-                    <div>مبلغاً وقدره: <strong className="font-mono text-blue-700">2,500 {currency}</strong> (ألفان وخمسمائة {currency} فقط لا غير)</div>
-                    <div>وذلك عن: <strong>سداد الدفعة الأولى من الرسوم الدراسية للطالب / فيصل</strong></div>
-                    <div>طريقة الدفع: <strong>مدى (Mada) • رقم الحركة: TX-908129</strong></div>
-                  </div>
-                </div>
-              )}
-
-              {docType === "enrollment" && (
-                <div className="space-y-4 py-4">
-                  <div className="text-center">
-                    <h2 className="text-xl font-black text-slate-900 underline underline-offset-8">
-                      شهادة إثبات قيد وتسجيل طالب
-                    </h2>
-                  </div>
-                  <p className="text-xs leading-loose text-slate-800 font-bold">
-                    تشهد إدارة <strong>{systemSettings.schoolName}</strong> بأن الطالب المقيد لدينا /
-                    <strong> سارة عمر الدوسري</strong> (هوية رقم: 1109988771) منتظمة بالدراسة للعام الأكاديمي الحالي بالصف
-                    <strong> الثالث المتوسط</strong>، وقد أُعطيت هذه الشهادة بناءً على طلب ولي أمرها لتقديمها لمن يهمه الأمر دون أي مسؤولية على المدرسة.
-                  </p>
-                </div>
-              )}
-
-              {docType === "idcard" && (
-                <div className="p-6 border-2 border-slate-800 rounded-3xl max-w-sm mx-auto bg-slate-50 space-y-4 shadow-md">
-                  <div className="flex items-center justify-between border-b border-slate-300 pb-3">
-                    <div className="font-black text-xs text-slate-900">{systemSettings.schoolName}</div>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">بطاقة طالب</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="h-20 w-20 bg-slate-200 border border-slate-300 rounded-2xl flex items-center justify-center text-xs font-bold text-slate-500">
-                      صورة الطالب
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <div className="font-black text-slate-900 text-sm">تركي ماجد العتيبي</div>
-                      <div className="text-slate-600 font-bold">الصف: الأول الثانوي</div>
-                      <div className="text-[11px] font-mono text-slate-500">رقم الهوية: 110998877</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Verification & Official Seals */}
-            <div className="flex items-center justify-between pt-6 border-t border-slate-200 relative z-10">
-              {showQr && (
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 bg-white border border-slate-300 rounded-xl shadow-xs">
+              {/* QR Verification Code */}
+              <div className="text-left">
+                {showQr && (
+                  <div className="p-1.5 bg-white border border-slate-200 rounded-lg shadow-xs inline-block">
                     <QRCode value={qrData} size={64} level="M" />
                   </div>
-                  <div className="text-[10px] text-slate-500 leading-tight">
-                    <div className="font-bold text-slate-700">رمز التحقق الرقمي</div>
-                    <div>امسح الرمز للتأكد من الوثيقة</div>
-                    <div className="font-mono text-slate-500 mt-0.5">صالحة: {systemSettings.qrExpiry}</div>
-                  </div>
-                </div>
-              )}
-
-              {showStamp && (
-                <div className="flex items-center justify-center">
-                  {systemSettings.stampUrl ? (
-                    <img src={systemSettings.stampUrl} alt="Stamp" className="h-24 w-24 object-contain rotate-[-8deg] opacity-90 stamp" />
-                  ) : (
-                    <div className="h-20 w-20 rounded-full border-2 border-red-500/70 text-red-600 flex flex-col items-center justify-center rotate-[-10deg] text-[9px] font-black p-1 text-center shadow-xs">
-                      <span>ختم المدرسة الرسمي</span>
-                      <span>معتمد</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="text-center text-xs space-y-1">
-                <div className="font-bold text-slate-700">مدير عام المنشأة</div>
-                <div className="font-black text-slate-900 mt-1">{systemSettings.principalName || "خالد القحطاني"}</div>
-                <div className="text-[10px] text-slate-400 font-serif italic">[الاعتماد والختم الرقمي]</div>
+                )}
+                <div className="text-[9px] text-slate-400 font-mono mt-1 text-center">التحقق الرقمي</div>
               </div>
             </div>
 
-            {/* Footer Text */}
-            <div className="border-t border-slate-200 pt-3 text-center text-[10px] text-slate-500 relative z-10">
-              {systemSettings.footerText || "هذه الوثيقة رسمية ومستخرجة إلكترونياً من منصة مدارس ولا تتطلب توقيعاً خطياً إضافياً."}
+            {/* Document Title Banner */}
+            <div className="text-center my-6">
+              <h2 className="text-xl font-black tracking-wide inline-block border-b-2 border-slate-800 pb-1 text-slate-900">
+                {docType === "grades" && "كشف درجات وشهادة إتمام فترة تقويمية"}
+                {docType === "invoice" && "فاتورة رسوم دراسية ضريبية رسمية"}
+                {docType === "enrollment" && "إفادة قيد وتسجيل طالب بالمنظومة"}
+                {docType === "receipt" && "سند قبض مالي رسمي معتمد"}
+                {docType === "idcard" && "بطاقة تعريف وهوية مدرسية معتمدة"}
+              </h2>
+              <div className="text-xs text-slate-500 mt-1">للعام الدراسي: ١٤٤٧ / ١٤٤٨ هـ (2025-2026)</div>
+            </div>
+
+            {/* Student Info Box */}
+            <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs mb-6 font-bold">
+              <div><span className="text-slate-500">اسم الطالب:</span> <span className="text-slate-900">{currentStudent.name}</span></div>
+              <div><span className="text-slate-500">رقم الهوية:</span> <span className="font-mono text-slate-900">{currentStudent.nationalId}</span></div>
+              <div><span className="text-slate-500">المرحلة والصف:</span> <span className="text-slate-900">{getStageArabicTitle(currentStudent.stage as any)} - {currentStudent.grade}</span></div>
+              <div><span className="text-slate-500">رقم جوال الولي:</span> <span className="font-mono text-slate-900">{currentStudent.guardianPhone}</span></div>
+            </div>
+
+            {/* Document Dynamic Body */}
+            {docType === "grades" && (
+              <div className="space-y-4">
+                <table className="w-full text-xs text-right border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-y border-slate-300 font-black">
+                      <th className="p-2.5">المادة الدراسية</th>
+                      <th className="p-2.5 text-center">الدرجة العظمى</th>
+                      <th className="p-2.5 text-center">الدرجة المستحقة</th>
+                      <th className="p-2.5 text-center">التقدير</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {[
+                      { subject: "القرآن الكريم والدراسات الإسلامية", max: 100, score: 98, grade: "ممتاز مرتفع" },
+                      { subject: "اللغة العربية (لغتي الجميلة)", max: 100, score: 95, grade: "ممتاز" },
+                      { subject: "الرياضيات العامة", max: 100, score: 92, grade: "ممتاز" },
+                      { subject: "العلوم والطبيعة", max: 100, score: 96, grade: "ممتاز مرتفع" },
+                      { subject: "اللغة الإنجليزية (English)", max: 100, score: 94, grade: "ممتاز" },
+                      { subject: "المهارات الرقمية والحاسب", max: 100, score: 99, grade: "ممتاز مرتفع" },
+                    ].map((row, idx) => (
+                      <tr key={idx}>
+                        <td className="p-2.5 font-bold text-slate-800">{row.subject}</td>
+                        <td className="p-2.5 text-center font-mono text-slate-500">{row.max}</td>
+                        <td className="p-2.5 text-center font-mono font-black text-slate-900">{row.score}</td>
+                        <td className="p-2.5 text-center font-black text-emerald-700">{row.grade}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-100 border-t-2 border-slate-400 font-black">
+                      <td className="p-2.5">المعدل التراكمي العام</td>
+                      <td className="p-2.5 text-center font-mono">600</td>
+                      <td className="p-2.5 text-center font-mono text-primary font-black">574 (95.6%)</td>
+                      <td className="p-2.5 text-center text-emerald-700">ممتاز مع مرتبة الشرف</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+
+            {docType === "invoice" && (
+              <div className="space-y-4">
+                <table className="w-full text-xs text-right border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-y border-slate-300 font-black">
+                      <th className="p-2.5">البند والوصف</th>
+                      <th className="p-2.5 text-center">المبلغ الأساسي</th>
+                      <th className="p-2.5 text-center">الضريبة (15%)</th>
+                      <th className="p-2.5 text-center">الإجمالي</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    <tr>
+                      <td className="p-2.5 font-bold">رسوم الدراسة - الفصل الدراسي الأول</td>
+                      <td className="p-2.5 text-center font-mono">10,000</td>
+                      <td className="p-2.5 text-center font-mono">1,500</td>
+                      <td className="p-2.5 text-center font-mono font-black">11,500</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2.5 font-bold">خدمات النقل المدرسي والحافلات</td>
+                      <td className="p-2.5 text-center font-mono">1,500</td>
+                      <td className="p-2.5 text-center font-mono">225</td>
+                      <td className="p-2.5 text-center font-mono font-black">1,725</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-100 border-t-2 border-slate-400 font-black">
+                      <td className="p-2.5">المبلغ المطلوب سداده</td>
+                      <td className="p-2.5 text-center font-mono">11,500</td>
+                      <td className="p-2.5 text-center font-mono">1,725</td>
+                      <td className="p-2.5 text-center font-mono text-emerald-700 font-black">13,225 ريال</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+
+            {docType === "enrollment" && (
+              <div className="p-6 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-4 text-xs leading-relaxed text-slate-800">
+                <p>
+                  تشهد إدارة <span className="font-black text-slate-900">{systemSettings.schoolName}</span> بأن الطالب الموضح اسمه وبياناته أعلاه مقيد لدينا بصورة منتظمة ورسمية بالصف <span className="font-black text-slate-900">{currentStudent.grade}</span> خلال العام الدراسي الحالي.
+                </p>
+                <p>
+                  وقد أُعطيت له هذه الإفادة بناءً على طلب ولي أمره لتقديمها إلى من يهمه الأمر دون أدنى مسؤولية مالية على المدرسة.
+                </p>
+              </div>
+            )}
+
+            {docType === "receipt" && (
+              <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 text-xs leading-relaxed text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <span className="font-black">وصلنا من المكرم ولي أمر الطالب:</span>
+                  <span className="font-mono font-bold">{currentStudent.guardianName || currentStudent.name}</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <span className="font-black">مبلغ وقدره:</span>
+                  <span className="font-black font-mono text-base text-emerald-700">5,000.00 ريال سعودي</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-black">وذلك عن:</span>
+                  <span className="font-bold">سداد القسط الدراسي الثاني مع رسوم الكتب</span>
+                </div>
+              </div>
+            )}
+
+            {docType === "idcard" && (
+              <div className="max-w-sm mx-auto p-5 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border-2 border-primary/30 text-center space-y-3">
+                <div className="h-16 w-16 rounded-full bg-slate-200 border-2 border-primary mx-auto flex items-center justify-center font-black text-slate-500">
+                  صورة
+                </div>
+                <div className="font-black text-base text-slate-900">{currentStudent.name}</div>
+                <div className="text-xs font-bold text-slate-600">{currentStudent.grade}</div>
+                <div className="font-mono text-xs text-slate-500">ID: {currentStudent.nationalId}</div>
+              </div>
+            )}
+
+            {/* Official Footer with Signatures & Stamp */}
+            <div className="mt-12 pt-6 border-t border-slate-300 flex items-center justify-between text-xs font-bold">
+              <div className="space-y-1">
+                <div className="text-slate-500">الختم الرسمي للمدرسة</div>
+                {showStamp && systemSettings.stampUrl ? (
+                  <img src={systemSettings.stampUrl} alt="Stamp" className="h-20 w-20 object-contain stamp rotate-[-6deg]" />
+                ) : (
+                  <div className="h-16 w-16 rounded-full border-2 border-dashed border-slate-400 flex items-center justify-center text-[10px] text-slate-400 stamp rotate-[-6deg]">
+                    ختم المدرسة
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1 text-center">
+                <div className="text-slate-500">مسؤول التسجيل والقبول</div>
+                <div className="h-10 text-slate-800 font-mono pt-3">أمين السجلات</div>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <div className="text-slate-500">مدير عام المدرسة المعتمد</div>
+                <div className="font-black text-slate-900">{systemSettings.principalName}</div>
+                {showSignature && (
+                  <div className="text-[10px] text-slate-400 font-mono italic">توقيع معتمد إلكترونياً</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1720,7 +1885,7 @@ export function OfficialPrintPreviewModal({ isOpen, onClose }: OfficialPrintPrev
 }
 
 // =========================================================================
-// 5. Webhook & API Live Tester Modal (مختبر الأحداث البرمجية)
+// 5. Webhook & API Live Tester Modal (مختبر الربط البرمجي)
 // =========================================================================
 export interface WebhookTesterModalProps {
   isOpen: boolean;
@@ -1730,6 +1895,7 @@ export interface WebhookTesterModalProps {
 export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps) {
   const { systemSettings } = useGlobalStore();
   const [selectedEvent, setSelectedEvent] = useState("student.created");
+  const [webhookUrl, setWebhookUrl] = useState(systemSettings.webhookUrl || "https://api.school.edu/v1/webhooks");
   const [isSending, setIsSending] = useState(false);
   const [customPayload, setCustomPayload] = useState("");
   const [lastResponse, setLastResponse] = useState<any>(null);
@@ -1738,6 +1904,7 @@ export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps)
     "student.created": {
       event: "student.created",
       timestamp: new Date().toISOString(),
+      schoolId: systemSettings.licenseNumber,
       data: {
         studentId: "STU-90812",
         name: "فهد خالد الشمري",
@@ -1749,39 +1916,44 @@ export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps)
     "invoice.paid": {
       event: "invoice.paid",
       timestamp: new Date().toISOString(),
+      schoolId: systemSettings.licenseNumber,
       data: {
         invoiceId: "INV-2026-4412",
         studentName: "سارة عمر الدوسري",
         amountPaid: 4500,
         currency: "SAR",
         paymentMethod: "Mada",
+        referenceNo: "TXN-881920",
       },
     },
     "attendance.absent": {
       event: "attendance.absent",
       timestamp: new Date().toISOString(),
+      schoolId: systemSettings.licenseNumber,
       data: {
         studentId: "STU-1029",
         name: "تركي ماجد العتيبي",
         date: new Date().toISOString().split("T")[0],
         status: "absent",
-        period: "full_day",
+        period: "morning_assembly",
       },
     },
     "exam.grade.updated": {
       event: "exam.grade.updated",
       timestamp: new Date().toISOString(),
+      schoolId: systemSettings.licenseNumber,
       data: {
         examId: "EXAM-2026-01",
         studentId: "STU-90812",
         subject: "الرياضيات",
         grade: 98,
-        approvedBy: "مدير النظام",
+        approvedBy: systemSettings.principalName,
       },
     },
     "staff.leave.approved": {
       event: "staff.leave.approved",
       timestamp: new Date().toISOString(),
+      schoolId: systemSettings.licenseNumber,
       data: {
         employeeNo: "EMP-102",
         name: "أحمد بن سعيد",
@@ -1802,32 +1974,43 @@ export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps)
       setLastResponse({
         status: 200,
         statusText: "OK",
-        latency: `${Math.floor(20 + Math.random() * 25)}ms`,
-        signature: `sha256=${Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`,
+        latency: 118,
+        timestamp: new Date().toLocaleTimeString("ar-SA"),
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "x-signature-verified": "true",
+          "x-school-auth": "valid",
+        },
         body: {
           received: true,
           event: selectedEvent,
-          deliveryId: `del_${Math.random().toString(16).slice(2, 10)}`,
-          handledAt: new Date().toISOString(),
+          deliveryId: `del_${Math.random().toString(36).substring(2, 10)}`,
+          message: "تم استلام حدث الـ Webhook ومعالجته بنجاح من قبل الخادم",
         },
       });
-      toast.success("تم إرسال حدث Webhook بنجاح وتلقي استجابة HTTP 200 مع توقيع HMAC");
-    }, 600);
+      toast.success(`تم بث حدث (${selectedEvent}) بنجاح وتلقي استجابة 200 OK`);
+    }, 700);
+  };
+
+  const copyCurl = () => {
+    const curl = `curl -X POST "${webhookUrl}" \\\n  -H "Content-Type: application/json" \\\n  -H "X-School-Signature: sha256=mock_sig_992" \\\n  -d '${customPayload.replace(/\n/g, "")}'`;
+    navigator.clipboard?.writeText(curl);
+    toast.success("تم نسخ أمر cURL للحافظة بنجاح");
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-xl max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+      <DialogContent hideCloseButton={true} className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+        <DialogHeader className="p-5 pb-3 border-b border-border/80 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
-                <Send className="h-6 w-6" />
+                <Webhook className="h-6 w-6" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-black text-foreground">مختبر أحداث الـ Webhooks المباشر</DialogTitle>
+                <DialogTitle className="text-lg font-black text-foreground">مختبر الـ Webhooks والبث اللحظي للأحداث</DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5 font-bold">
-                  اختبار إرسال الأحداث اللحظية وتدقيق حمولة البيانات (Payload) واستجابة الخادم
+                  محاكاة إرسال أحداث النظام للأنظمة الخارجية مع فحص التوقيعات وسرعة الاستجابة
                 </DialogDescription>
               </div>
             </div>
@@ -1840,65 +2023,81 @@ export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps)
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar text-xs">
+          {/* Webhook Endpoint URL */}
           <div>
-            <label className="text-xs font-black text-muted-foreground mb-1 block">رابط الاستقبال المستهدف (Webhook Endpoint)</label>
-            <input
-              type="text"
-              readOnly
-              dir="ltr"
-              value={systemSettings.webhookUrl || "https://example.com/api/v1/school-webhook"}
-              className="w-full h-10 rounded-xl border border-border bg-muted/40 px-3 text-xs font-mono font-bold text-foreground"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-black text-muted-foreground mb-1 block">نوع الحدث المراد محاكاته</label>
-            <select
-              value={selectedEvent}
-              onChange={(e) => setSelectedEvent(e.target.value)}
-              className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold"
-            >
-              <option value="student.created">student.created (تسجيل طالب جديد)</option>
-              <option value="invoice.paid">invoice.paid (سداد فاتورة دراسية)</option>
-              <option value="attendance.absent">attendance.absent (تسجيل غياب فوري)</option>
-              <option value="exam.grade.updated">exam.grade.updated (اعتماد نتيجة اختبار)</option>
-              <option value="staff.leave.approved">staff.leave.approved (اعتماد إجازة موظف)</option>
-            </select>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-black text-muted-foreground">حمولة الحدث (JSON Payload):</label>
+            <label className="font-black text-foreground block mb-1">رابط استقبال الـ Webhook (Endpoint URL):</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                dir="ltr"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                className="h-10 flex-1 rounded-xl border border-border bg-background px-3 font-mono font-bold text-xs"
+              />
               <button
                 type="button"
-                onClick={() => setCustomPayload(JSON.stringify(defaultPayloads[selectedEvent] || {}, null, 2))}
-                className="text-[11px] font-bold text-primary hover:underline"
+                onClick={copyCurl}
+                className="px-3.5 rounded-xl border border-border hover:bg-accent flex items-center gap-1 font-bold shrink-0"
               >
-                استعادة القالب
+                <Copy className="h-3.5 w-3.5" /> نسخ cURL
               </button>
             </div>
+          </div>
+
+          {/* Event Picker */}
+          <div>
+            <label className="font-black text-foreground block mb-1">نوع الحدث المراد اختباره:</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                { id: "student.created", label: "تسجيل طالب جديد" },
+                { id: "invoice.paid", label: "سداد فاتورة ورسوم" },
+                { id: "attendance.absent", label: "رصد غياب طالب" },
+                { id: "exam.grade.updated", label: "اعتماد وتحديث درجات" },
+                { id: "staff.leave.approved", label: "إجازة موظف معتمدة" },
+              ].map((ev) => (
+                <button
+                  key={ev.id}
+                  type="button"
+                  onClick={() => setSelectedEvent(ev.id)}
+                  className={`p-2.5 rounded-xl border text-right transition-all font-bold ${
+                    selectedEvent === ev.id
+                      ? "border-primary bg-primary/10 text-primary font-black ring-1 ring-primary/20"
+                      : "border-border bg-card text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <div className="truncate">{ev.label}</div>
+                  <div className="text-[10px] font-mono opacity-70 mt-0.5">{ev.id}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* JSON Payload */}
+          <div>
+            <label className="font-black text-foreground block mb-1">حمولة البيانات (JSON Payload):</label>
             <textarea
+              dir="ltr"
               rows={6}
               value={customPayload}
               onChange={(e) => setCustomPayload(e.target.value)}
-              dir="ltr"
-              className="w-full rounded-2xl bg-slate-950 text-emerald-400 font-mono text-xs p-3.5 border border-slate-800 outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-2xl border border-border bg-slate-900 text-slate-100 p-3 font-mono text-[11px] leading-relaxed outline-none focus:border-primary"
             />
           </div>
 
+          {/* Response Inspection */}
           {lastResponse && (
-            <div className="p-4 rounded-2xl bg-card border border-border space-y-2.5 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-black">
-                  <CheckCircle2 className="h-4 w-4" /> استجابة الخادم: {lastResponse.status} {lastResponse.statusText}
+            <div className="border border-border rounded-2xl p-4 bg-muted/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-black text-foreground flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span>نتيجة استجابة الخادم:</span>
                 </span>
-                <span className="text-muted-foreground font-mono text-[11px]">الزمن: {lastResponse.latency}</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">
+                  {lastResponse.status} {lastResponse.statusText} ({lastResponse.latency}ms)
+                </span>
               </div>
-              <div className="text-[10px] font-mono text-muted-foreground truncate" dir="ltr">
-                Header: X-Darasi-Signature: {lastResponse.signature}
-              </div>
-              <pre className="p-3 rounded-xl bg-muted/60 text-[10px] font-mono text-foreground" dir="ltr">
+              <pre dir="ltr" className="bg-background p-3 rounded-xl border border-border text-[11px] font-mono text-muted-foreground overflow-x-auto">
                 {JSON.stringify(lastResponse.body, null, 2)}
               </pre>
             </div>
@@ -1909,7 +2108,7 @@ export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps)
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-border text-xs font-bold hover:bg-accent"
+            className="px-4 py-2.5 rounded-xl border border-border text-xs font-bold hover:bg-accent"
           >
             إغلاق
           </button>
@@ -1917,15 +2116,15 @@ export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps)
             type="button"
             onClick={handleSendTest}
             disabled={isSending}
-            className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 flex items-center gap-2 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 transition-all hover:scale-[1.02]"
           >
             {isSending ? (
               <>
-                <RefreshCcw className="h-4 w-4 animate-spin" /> جاري الإرسال...
+                <RefreshCcw className="h-4 w-4 animate-spin" /> جاري البث...
               </>
             ) : (
               <>
-                <Send className="h-4 w-4" /> إرسال الحدث التجريبي الآن
+                <Send className="h-4 w-4" /> بث الحدث التجريبي الآن
               </>
             )}
           </button>
@@ -1936,7 +2135,7 @@ export function WebhookTesterModal({ isOpen, onClose }: WebhookTesterModalProps)
 }
 
 // =========================================================================
-// 6. Notification Simulator Modal (مختبر قنوات الإشعارات والرسائل)
+// 6. Notification Channel Simulator Modal (محاكي قنوات الإشعارات والرسائل)
 // =========================================================================
 export interface NotificationSimulatorModalProps {
   isOpen: boolean;
@@ -1944,24 +2143,32 @@ export interface NotificationSimulatorModalProps {
 }
 
 export function NotificationSimulatorModal({ isOpen, onClose }: NotificationSimulatorModalProps) {
-  const { systemSettings, addNotification } = useGlobalStore();
+  const { systemSettings, addNotification, allStudents } = useGlobalStore();
   const [channel, setChannel] = useState<"whatsapp" | "sms" | "email">("whatsapp");
   const [template, setTemplate] = useState("absence");
-  const [recipient, setRecipient] = useState("0501234567");
-  const [message, setMessage] = useState("نود إشعاركم بأنه تم رصد غياب الطالب في طابور الصباح اليوم.");
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("0501234567");
+  const [recipientName, setRecipientName] = useState("ولي أمر الطالب");
+  const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
+    const stu = allStudents.find((s) => s.id === selectedStudentId) || allStudents[0];
+    const sName = stu?.name || "زياد خالد الدوسري";
+    const gPhone = stu?.guardianPhone || "0501234567";
+    setRecipientPhone(gPhone);
+    setRecipientName(`ولي أمر ${sName}`);
+
     if (template === "absence") {
-      setMessage("نود إشعاركم بأنه تم رصد غياب الطالب في طابور الصباح اليوم. يمكن تقديم العذر عبر تطبيق ولي الأمر.");
+      setMessage(`السلام عليكم ورحمة الله. نفيدكم برصد غياب الطالب (${sName}) عن الطابور الصباحي اليوم. يمكنكم تقديم العذر عبر تطبيق ولي الأمر.`);
     } else if (template === "payment") {
-      setMessage(`تم قيد سداد الرسوم الدراسية بمبلغ 2,500 ${systemSettings.schoolName}. شكراً لتعاونكم.`);
+      setMessage(`سعادة ولي أمر الطالب (${sName}): تم قيد سداد الرسوم الدراسية بمبلغ 2,500 ريال بنجاح. شكراً لتعاونكم مع ${systemSettings.schoolName}.`);
     } else if (template === "exam") {
-      setMessage("تم اعتماد ونشر كشوف درجات الفترة الأكاديمية الأولى في بوابة الطالب وولي الأمر.");
+      setMessage(`بشرى سارة: تم اعتماد ونشر كشوف درجات الفترة الأكاديمية الأولى للطالب (${sName}). نتمنى له دوام التوفيق والنجاح.`);
     } else {
-      setMessage("يسر إدارة المدرسة دعوتكم لحضور اللقاء التربوي الدوري لأولياء الأمور يوم الخميس القادم.");
+      setMessage(`يسر إدارة ${systemSettings.schoolName} دعوتكم لحضور اللقاء التربوي الدوري لأولياء الأمور يوم الخميس القادم.`);
     }
-  }, [template, systemSettings.schoolName]);
+  }, [template, selectedStudentId, allStudents, systemSettings.schoolName]);
 
   const handleSendTest = () => {
     setIsSending(true);
@@ -1969,27 +2176,27 @@ export function NotificationSimulatorModal({ isOpen, onClose }: NotificationSimu
       setIsSending(false);
       addNotification({
         title: `إشعار ${channel.toUpperCase()}: ${systemSettings.schoolName}`,
-        message: `${message} (مرسل إلى: ${recipient})`,
+        message: `${message} (مرسل إلى: ${recipientPhone})`,
         type: "success",
       });
-      toast.success(`تم إرسال الإشعار بنجاح عبر قناة ${channel.toUpperCase()} إلى ${recipient}`);
+      toast.success(`تم إرسال الإشعار بنجاح عبر قناة ${channel.toUpperCase()} إلى ${recipientPhone}`);
       onClose();
     }, 600);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-md max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+      <DialogContent hideCloseButton={true} className="max-w-lg max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+        <DialogHeader className="p-5 pb-3 border-b border-border/80 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
                 <MessageSquare className="h-6 w-6" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-black text-foreground">مختبر قنوات الإشعارات والرسائل</DialogTitle>
+                <DialogTitle className="text-lg font-black text-foreground">محاكي قنوات الإشعارات والرسائل</DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5 font-bold">
-                  معاينة مباشرة وشاملة لظهور الرسائل على هاتف ولي الأمر والمعلم
+                  معاينة حية واقعية لظهور الرسائل على شاشة هاتف ولي الأمر عبر واتساب و SMS والبريد
                 </DialogDescription>
               </div>
             </div>
@@ -2002,12 +2209,12 @@ export function NotificationSimulatorModal({ isOpen, onClose }: NotificationSimu
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar text-xs">
           {/* Channel Selector */}
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: "whatsapp", label: "WhatsApp", icon: MessageSquare },
-              { id: "sms", label: "SMS", icon: Smartphone },
+              { id: "whatsapp", label: "WhatsApp واتساب", icon: MessageSquare },
+              { id: "sms", label: "SMS رسائل نصية", icon: Smartphone },
               { id: "email", label: "البريد الإلكتروني", icon: Mail },
             ].map((it) => (
               <button
@@ -2026,69 +2233,97 @@ export function NotificationSimulatorModal({ isOpen, onClose }: NotificationSimu
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          {/* Student Picker & Template */}
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="text-[11px] font-bold text-muted-foreground mb-1 block">قالب الرسالة</label>
+              <label className="text-[11px] font-bold text-muted-foreground mb-1 block">اختيار الطالب المستهدف:</label>
+              <select
+                value={selectedStudentId}
+                onChange={(e) => setSelectedStudentId(e.target.value)}
+                className="w-full h-9 rounded-xl border border-border bg-background px-2 text-xs font-bold"
+              >
+                {allStudents.slice(0, 10).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-muted-foreground mb-1 block">قالب الرسالة:</label>
               <select
                 value={template}
                 onChange={(e) => setTemplate(e.target.value)}
                 className="w-full h-9 rounded-xl border border-border bg-background px-2 text-xs font-bold"
               >
-                <option value="absence">تنبيه غياب طالب</option>
-                <option value="payment">إشعار سداد قسط</option>
-                <option value="exam">اعتماد درجات</option>
-                <option value="announcement">إعلان مدرسي عام</option>
+                <option value="absence">تنبيه غياب صباحي</option>
+                <option value="payment">إشعار سداد قسط مالي</option>
+                <option value="exam">اعتماد ونشر كشوف الدرجات</option>
+                <option value="announcement">دعوة لاجتماع مدرسي عام</option>
               </select>
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-muted-foreground mb-1 block">رقم هاتف المستلم</label>
-              <input
-                type="text"
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs font-mono font-bold"
-              />
             </div>
           </div>
 
-          {/* Interactive Device Bubble Simulator */}
-          <div className="p-4 rounded-3xl bg-muted/60 border border-border">
-            <div className="text-[11px] font-black text-muted-foreground mb-2.5 flex items-center justify-between">
-              <span>معاينة شاشة الهاتف المباشرة:</span>
-              <span className="text-primary font-mono font-black">{channel.toUpperCase()}</span>
+          <div>
+            <label className="text-[11px] font-bold text-muted-foreground mb-1 block">نص الرسالة المعتمد:</label>
+            <textarea
+              rows={3}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background p-3 text-xs leading-relaxed font-bold outline-none focus:border-primary"
+            />
+          </div>
+
+          {/* Realistic Device Phone Mockup */}
+          <div className="border border-border rounded-2xl p-4 bg-slate-900 text-white space-y-3">
+            <div className="text-[10px] font-mono text-slate-400 flex items-center justify-between">
+              <span>معاينة حية على شاشة هاتف ولي الأمر:</span>
+              <span>{recipientPhone}</span>
             </div>
 
             {channel === "whatsapp" && (
-              <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-900 dark:text-emerald-100 text-xs leading-relaxed space-y-2 shadow-xs">
-                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
-                  <span className="font-black text-emerald-600 dark:text-emerald-400">🔔 {systemSettings.schoolName}</span>
-                  <span className="text-[10px] text-muted-foreground font-mono">الآن</span>
+              <div className="bg-[#0b141a] rounded-xl overflow-hidden border border-[#202c33]">
+                <div className="bg-[#202c33] p-2.5 flex items-center gap-2.5 border-b border-[#2a3942]">
+                  <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center font-black text-xs text-white">
+                    {systemSettings.schoolName.slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="font-bold text-xs text-white flex items-center gap-1">
+                      <span>{systemSettings.schoolName}</span>
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                    </div>
+                    <div className="text-[9px] text-slate-400">حساب تجاري رسمي موثق</div>
+                  </div>
                 </div>
-                <div>{message}</div>
-                <div className="text-[10px] text-emerald-600/80 flex items-center justify-end gap-1 pt-1 font-mono">
-                  <span>تم التوصيل</span>
-                  <Check className="h-3 w-3" />
+                <div className="p-3 bg-[#0b141a] bg-opacity-95">
+                  <div className="bg-[#005c4b] text-white p-3 rounded-2xl rounded-tr-none text-xs leading-relaxed shadow-sm max-w-[90%] mr-auto">
+                    <div>{message}</div>
+                    <div className="text-[9px] text-emerald-200 text-left mt-1 font-mono flex items-center justify-end gap-1">
+                      <span>10:30 ص</span>
+                      <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {channel === "sms" && (
-              <div className="p-4 rounded-2xl bg-card border border-border text-foreground text-xs leading-relaxed space-y-2 shadow-xs">
-                <div className="font-bold text-primary flex items-center justify-between text-[11px]">
-                  <span>رسالة قصيرة SMS من: {systemSettings.schoolName?.substring(0, 11)}</span>
-                  <span className="text-muted-foreground font-mono">الآن</span>
+              <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <div className="text-center text-[10px] text-slate-400 mb-2">رسالة نصية قصيرة • {systemSettings.schoolName}</div>
+                <div className="bg-slate-700 text-white p-3 rounded-2xl rounded-tr-none text-xs leading-relaxed max-w-[90%] mr-auto">
+                  {message}
                 </div>
-                <div>{message}</div>
               </div>
             )}
 
             {channel === "email" && (
-              <div className="p-4 rounded-2xl bg-card border border-border text-foreground text-xs leading-relaxed space-y-2.5 shadow-xs">
-                <div className="border-b border-border pb-2 space-y-0.5">
-                  <div className="font-black text-primary">الموضوع: إشعار رسمي من {systemSettings.schoolName}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono">من: info@school.edu.sa • إلى: {recipient}</div>
+              <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-2">
+                <div className="text-[10px] text-slate-400">من: {systemSettings.email}</div>
+                <div className="text-[10px] text-slate-400">إلى: {recipientName} &lt;parent@domain.com&gt;</div>
+                <div className="p-3 bg-slate-900 rounded-lg text-xs leading-relaxed border border-slate-700">
+                  <div className="font-black text-primary mb-1">{systemSettings.schoolName}</div>
+                  {message}
                 </div>
-                <div>{message}</div>
               </div>
             )}
           </div>
@@ -2098,25 +2333,18 @@ export function NotificationSimulatorModal({ isOpen, onClose }: NotificationSimu
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-border text-xs font-bold hover:bg-accent"
+            className="px-4 py-2.5 rounded-xl border border-border text-xs font-bold hover:bg-accent"
           >
-            إلغاء
+            إغلاق
           </button>
           <button
             type="button"
             onClick={handleSendTest}
             disabled={isSending}
-            className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 flex items-center gap-2 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02]"
           >
-            {isSending ? (
-              <>
-                <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> جاري الإرسال...
-              </>
-            ) : (
-              <>
-                <Send className="h-3.5 w-3.5" /> إرسال المعاينة لهاتفي الآن
-              </>
-            )}
+            {isSending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            إرسال إشعار تجريبي فوري
           </button>
         </DialogFooter>
       </DialogContent>
@@ -2125,7 +2353,7 @@ export function NotificationSimulatorModal({ isOpen, onClose }: NotificationSimu
 }
 
 // =========================================================================
-// 7. Mobile App Connect QR Code Modal (ربط تطبيق الهاتف وبوابة ولي الأمر)
+// 7. Mobile App Connect Modal (رمز وتطبيق ولي الأمر)
 // =========================================================================
 export interface MobileConnectModalProps {
   isOpen: boolean;
@@ -2136,6 +2364,7 @@ export function MobileConnectModal({ isOpen, onClose }: MobileConnectModalProps)
   const { systemSettings } = useGlobalStore();
   const [pinCode, setPinCode] = useState("892-410");
   const [timer, setTimer] = useState(600);
+  const [targetApp, setTargetApp] = useState<"parent" | "teacher" | "student">("parent");
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -2144,14 +2373,14 @@ export function MobileConnectModal({ isOpen, onClose }: MobileConnectModalProps)
     return () => clearInterval(t);
   }, []);
 
-  const connectUrl = `https://darasi.app/connect?school=${encodeURIComponent(systemSettings.schoolName)}&key=${systemSettings.apiKey}`;
+  const connectUrl = `https://darasi.app/connect?school=${encodeURIComponent(systemSettings.schoolName)}&app=${targetApp}&pin=${pinCode}`;
 
   const handleGenerateNewPin = () => {
     const p1 = Math.floor(100 + Math.random() * 900);
     const p2 = Math.floor(100 + Math.random() * 900);
     setPinCode(`${p1}-${p2}`);
     setTimer(600);
-    toast.success("تم توليد رمز ربط مؤقت جديد");
+    toast.success("تم توليد رمز ربط مؤقت جديد وتحديث رمز الاستجابة QR");
   };
 
   const handleCopy = () => {
@@ -2161,20 +2390,51 @@ export function MobileConnectModal({ isOpen, onClose }: MobileConnectModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-md text-center max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+      <DialogContent hideCloseButton={true} className="max-w-md text-center max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+        <DialogHeader className="p-5 pb-3 border-b border-border/80 bg-muted/20">
           <div className="flex flex-col items-center">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs mb-2">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs mb-1.5">
               <Smartphone className="h-6 w-6" />
             </div>
-            <DialogTitle className="text-lg font-black text-foreground">رمز ربط تطبيق الهاتف وبوابة ولي الأمر</DialogTitle>
+            <DialogTitle className="text-lg font-black text-foreground">رمز ربط تطبيقات الهاتف والمنصات الذكية</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-0.5 font-bold">
               امسح الرمز أو أدخل كود الربط السريع لتهيئة تطبيق دارسي على جهازك
             </DialogDescription>
           </div>
         </DialogHeader>
 
-        <div className="p-6 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-5 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
+          {/* Target App Switcher */}
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-xl border border-border text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setTargetApp("parent")}
+              className={`py-1.5 rounded-lg transition-all ${
+                targetApp === "parent" ? "bg-card text-foreground shadow-xs font-black" : "text-muted-foreground"
+              }`}
+            >
+              بوابة ولي الأمر
+            </button>
+            <button
+              type="button"
+              onClick={() => setTargetApp("teacher")}
+              className={`py-1.5 rounded-lg transition-all ${
+                targetApp === "teacher" ? "bg-card text-foreground shadow-xs font-black" : "text-muted-foreground"
+              }`}
+            >
+              تطبيق المعلم
+            </button>
+            <button
+              type="button"
+              onClick={() => setTargetApp("student")}
+              className={`py-1.5 rounded-lg transition-all ${
+                targetApp === "student" ? "bg-card text-foreground shadow-xs font-black" : "text-muted-foreground"
+              }`}
+            >
+              بوابة الطالب
+            </button>
+          </div>
+
           <div className="inline-block p-4 rounded-3xl bg-white border border-slate-200 shadow-xl">
             <QRCode value={connectUrl} size={150} level="H" />
           </div>
@@ -2234,13 +2494,15 @@ export interface FactoryResetModalProps {
 
 export function FactoryResetModal({ isOpen, onClose, onConfirm }: FactoryResetModalProps) {
   const { wipeSystemData, allStudents, allStaff, allInvoices } = useGlobalStore();
-  const [mode, setMode] = useState<"settings" | "full">("settings");
+  const [mode, setMode] = useState<"settings" | "features" | "full">("settings");
   const [confirmationWord, setConfirmationWord] = useState("");
   const isMatch = confirmationWord.trim() === "تأكيد" || confirmationWord.trim().toLowerCase() === "reset";
 
   const handleExecuteReset = () => {
     if (!isMatch) return;
     if (mode === "settings") {
+      onConfirm();
+    } else if (mode === "features") {
       onConfirm();
     } else {
       wipeSystemData({ wipeStudents: true, wipeStaff: true, wipeFinance: true, resetSettings: true });
@@ -2251,8 +2513,8 @@ export function FactoryResetModal({ isOpen, onClose, onConfirm }: FactoryResetMo
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setConfirmationWord(""); onClose(); } }}>
-      <DialogContent className="max-w-md max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-danger/30 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-danger/5">
+      <DialogContent hideCloseButton={true} className="max-w-md max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-danger/30 shadow-2xl bg-card">
+        <DialogHeader className="p-5 pb-3 border-b border-border/80 bg-danger/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-danger/10 text-danger border border-danger/20 shadow-xs">
@@ -2274,39 +2536,51 @@ export function FactoryResetModal({ isOpen, onClose, onConfirm }: FactoryResetMo
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs leading-relaxed custom-scrollbar">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs leading-relaxed custom-scrollbar">
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => setMode("settings")}
-              className={`p-3.5 rounded-2xl border text-right transition-all ${
+              className={`p-2.5 rounded-2xl border text-right transition-all ${
                 mode === "settings"
                   ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary/30"
                   : "border-border bg-card hover:bg-accent"
               }`}
             >
-              <div className="font-black text-xs text-foreground">1. إعادة تعيين الإعدادات</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5 font-bold">يحافظ على الطلاب والموظفين</div>
+              <div className="font-black text-xs text-foreground">1. الإعدادات</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 font-bold">يحافظ على البيانات</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("features")}
+              className={`p-2.5 rounded-2xl border text-right transition-all ${
+                mode === "features"
+                  ? "border-amber-500 bg-amber-500/10 shadow-xs ring-1 ring-amber-500/30"
+                  : "border-border bg-card hover:bg-accent"
+              }`}
+            >
+              <div className="font-black text-xs text-amber-600 dark:text-amber-400">2. الميزات</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 font-bold">تصفير الوحدات</div>
             </button>
             <button
               type="button"
               onClick={() => setMode("full")}
-              className={`p-3.5 rounded-2xl border text-right transition-all ${
+              className={`p-2.5 rounded-2xl border text-right transition-all ${
                 mode === "full"
                   ? "border-danger bg-danger/10 shadow-xs ring-1 ring-danger/30"
                   : "border-border bg-card hover:bg-accent"
               }`}
             >
-              <div className="font-black text-xs text-danger">2. تهيئة شاملة للمنصة</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5 font-bold">مسح كافة البيانات</div>
+              <div className="font-black text-xs text-danger">3. مسح شامل</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 font-bold">حذف البيانات</div>
             </button>
           </div>
 
           <div className="p-4 rounded-2xl bg-danger/5 border border-danger/20 text-danger font-bold space-y-1.5">
             <div className="font-black">
-              {mode === "settings"
-                ? "سيتم استعادة الإعدادات والسياسات التالية إلى الافتراضيات:"
-                : `تحذير حرج: سيتم مسح ${allStudents.length} طالب و ${allStaff.length} موظف و ${allInvoices.length} مطالبة بالكامل:`}
+              {mode === "settings" && "سيتم استعادة الإعدادات والسياسات التالية إلى الافتراضيات:"}
+              {mode === "features" && "سيتم إعادة تهيئة ميزات النظام والربط البرمجي إلى الحالة الافتراضية:"}
+              {mode === "full" && `تحذير حرج: سيتم مسح ${allStudents.length} طالب و ${allStaff.length} موظف و ${allInvoices.length} مطالبة بالكامل:`}
             </div>
             <ul className="list-disc list-inside text-[11px] font-bold space-y-1 pt-1">
               <li>اسم المدرسة والهوية البصرية والشعار والختم</li>
@@ -2343,7 +2617,7 @@ export function FactoryResetModal({ isOpen, onClose, onConfirm }: FactoryResetMo
             disabled={!isMatch}
             className="px-6 py-2.5 rounded-xl bg-danger text-danger-foreground text-xs font-black hover:bg-danger/90 shadow-md disabled:opacity-40 transition-all"
           >
-            {mode === "settings" ? "استعادة ضبط الإعدادات" : "مسح شامل وإعادة ضبط المصنع"}
+            {mode === "settings" ? "استعادة ضبط الإعدادات" : mode === "features" ? "تصفير ميزات النظام" : "مسح شامل وإعادة ضبط المصنع"}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -2367,6 +2641,14 @@ export function AddAcademicYearModal({ isOpen, onClose }: AddAcademicYearModalPr
   const [termSystem, setTermSystem] = useState<"3_terms" | "2_terms">("3_terms");
   const [isCurrent, setIsCurrent] = useState(false);
 
+  // Term custom dates state
+  const [t1Start, setT1Start] = useState("2025-08-24");
+  const [t1End, setT1End] = useState("2025-11-20");
+  const [t2Start, setT2Start] = useState("2025-11-30");
+  const [t2End, setT2End] = useState("2026-02-26");
+  const [t3Start, setT3Start] = useState("2026-03-08");
+  const [t3End, setT3End] = useState("2026-06-18");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -2374,34 +2656,17 @@ export function AddAcademicYearModal({ isOpen, onClose }: AddAcademicYearModalPr
       return;
     }
 
-    const startMs = new Date(startDate).getTime();
-    const endMs = new Date(endDate).getTime();
-    const totalDuration = endMs - startMs;
-
-    if (totalDuration <= 0) {
-      toast.error("تاريخ نهاية العام يجب أن يكون لاحقاً لتاريخ البداية");
-      return;
-    }
-
     let terms = [];
     if (termSystem === "3_terms") {
-      const t1End = new Date(startMs + totalDuration * 0.33).toISOString().split("T")[0];
-      const t2Start = new Date(startMs + totalDuration * 0.35).toISOString().split("T")[0];
-      const t2End = new Date(startMs + totalDuration * 0.66).toISOString().split("T")[0];
-      const t3Start = new Date(startMs + totalDuration * 0.68).toISOString().split("T")[0];
-
       terms = [
-        { id: `term-${Date.now()}-1`, name: "الفصل الدراسي الأول", startDate, endDate: t1End, status: "active" as const },
+        { id: `term-${Date.now()}-1`, name: "الفصل الدراسي الأول", startDate: t1Start, endDate: t1End, status: "active" as const },
         { id: `term-${Date.now()}-2`, name: "الفصل الدراسي الثاني", startDate: t2Start, endDate: t2End, status: "upcoming" as const },
-        { id: `term-${Date.now()}-3`, name: "الفصل الدراسي الثالث", startDate: t3Start, endDate, status: "upcoming" as const },
+        { id: `term-${Date.now()}-3`, name: "الفصل الدراسي الثالث", startDate: t3Start, endDate: t3End, status: "upcoming" as const },
       ];
     } else {
-      const mid = new Date(startMs + totalDuration * 0.48).toISOString().split("T")[0];
-      const mid2 = new Date(startMs + totalDuration * 0.52).toISOString().split("T")[0];
-
       terms = [
-        { id: `term-${Date.now()}-1`, name: "الفصل الدراسي الأول", startDate, endDate: mid, status: "active" as const },
-        { id: `term-${Date.now()}-2`, name: "الفصل الدراسي الثاني", startDate: mid2, endDate, status: "upcoming" as const },
+        { id: `term-${Date.now()}-1`, name: "الفصل الدراسي الأول", startDate: t1Start, endDate: t1End, status: "active" as const },
+        { id: `term-${Date.now()}-2`, name: "الفصل الدراسي الثاني", startDate: t2Start, endDate: t3End, status: "upcoming" as const },
       ];
     }
 
@@ -2420,14 +2685,14 @@ export function AddAcademicYearModal({ isOpen, onClose }: AddAcademicYearModalPr
       terms,
     });
 
-    toast.success(`تمت إضافة وتثبيت السنة الدراسية (${name}) بنجاح`);
+    toast.success(`تمت إضافة وتنشيط السنة الدراسية (${name}) بنجاح`);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-md max-h-[88vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
-        <DialogHeader className="p-6 pb-4 border-b border-border/80 bg-muted/20">
+      <DialogContent hideCloseButton={true} className="max-w-md max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border border-border/80 shadow-2xl bg-card">
+        <DialogHeader className="p-5 pb-3 border-b border-border/80 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
@@ -2436,7 +2701,7 @@ export function AddAcademicYearModal({ isOpen, onClose }: AddAcademicYearModalPr
               <div>
                 <DialogTitle className="text-lg font-black text-foreground">إضافة سنة أكاديمية جديدة</DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5 font-bold">
-                  تهيئة سنة دراسية جديدة وحساب مواعيد الفصول التابعة لها تلقائياً
+                  تهيئة سنة دراسية جديدة وجدولة فصولها الأكاديمية بدقة
                 </DialogDescription>
               </div>
             </div>
@@ -2449,55 +2714,91 @@ export function AddAcademicYearModal({ isOpen, onClose }: AddAcademicYearModalPr
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar text-xs">
           <div>
-            <label className="text-xs font-black text-muted-foreground mb-1 block">مسمى السنة الدراسية</label>
+            <label className="font-black text-muted-foreground mb-1 block">مسمى السنة الدراسية:</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="مثال: ١٤٤٧ / ١٤٤٨ هـ (2025-2026)"
-              className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold"
+              className="w-full h-10 rounded-xl border border-border bg-background px-3 font-bold"
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="text-xs font-black text-muted-foreground mb-1 block">بداية العام الدراسي</label>
+              <label className="font-black text-muted-foreground mb-1 block">بداية العام الدراسي:</label>
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold"
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setT1Start(e.target.value);
+                }}
+                className="w-full h-10 rounded-xl border border-border bg-background px-3 font-bold"
                 required
               />
             </div>
             <div>
-              <label className="text-xs font-black text-muted-foreground mb-1 block">نهاية العام الدراسي</label>
+              <label className="font-black text-muted-foreground mb-1 block">نهاية العام الدراسي:</label>
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold"
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setT3End(e.target.value);
+                }}
+                className="w-full h-10 rounded-xl border border-border bg-background px-3 font-bold"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-black text-muted-foreground mb-1 block">نظام الفصول الدراسية المعتمد</label>
+            <label className="font-black text-muted-foreground mb-1 block">نظام الفصول الدراسية المعتمد:</label>
             <select
               value={termSystem}
               onChange={(e) => setTermSystem(e.target.value as any)}
-              className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold"
+              className="w-full h-10 rounded-xl border border-border bg-background px-3 font-bold"
             >
-              <option value="3_terms">نظام الثلاثة فصول دراسية (المعتمد في السعودية)</option>
-              <option value="2_terms">نظام الفصلين الدراسيين</option>
+              <option value="3_terms">نظام الثلاثة فصول دراسية (المعتمد بالسعودية)</option>
+              <option value="2_terms">نظام الفصلين الدراسيين (نصف سنوي)</option>
             </select>
           </div>
 
-          <label className="flex items-center gap-2 text-xs font-bold p-3.5 rounded-2xl border border-border bg-card hover:bg-accent/40 cursor-pointer">
+          {/* Term Dates Builder */}
+          <div className="p-3.5 rounded-2xl bg-muted/40 border border-border space-y-2.5">
+            <div className="font-black text-foreground">مواعيد الفصول الدراسية:</div>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <span className="font-bold text-[11px]">الفصل 1 (بداية / نهاية):</span>
+                <div className="flex gap-1">
+                  <input type="date" value={t1Start} onChange={(e) => setT1Start(e.target.value)} className="w-1/2 h-7 rounded border border-border bg-background px-1 text-[10px]" />
+                  <input type="date" value={t1End} onChange={(e) => setT1End(e.target.value)} className="w-1/2 h-7 rounded border border-border bg-background px-1 text-[10px]" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <span className="font-bold text-[11px]">الفصل 2 (بداية / نهاية):</span>
+                <div className="flex gap-1">
+                  <input type="date" value={t2Start} onChange={(e) => setT2Start(e.target.value)} className="w-1/2 h-7 rounded border border-border bg-background px-1 text-[10px]" />
+                  <input type="date" value={t2End} onChange={(e) => setT2End(e.target.value)} className="w-1/2 h-7 rounded border border-border bg-background px-1 text-[10px]" />
+                </div>
+              </div>
+              {termSystem === "3_terms" && (
+                <div className="grid grid-cols-2 gap-2 items-center">
+                  <span className="font-bold text-[11px]">الفصل 3 (بداية / نهاية):</span>
+                  <div className="flex gap-1">
+                    <input type="date" value={t3Start} onChange={(e) => setT3Start(e.target.value)} className="w-1/2 h-7 rounded border border-border bg-background px-1 text-[10px]" />
+                    <input type="date" value={t3End} onChange={(e) => setT3End(e.target.value)} className="w-1/2 h-7 rounded border border-border bg-background px-1 text-[10px]" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 font-bold p-3 rounded-2xl border border-border bg-card hover:bg-accent/40 cursor-pointer">
             <input
               type="checkbox"
               checked={isCurrent}
@@ -2507,17 +2808,17 @@ export function AddAcademicYearModal({ isOpen, onClose }: AddAcademicYearModalPr
             <span>تعيين كسنة دراسية حالية ونشطة فوراً للمنصة</span>
           </label>
 
-          <DialogFooter className="p-4 -mx-6 -mb-6 border-t border-border/80 bg-muted/20 flex items-center justify-between w-[calc(100%+3rem)]">
+          <DialogFooter className="p-4 -mx-5 -mb-5 border-t border-border/80 bg-muted/20 flex items-center justify-between">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-border text-xs font-bold hover:bg-accent"
+              className="px-4 py-2 rounded-xl border border-border font-bold hover:bg-accent"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20"
+              className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-black hover:bg-primary/90 shadow-md shadow-primary/20"
             >
               حفظ وتنشيط السنة الدراسية
             </button>

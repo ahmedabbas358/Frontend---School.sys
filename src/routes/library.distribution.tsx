@@ -29,6 +29,8 @@ import { useGlobalStore, Textbook, TextbookDistribution } from "@/contexts/Globa
 import { useStage } from "@/contexts/StageContext";
 import { getGradesForStage } from "@/lib/school-structure";
 import { toast } from "sonner";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FacilitiesNavTabs } from "@/components/facilities/facilities-nav";
 
 export const Route = createFileRoute("/library/distribution")({
   head: () => ({ meta: [{ title: "توزيع وتسليم الكتب المدرسية | منصة مدارس" }] }),
@@ -382,6 +384,8 @@ function LibraryDistribution() {
       ]}
     >
       <div className="space-y-6 pb-12">
+        <FacilitiesNavTabs activeTab="library-distribution" />
+
         {/* Top Header Card */}
         <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card/95 to-primary/5 p-6 shadow-xl backdrop-blur-xl">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -820,42 +824,28 @@ function LibraryDistribution() {
           />
         </PageCard>
 
-        {/* Student Handover Drawer / Modal */}
-        {selectedStudent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto animate-in fade-in duration-200">
-            <div className="w-full max-w-3xl rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 flex flex-col max-h-[92vh]">
-              {/* Modal Header */}
-              <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/5 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 text-primary-foreground flex items-center justify-center shadow-md shadow-primary/20">
-                    <BookOpen className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-black text-foreground">
-                        ملف عهدة وتوزيع الكتب: {selectedStudent.name}
-                      </h2>
-                      <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-black border border-primary/20">
-                        {selectedStudent.grade}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      رقم الهوية: {selectedStudent.nationalId || selectedStudent.id} • ولي الأمر: {selectedStudent.guardianName || "غير محدد"} ({selectedStudent.guardianPhone || "بدون هاتف"})
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedStudent(null)}
-                  className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 overflow-y-auto custom-scrollbar-modal space-y-6">
-                {/* Visual Summary Card */}
+        {/* Student Handover Modal */}
+        <AdminModal
+          isOpen={!!selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          title={`ملف عهدة وتوزيع الكتب: ${selectedStudent?.name || ""}`}
+          description={selectedStudent ? `رقم الهوية: ${selectedStudent.nationalId || selectedStudent.id} • ${selectedStudent.grade} • ولي الأمر: ${selectedStudent.guardianName || "غير محدد"} (${selectedStudent.guardianPhone || "بدون هاتف"})` : undefined}
+          icon={BookOpen}
+          tone="primary"
+          maxWidth="3xl"
+          footer={
+            <button
+              type="button"
+              onClick={() => setSelectedStudent(null)}
+              className="rounded-xl px-5 py-2 text-xs font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]"
+            >
+              إغلاق
+            </button>
+          }
+        >
+          {selectedStudent && (
+            <div className="space-y-6">
+              {/* Visual Summary Card */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-2xl border border-border/70 bg-card/70 p-3.5 text-center shadow-sm">
                     <p className="text-xs font-bold text-muted-foreground">إجمالي المقررات</p>
@@ -1026,333 +1016,287 @@ function LibraryDistribution() {
                   </div>
                 )}
               </div>
-
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-border/50 flex justify-end shrink-0 bg-muted/10">
-                <button
-                  type="button"
-                  onClick={() => setSelectedStudent(null)}
-                  className="rounded-xl px-5 py-2 text-xs font-bold border border-border/80 hover:bg-accent transition-colors active:scale-[0.98]"
-                >
-                  إغلاق
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </AdminModal>
 
         {/* RETURN CONFIRMATION MODAL */}
-        {returnConfirmStudent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-            <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-              <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-destructive/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center shadow-inner border border-destructive/20">
-                    <RefreshCw className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black text-foreground">استرجاع عهدة المقررات</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">إعادة كافة الكتب المستلمة إلى رصيد المستودع</p>
-                  </div>
+        <AdminModal
+          isOpen={!!returnConfirmStudent}
+          onClose={() => setReturnConfirmStudent(null)}
+          title="استرجاع عهدة المقررات"
+          description="إعادة كافة الكتب المستلمة إلى رصيد المستودع المدرسي المركزي"
+          icon={RefreshCw}
+          tone="danger"
+          maxWidth="md"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setReturnConfirmStudent(null)}
+                className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={executeReturnAllReceived}
+                className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
+              >
+                تأكيد الاسترجاع للمستودع
+              </button>
+            </>
+          }
+        >
+          {returnConfirmStudent && (
+            <div className="space-y-4">
+              <p className="text-sm font-bold text-foreground">
+                هل أنت متأكد من استرجاع كامل عهدة المقررات للطالب وإعادتها فوراً إلى رصيد المستودع المركزي؟
+              </p>
+
+              <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">اسم الطالب:</span>
+                  <span className="font-bold text-foreground">{returnConfirmStudent.name}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setReturnConfirmStudent(null)}
-                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <p className="text-sm font-bold text-foreground">
-                  هل أنت متأكد من استرجاع كامل عهدة المقررات للطالب وإعادتها فوراً إلى رصيد المستودع المركزي؟
-                </p>
-
-                <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">اسم الطالب:</span>
-                    <span className="font-bold text-foreground">{returnConfirmStudent.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">الصف:</span>
-                    <span className="font-bold text-foreground">{returnConfirmStudent.grade}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">الكتب المسترجعة:</span>
-                    <span className="font-black text-primary">
-                      {activeStageDistributions.filter(d => d.studentId === returnConfirmStudent.id).length} كتب
-                    </span>
-                  </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">الصف:</span>
+                  <span className="font-bold text-foreground">{returnConfirmStudent.grade}</span>
                 </div>
-
-                <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setReturnConfirmStudent(null)}
-                    className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    type="button"
-                    onClick={executeReturnAllReceived}
-                    className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
-                  >
-                    تأكيد الاسترجاع للمستودع
-                  </button>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">الكتب المسترجعة:</span>
+                  <span className="font-black text-primary">
+                    {activeStageDistributions.filter(d => d.studentId === returnConfirmStudent.id).length} كتب
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </AdminModal>
 
         {/* Batch Delivery Modal ("تسليم حزمة لشعبة كاملة") */}
-        {isBatchModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury animate-in fade-in duration-200">
-            <div className="w-full max-w-lg rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 flex flex-col">
-              <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-foreground">صرف وتسليم حزمة لشعبة كاملة</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">تسليم موحد لجميع الطلاب وخصم من المستودع</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsBatchModalOpen(false)}
-                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+        <AdminModal
+          isOpen={isBatchModalOpen}
+          onClose={() => setIsBatchModalOpen(false)}
+          title="صرف وتسليم حزمة لشعبة كاملة"
+          description="تسليم موحد لجميع الطلاب وخصم المقررات من رصيد المستودع تلقائياً"
+          icon={Sparkles}
+          tone="primary"
+          maxWidth="lg"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setIsBatchModalOpen(false)}
+                className="rounded-xl border border-border/80 px-4 py-2 text-xs font-bold hover:bg-muted"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchSubmit}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-black text-primary-foreground shadow-md shadow-primary/20 hover:opacity-95 active:scale-[0.98]"
+              >
+                تأكيد وصرف الحزمة
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-black text-foreground">الصف الدراسي:</label>
+              <select
+                value={batchGrade}
+                onChange={(e) => {
+                  setBatchGrade(e.target.value);
+                  const secForGrade = allSections.find(s => s.stage === stage && s.grade === e.target.value);
+                  setBatchSectionId(secForGrade ? secForGrade.id : "");
+                }}
+                className="h-10 w-full rounded-xl border border-border/80 bg-background px-3 text-xs font-bold shadow-sm focus:border-primary focus:outline-none"
+              >
+                {grades.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-black text-foreground">الشعبة المستهدفة:</label>
+              <select
+                value={batchSectionId}
+                onChange={(e) => setBatchSectionId(e.target.value)}
+                required
+                className="h-10 w-full rounded-xl border border-border/80 bg-background px-3 text-xs font-bold shadow-sm focus:border-primary focus:outline-none"
+              >
+                <option value="">اختر الشعبة...</option>
+                {allSections
+                  .filter(s => s.stage === stage && (!batchGrade || s.grade === batchGrade))
+                  .map(s => {
+                    const count = activeStageStudents.filter(st => st.sectionId === s.id).length;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        شعبة {s.name} ({s.grade}) - {count} طالباً
+                      </option>
+                    );
+                  })}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-black text-foreground">الفصل الدراسي للحزمة:</label>
+              <select
+                value={batchTerm}
+                onChange={(e) => setBatchTerm(e.target.value)}
+                className="h-10 w-full rounded-xl border border-border/80 bg-background px-3 text-xs font-bold shadow-sm focus:border-primary focus:outline-none"
+              >
+                <option value="الفصل الأول">الفصل الدراسي الأول</option>
+                <option value="الفصل الثاني">الفصل الدراسي الثاني</option>
+                <option value="الفصل الثالث">الفصل الدراسي الثالث</option>
+              </select>
+            </div>
+
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-black text-primary">
+                <ShieldCheck className="h-4 w-4" />
+                <span>تأكيد العملية التلقائية</span>
               </div>
-
-              <form onSubmit={handleBatchSubmit} className="p-6 space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-black text-foreground">الصف الدراسي:</label>
-                  <select
-                    value={batchGrade}
-                    onChange={(e) => {
-                      setBatchGrade(e.target.value);
-                      const secForGrade = allSections.find(s => s.stage === stage && s.grade === e.target.value);
-                      setBatchSectionId(secForGrade ? secForGrade.id : "");
-                    }}
-                    className="h-10 w-full rounded-xl border border-border/80 bg-background px-3 text-xs font-bold shadow-sm focus:border-primary focus:outline-none"
-                  >
-                    {grades.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-black text-foreground">الشعبة المستهدفة:</label>
-                  <select
-                    value={batchSectionId}
-                    onChange={(e) => setBatchSectionId(e.target.value)}
-                    required
-                    className="h-10 w-full rounded-xl border border-border/80 bg-background px-3 text-xs font-bold shadow-sm focus:border-primary focus:outline-none"
-                  >
-                    <option value="">اختر الشعبة...</option>
-                    {allSections
-                      .filter(s => s.stage === stage && (!batchGrade || s.grade === batchGrade))
-                      .map(s => {
-                        const count = activeStageStudents.filter(st => st.sectionId === s.id).length;
-                        return (
-                          <option key={s.id} value={s.id}>
-                            شعبة {s.name} ({s.grade}) - {count} طالباً
-                          </option>
-                        );
-                      })}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-black text-foreground">الفصل الدراسي للحزمة:</label>
-                  <select
-                    value={batchTerm}
-                    onChange={(e) => setBatchTerm(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-border/80 bg-background px-3 text-xs font-bold shadow-sm focus:border-primary focus:outline-none"
-                  >
-                    <option value="الفصل الأول">الفصل الدراسي الأول</option>
-                    <option value="الفصل الثاني">الفصل الدراسي الثاني</option>
-                    <option value="الفصل الثالث">الفصل الدراسي الثالث</option>
-                  </select>
-                </div>
-
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-black text-primary">
-                    <ShieldCheck className="h-4 w-4" />
-                    <span>تأكيد العملية التلقائية</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    سيقوم النظام بفحص الطلاب المسجلين في الشعبة وصرف المقررات غير المستلمة، مع خصم الكمية الإجمالية مباشرة من رصيد المستودع المدرسي المركزي وإصدار قيود الحركات المخزنية.
-                  </p>
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setIsBatchModalOpen(false)}
-                    className="rounded-xl border border-border/80 px-4 py-2 text-xs font-bold hover:bg-muted"
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-primary px-5 py-2 text-xs font-black text-primary-foreground shadow-md shadow-primary/20 hover:opacity-95 active:scale-[0.98]"
-                  >
-                    تأكيد وصرف الحزمة
-                  </button>
-                </div>
-              </form>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                سيقوم النظام بفحص الطلاب المسجلين في الشعبة وصرف المقررات غير المستلمة، مع خصم الكمية الإجمالية مباشرة من رصيد المستودع المدرسي المركزي وإصدار قيود الحركات المخزنية.
+              </p>
             </div>
           </div>
-        )}
+        </AdminModal>
 
         {/* Printable Official Handover Receipt Modal */}
-        {isReceiptModalOpen && receiptStudent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury animate-in fade-in duration-200">
-            <div className="w-full max-w-2xl rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 flex flex-col max-h-[92vh]">
-              <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
-                <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-                  <Printer className="h-4 w-4 text-primary" />
-                  معاينة وطباعة سند استلام عهدة المقررات
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsReceiptModalOpen(false)}
-                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Printable Document Area */}
-              <div id="handover-receipt" className="p-8 overflow-y-auto space-y-6 bg-white text-slate-900 dark:bg-card dark:text-foreground">
-                {/* Official School Header */}
-                <div className="border-b-2 border-slate-800 dark:border-border pb-4 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-black tracking-tight">مدارس المنهاج الأهلية النموذجية</h2>
-                    <p className="text-xs text-slate-500 dark:text-muted-foreground font-bold">
-                      قسم المستودع والوسائل التعليمية • العام الدراسي 2026/2027
-                    </p>
-                  </div>
-                  <div className="text-left text-xs font-bold text-slate-600 dark:text-muted-foreground">
-                    <div>التاريخ: {new Date().toLocaleDateString("ar-SA")}</div>
-                    <div>الرقم المرجعي: BK-{receiptStudent.id}-{Date.now().toString().slice(-4)}</div>
-                  </div>
-                </div>
-
-                <div className="text-center py-2">
-                  <h3 className="text-base font-black underline underline-offset-8">
-                    سند تسليم عهدة الكتب والمقررات المدرسية
-                  </h3>
-                </div>
-
-                {/* Student Details Box */}
-                <div className="rounded-xl border border-slate-300 dark:border-border p-4 grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="font-bold text-slate-500 dark:text-muted-foreground">اسم الطالب: </span>
-                    <span className="font-black">{receiptStudent.name}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-500 dark:text-muted-foreground">رقم الهوية: </span>
-                    <span className="font-black tabular-nums">{receiptStudent.nationalId || receiptStudent.id}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-500 dark:text-muted-foreground">الصف / الشعبة: </span>
-                    <span className="font-black">{receiptStudent.grade}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-500 dark:text-muted-foreground">اسم ولي الأمر: </span>
-                    <span className="font-black">{receiptStudent.guardianName || "-"}</span>
-                  </div>
-                </div>
-
-                {/* Books Received Table */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-black">المقررات والكتب المسلمة في هذه العهدة:</h4>
-                  <table className="w-full text-xs border border-slate-300 dark:border-border text-center">
-                    <thead>
-                      <tr className="bg-slate-100 dark:bg-muted font-black border-b border-slate-300 dark:border-border">
-                        <th className="p-2 border-r border-slate-300 dark:border-border">م</th>
-                        <th className="p-2 border-r border-slate-300 dark:border-border text-right">عنوان الكتاب / المقرر</th>
-                        <th className="p-2 border-r border-slate-300 dark:border-border">الفصل</th>
-                        <th className="p-2 border-r border-slate-300 dark:border-border">الحالة</th>
-                        <th className="p-2">تاريخ الصرف</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activeStageDistributions
-                        .filter(d => d.studentId === receiptStudent.id)
-                        .map((dist, idx) => {
-                          const tb = activeStageTextbooks.find(t => t.id === dist.textbookId);
-                          return (
-                            <tr key={dist.id} className="border-b border-slate-200 dark:border-border/50">
-                              <td className="p-2 border-r border-slate-200 dark:border-border/50 font-bold">{idx + 1}</td>
-                              <td className="p-2 border-r border-slate-200 dark:border-border/50 text-right font-black">
-                                {tb?.title || "كتاب دراسي"} {tb?.edition ? `(${tb.edition})` : ""}
-                              </td>
-                              <td className="p-2 border-r border-slate-200 dark:border-border/50">{dist.term || tb?.term || "الفصل 1"}</td>
-                              <td className="p-2 border-r border-slate-200 dark:border-border/50 font-bold text-emerald-600">جديد</td>
-                              <td className="p-2 font-bold tabular-nums">{dist.date}</td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Legal acknowledgment */}
-                <div className="rounded-xl bg-slate-50 dark:bg-muted/30 p-3 text-[11px] text-slate-600 dark:text-muted-foreground leading-relaxed border border-slate-200 dark:border-border/60">
-                  <p className="font-bold">إقرار واستلام العهدة:</p>
-                  <p>
-                    أقر أنا ولي أمر الطالب الموضح أعلاه بأنني استلمت كامل الكتب المدرسية المبينة بالجدول في حالة سليمة وجديدة، وأتعهد بالمحافظة عليها ومتابعة الطالب دراسياً وفق التعليمات المعتمدة.
+        <AdminModal
+          isOpen={isReceiptModalOpen && !!receiptStudent}
+          onClose={() => setIsReceiptModalOpen(false)}
+          title="معاينة وطباعة سند استلام عهدة المقررات"
+          description={receiptStudent ? `سند استلام رسمي للطالب: ${receiptStudent.name} (${receiptStudent.grade})` : undefined}
+          icon={Printer}
+          tone="primary"
+          maxWidth="2xl"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setIsReceiptModalOpen(false)}
+                className="rounded-xl border border-border/80 px-4 py-2 text-xs font-bold hover:bg-muted"
+              >
+                إغلاق
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-black text-primary-foreground shadow-md shadow-primary/20 hover:opacity-95 flex items-center gap-1.5"
+              >
+                <Printer className="h-4 w-4" />
+                <span>طباعة السند</span>
+              </button>
+            </>
+          }
+        >
+          {receiptStudent && (
+            <div id="handover-receipt" className="space-y-6 bg-white text-slate-900 dark:bg-card dark:text-foreground p-4 rounded-2xl border border-border/50">
+              {/* Official School Header */}
+              <div className="border-b-2 border-slate-800 dark:border-border pb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-black tracking-tight">مدارس المنهاج الأهلية النموذجية</h2>
+                  <p className="text-xs text-slate-500 dark:text-muted-foreground font-bold">
+                    قسم المستودع والوسائل التعليمية • العام الدراسي 2026/2027
                   </p>
                 </div>
-
-                {/* Signatures */}
-                <div className="pt-6 grid grid-cols-3 gap-6 text-center text-xs font-black">
-                  <div>
-                    <p className="mb-8">توقيع ولي الأمر</p>
-                    <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">.......................</p>
-                  </div>
-                  <div>
-                    <p className="mb-8">أمين المستودع المدرسي</p>
-                    <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">أ. أمين المستودع</p>
-                  </div>
-                  <div>
-                    <p className="mb-8">ختم إدارة المدرسة</p>
-                    <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">.......................</p>
-                  </div>
+                <div className="text-left text-xs font-bold text-slate-600 dark:text-muted-foreground">
+                  <div>التاريخ: {new Date().toLocaleDateString("ar-SA")}</div>
+                  <div>الرقم المرجعي: BK-{receiptStudent.id}-{Date.now().toString().slice(-4)}</div>
                 </div>
               </div>
 
-              {/* Actions Footer */}
-              <div className="p-4 border-t border-border/50 flex justify-end gap-2.5 bg-muted/10 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsReceiptModalOpen(false)}
-                  className="rounded-xl border border-border/80 px-4 py-2 text-xs font-bold hover:bg-muted"
-                >
-                  إغلاق
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="rounded-xl bg-primary px-5 py-2 text-xs font-black text-primary-foreground shadow-md shadow-primary/20 hover:opacity-95 flex items-center gap-1.5"
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>طباعة السند</span>
-                </button>
+              <div className="text-center py-2">
+                <h3 className="text-base font-black underline underline-offset-8">
+                  سند تسليم عهدة الكتب والمقررات المدرسية
+                </h3>
+              </div>
+
+              {/* Student Details Box */}
+              <div className="rounded-xl border border-slate-300 dark:border-border p-4 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">اسم الطالب: </span>
+                  <span className="font-black">{receiptStudent.name}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">رقم الهوية: </span>
+                  <span className="font-black tabular-nums">{receiptStudent.nationalId || receiptStudent.id}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">الصف / الشعبة: </span>
+                  <span className="font-black">{receiptStudent.grade}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500 dark:text-muted-foreground">اسم ولي الأمر: </span>
+                  <span className="font-black">{receiptStudent.guardianName || "-"}</span>
+                </div>
+              </div>
+
+              {/* Books Received Table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-black">المقررات والكتب المسلمة في هذه العهدة:</h4>
+                <table className="w-full text-xs border border-slate-300 dark:border-border text-center">
+                  <thead>
+                    <tr className="bg-slate-100 dark:bg-muted font-black border-b border-slate-300 dark:border-border">
+                      <th className="p-2 border-r border-slate-300 dark:border-border">م</th>
+                      <th className="p-2 border-r border-slate-300 dark:border-border text-right">عنوان الكتاب / المقرر</th>
+                      <th className="p-2 border-r border-slate-300 dark:border-border">الفصل</th>
+                      <th className="p-2 border-r border-slate-300 dark:border-border">الحالة</th>
+                      <th className="p-2">تاريخ الصرف</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeStageDistributions
+                      .filter(d => d.studentId === receiptStudent.id)
+                      .map((dist, idx) => {
+                        const tb = activeStageTextbooks.find(t => t.id === dist.textbookId);
+                        return (
+                          <tr key={dist.id} className="border-b border-slate-200 dark:border-border/50">
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50 font-bold">{idx + 1}</td>
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50 text-right font-black">
+                              {tb?.title || "كتاب دراسي"} {tb?.edition ? `(${tb.edition})` : ""}
+                            </td>
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50">{dist.term || tb?.term || "الفصل 1"}</td>
+                            <td className="p-2 border-r border-slate-200 dark:border-border/50 font-bold text-emerald-600">جديد</td>
+                            <td className="p-2 font-bold tabular-nums">{dist.date}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Legal acknowledgment */}
+              <div className="rounded-xl bg-slate-50 dark:bg-muted/30 p-3 text-[11px] text-slate-600 dark:text-muted-foreground leading-relaxed border border-slate-200 dark:border-border/60">
+                <p className="font-bold">إقرار واستلام العهدة:</p>
+                <p>
+                  أقر أنا ولي أمر الطالب الموضح أعلاه بأنني استلمت كامل الكتب المدرسية المبينة بالجدول في حالة سليمة وجديدة، وأتعهد بالمحافظة عليها ومتابعة الطالب دراسياً وفق التعليمات المعتمدة.
+                </p>
+              </div>
+
+              {/* Signatures */}
+              <div className="pt-6 grid grid-cols-3 gap-6 text-center text-xs font-black">
+                <div>
+                  <p className="mb-8">توقيع ولي الأمر</p>
+                  <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">.......................</p>
+                </div>
+                <div>
+                  <p className="mb-8">أمين المستودع المدرسي</p>
+                  <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">أ. أمين المستودع</p>
+                </div>
+                <div>
+                  <p className="mb-8">ختم إدارة المدرسة</p>
+                  <p className="border-t border-slate-400 dark:border-border pt-1 text-[11px] text-slate-500">.......................</p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </AdminModal>
       </div>
     </AppShell>
   );

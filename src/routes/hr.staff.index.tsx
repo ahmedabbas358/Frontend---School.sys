@@ -112,7 +112,7 @@ function HrStaffIndex() {
     if (!s) return null;
     return allUsers.find(
       (u) =>
-        (u.staffId && u.staffId === s.id) ||
+        (u.staffId && (u.staffId === s.id || (s.employeeNo && u.staffId === s.employeeNo))) ||
         (u.email && s.email && u.email.trim().toLowerCase() === s.email.trim().toLowerCase()) ||
         (u.fullName && s.name && u.fullName.trim() === s.name.trim()) ||
         (u.username && s.employeeNo && u.username.toLowerCase() === s.employeeNo.toLowerCase()) ||
@@ -140,7 +140,7 @@ function HrStaffIndex() {
       updateStaff(editingStaff.id, staffData);
       toast.success("تم تحديث بيانات الموظف بنجاح");
     } else {
-      addStaff(staffData);
+      const createdStaff = addStaff(staffData);
       toast.success("تم تسجيل الموظف الجديد بنجاح في المنظومة");
 
       // Auto-create User Account if requested
@@ -154,8 +154,8 @@ function HrStaffIndex() {
           phone: staffData.phone || "",
           password: userAccountParams.password || "Staff@2026",
           stageScope: staffData.stage || "all",
-          staffId: staffData.id || staffData.employeeNo || "",
-          notes: `حساب تم إنشاؤه تلقائياً عند تسجيل الموظف (رقم: ${staffData.employeeNo || "تلقائي"})`,
+          staffId: createdStaff.id,
+          notes: `حساب تم إنشاؤه تلقائياً عند تسجيل الموظف (كود: ${createdStaff.employeeNo || createdStaff.id})`,
           lastLogin: "لم يسجل دخول",
           twoFactorEnabled: false,
           createdAt: new Date().toISOString().split("T")[0],
@@ -728,6 +728,7 @@ function HrStaffIndex() {
         activeStageStaff={activeStageStaff}
         allStaff={allStaff}
         currentAcademicYearId={currentAcademicYearId}
+        allUsers={allUsers}
       />
 
       {/* ─────────────────────────────────────────────────────────────
@@ -741,6 +742,7 @@ function HrStaffIndex() {
         onLinkOrCreate={handleLinkOrCreateUser}
         onResetPassword={handleResetUserPassword}
         onToggleUserStatus={handleToggleUserStatus}
+        onUpdateUserRole={(userId, newRole) => updateUser(userId, { role: newRole })}
       />
 
       {/* ─────────────────────────────────────────────────────────────
@@ -784,6 +786,13 @@ function HrStaffIndex() {
         onOpenAssignments={isTeachingStaff(previewStaff) ? () => setAssignmentsStaff(previewStaff) : undefined}
         onOpenDocument={() => setDocumentStaff(previewStaff)}
         onOpenAdvance={() => setAdvanceStaff(previewStaff)}
+        onToggleStatus={() => {
+          if (!previewStaff) return;
+          const next = previewStaff.status === "active" ? "on_leave" : "active";
+          updateStaff(previewStaff.id, { status: next });
+          setPreviewStaff({ ...previewStaff, status: next });
+          toast.success(`تم تغيير حالة الموظف إلى: ${next === "active" ? "على رأس العمل" : "في إجازة"}`);
+        }}
       />
 
       {/* ─────────────────────────────────────────────────────────────

@@ -41,6 +41,8 @@ import {
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
 import { ArabicDatePicker } from "@/components/ui/arabic-date-picker";
+import { AttendanceDisciplineNav } from "@/components/attendance/attendance-nav";
+import { AdminModal } from "@/components/admin/admin-modal";
 
 export const Route = createFileRoute("/attendance/")({
   head: () => ({
@@ -501,6 +503,9 @@ export function UnifiedAttendanceHubPage() {
       }
     >
       <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-3 duration-400 font-sans" dir="rtl">
+
+        {/* Unified Subnavigation Ribbon */}
+        <AttendanceDisciplineNav activeTab="hub" />
 
         {/* Top Master Banner: Date Picker + Quick Stage Badge */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-gradient-to-r from-card via-card/95 to-primary/5 border border-border/80 rounded-3xl p-6 shadow-sm backdrop-blur-xl">
@@ -1417,70 +1422,56 @@ export function UnifiedAttendanceHubPage() {
       </div>
 
       {/* =========================================================================
-          MODAL: Substitute Teacher Assignment Modal
+          MODAL 1: Substitute Teacher Assignment Modal
           ========================================================================= */}
       {substituteModalData && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury animate-in fade-in duration-200 overflow-y-auto"
-          onClick={() => setSubstituteModalData(null)}
-          dir="rtl"
+        <AdminModal
+          isOpen={true}
+          onClose={() => setSubstituteModalData(null)}
+          title="تكليف معلم بديل (احتياط)"
+          subtitle={`تغطية حصص المعلم الغائب (${substituteModalData.teacherName}) لمنع فراغ الفصول`}
+          icon={UserCog}
+          tone="primary"
+          size="medium"
         >
-          <div
-            className="w-full max-w-md modal-card-luxury p-6 rounded-3xl border border-border/80 bg-card/98 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-150 space-y-4 my-8"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-black">
-                  <UserCog className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-sm text-foreground">تكليف معلم بديل (احتياط)</h3>
-                  <p className="text-[11px] text-muted-foreground">تغطية حصص المعلم الغائب لمنع فراغ الفصول</p>
-                </div>
-              </div>
-              <button onClick={() => setSubstituteModalData(null)} className="h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
+          <div className="space-y-4 text-xs font-bold">
+            <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/60 space-y-1">
+              <span className="text-muted-foreground font-semibold block text-[11px]">المعلم الأساسي (الغائب):</span>
+              <span className="font-black text-sm text-foreground block">{substituteModalData.teacherName}</span>
             </div>
 
-            <div className="space-y-3.5 text-xs">
-              <div className="p-3 rounded-2xl bg-muted/40 border border-border/60 space-y-1">
-                <span className="text-muted-foreground font-semibold block text-[11px]">المعلم الأساسي (الغائب):</span>
-                <span className="font-black text-sm text-foreground block">{substituteModalData.teacherName}</span>
-              </div>
+            <div>
+              <label className="block font-bold text-foreground mb-1.5">اختر المعلم البديل المتاح في نفس الفترة:</label>
+              <select
+                value={selectedSubstituteTeacherId}
+                onChange={e => setSelectedSubstituteTeacherId(e.target.value)}
+                className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
+              >
+                <option value="">-- اختر المعلم الاحتياط --</option>
+                {teachersList
+                  .filter(t => t.id !== substituteModalData.originalTeacherId)
+                  .map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.role})
+                    </option>
+                  ))}
+              </select>
+            </div>
 
-              <div>
-                <label className="block font-bold text-foreground mb-1.5">اختر المعلم البديل المتاح في نفس الفترة:</label>
-                <select
-                  value={selectedSubstituteTeacherId}
-                  onChange={e => setSelectedSubstituteTeacherId(e.target.value)}
-                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-                >
-                  <option value="">-- اختر المعلم الاحتياط --</option>
-                  {teachersList
-                    .filter(t => t.id !== substituteModalData.originalTeacherId)
-                    .map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.role})
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/25 text-purple-700 dark:text-purple-300 text-[11px] font-semibold leading-relaxed">
-                ℹ️ سيتم إرسال إشعار فوري للمعلم البديل بالحصص المكلف بتغطيتها، وتوثيق ذلك في سجل الاحتياط المدرسي.
-              </div>
+            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/25 text-purple-700 dark:text-purple-300 text-[11px] font-semibold leading-relaxed">
+              ℹ️ سيتم إرسال إشعار فوري للمعلم البديل بالحصص المكلف بتغطيتها، وتوثيق ذلك في سجل الاحتياط المدرسي.
             </div>
 
             <div className="pt-3 border-t border-border/60 flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setSubstituteModalData(null)}
-                className="px-4 py-2 rounded-xl border border-input bg-background text-xs font-bold text-foreground hover:bg-muted"
+                className="h-10 px-4 rounded-xl border border-input bg-background text-xs font-bold text-foreground hover:bg-muted transition-all cursor-pointer"
               >
                 إلغاء
               </button>
               <button
+                type="button"
                 onClick={() => {
                   if (!selectedSubstituteTeacherId) {
                     toast.error("الرجاء اختيار معلم بديل");
@@ -1490,217 +1481,187 @@ export function UnifiedAttendanceHubPage() {
                   toast.success(`تم تكليف (${subTeacher?.name}) كبديل لـ (${substituteModalData.teacherName}) بنجاح!`);
                   setSubstituteModalData(null);
                 }}
-                className="px-5 py-2 rounded-xl bg-purple-600 text-white text-xs font-black shadow-md hover:bg-purple-700 transition-all active:scale-95 flex items-center gap-1.5"
+                className="h-10 px-5 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer glow-primary"
               >
                 <Check className="w-4 h-4" />
                 <span>اعتماد التكليف</span>
               </button>
             </div>
           </div>
-        </div>
+        </AdminModal>
       )}
 
       {/* =========================================================================
-          MODAL: Mobile / PWA App Export Modal (تصدير روابط الهواتف للمشرفين والعمال)
+          MODAL 2: Mobile / PWA App Export Modal
           ========================================================================= */}
       {isMobileExportModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury animate-in fade-in duration-200 overflow-y-auto"
-          onClick={() => setIsMobileExportModalOpen(false)}
-          dir="rtl"
+        <AdminModal
+          isOpen={true}
+          onClose={() => setIsMobileExportModalOpen(false)}
+          title="تصدير تطبيقات الحضور للهواتف والمشرفين"
+          subtitle="روابط مخصصة تعمل بكفاءة على هواتف المشرفين والعمال في الميدان المدرسي"
+          icon={Smartphone}
+          tone="info"
+          size="medium"
         >
-          <div
-            className="w-full max-w-lg modal-card-luxury p-6 sm:p-7 rounded-3xl border border-border/80 bg-card/98 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-150 space-y-4 my-8"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-base text-foreground">تصدير تطبيقات الحضور للهواتف والمشرفين</h3>
-                  <p className="text-xs text-muted-foreground">روابط مخصصة تعمل بكفاءة على هواتف المشرفين والعمال في الميدان</p>
-                </div>
-              </div>
-              <button onClick={() => setIsMobileExportModalOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="space-y-4 text-xs font-bold">
+            <p className="text-muted-foreground leading-relaxed font-medium">
+              لا داعي لعرض واجهة الهاتف داخل لوحة تحكم الإدارة المكتبية؛ يمكنك إرسال هذه الروابط المخصصة والمحمية مباشرة لهواتف الكوادر الميدانية:
+            </p>
 
-            <div className="space-y-3.5 text-xs">
-              <p className="text-muted-foreground leading-relaxed">
-                لا داعي لعرض واجهة الهاتف داخل لوحة تحكم الإدارة المكتبية؛ يمكنك إرسال هذه الروابط المخصصة والمحمية مباشرة لهواتف الكوادر الميدانية:
+            {/* Link 1: Class Supervisors Mobile App */}
+            <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  <span className="font-black text-xs text-foreground">تطبيق المشرفين (رصد حضور الفصول)</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">هواتف المشرفين</span>
+              </div>
+              <p className="text-muted-foreground text-[11px] font-medium">
+                مخصص لمشرفي الأدوار والفصول لتسجيل الحضور بنقرة سريعة أثناء المرور الميداني.
               </p>
-
-              {/* Link 1: Class Supervisors Mobile App */}
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    <span className="font-black text-sm text-foreground">تطبيق المشرفين (رصد حضور الفصول)</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold">هواتف المشرفين</span>
-                </div>
-                <p className="text-muted-foreground text-[11px]">
-                  مخصص لمشرفي الأدوار والفصول لتسجيل الحضور بنقرة سريعة أثناء المرور الميداني.
-                </p>
-                <div className="pt-2 flex items-center gap-2">
-                  <button
-                    onClick={() => handleCopyMobileLink("/supervisor/classes", "تطبيق رصد الفصول")}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-xs"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>نسخ رابط الهاتف (لإرساله عبر واتساب)</span>
-                  </button>
-                  <a
-                    href="/supervisor/classes"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-9 w-9 rounded-xl border border-border/70 bg-card flex items-center justify-center text-muted-foreground hover:text-foreground"
-                    title="فتح في نافذة جديدة"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Link 2: Gate & Worker Check-in App */}
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-primary" />
-                    <span className="font-black text-sm text-foreground">بوابة تحضير العمال والحراسة (عند البوابة)</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">بوابة الاستقبال</span>
-                </div>
-                <p className="text-muted-foreground text-[11px]">
-                  مخصص لمشرف البوابة العامة لتحضير كافة الكوادر والعمال لحظة الدخول والخروج.
-                </p>
-                <div className="pt-2 flex items-center gap-2">
-                  <button
-                    onClick={() => handleCopyMobileLink("/supervisor/gate", "بوابة تحضير العمال")}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-xs"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>نسخ رابط بوابة الاستقبال</span>
-                  </button>
-                  <a
-                    href="/supervisor/gate"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-9 w-9 rounded-xl border border-border/70 bg-card flex items-center justify-center text-muted-foreground hover:text-foreground"
-                    title="فتح في نافذة جديدة"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
+              <div className="pt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyMobileLink("/supervisor/classes", "تطبيق رصد الفصول")}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>نسخ رابط الهاتف (لإرساله عبر واتساب)</span>
+                </button>
+                <a
+                  href="/supervisor/classes"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-9 w-9 rounded-xl border border-border/70 bg-card flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  title="فتح في نافذة جديدة"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-border/60 flex justify-end">
+            {/* Link 2: Gate & Worker Check-in App */}
+            <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-primary" />
+                  <span className="font-black text-xs text-foreground">بوابة تحضير العمال والحراسة (عند البوابة)</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">بوابة الاستقبال</span>
+              </div>
+              <p className="text-muted-foreground text-[11px] font-medium">
+                مخصص لمشرف البوابة العامة لتحضير كافة الكوادر والعمال لحظة الدخول والخروج.
+              </p>
+              <div className="pt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyMobileLink("/supervisor/gate", "بوابة تحضير العمال")}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>نسخ رابط بوابة الاستقبال</span>
+                </button>
+                <a
+                  href="/supervisor/gate"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-9 w-9 rounded-xl border border-border/70 bg-card flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  title="فتح في نافذة جديدة"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-border/60 flex justify-end">
               <button
+                type="button"
                 onClick={() => setIsMobileExportModalOpen(false)}
-                className="px-5 py-2 rounded-xl bg-card border border-border/70 text-xs font-bold text-foreground hover:bg-muted"
+                className="h-9 px-5 rounded-xl bg-card border border-border/70 text-xs font-bold text-foreground hover:bg-muted transition-all cursor-pointer"
               >
                 إغلاق النافذة
               </button>
             </div>
           </div>
-        </div>
+        </AdminModal>
       )}
 
       {/* =========================================================================
-          MODAL: Quick Scan / Barcode Check-in
+          MODAL 3: Quick Scan / Barcode Check-in Modal
           ========================================================================= */}
       {isQuickScanModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury animate-in fade-in duration-200 overflow-y-auto"
-          onClick={() => setIsQuickScanModalOpen(false)}
-          dir="rtl"
+        <AdminModal
+          isOpen={true}
+          onClose={() => setIsQuickScanModalOpen(false)}
+          title="التحضير السريع بالباركود / الرقم التعريفي"
+          subtitle="مسح فوري لبطاقة الطالب أو الموظف لتسجيل الحضور المباشر"
+          icon={QrCode}
+          tone="primary"
+          size="medium"
         >
-          <div
-            className="w-full max-w-md modal-card-luxury p-6 rounded-3xl border border-border/80 bg-card/98 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-150 space-y-4 my-8"
-            onClick={e => e.stopPropagation()}
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              if (!quickScanInput.trim()) return;
+              const query = quickScanInput.trim().toLowerCase();
+              const student = allStudents.find(s => (s.nationalId || "").includes(query) || s.id.toLowerCase().includes(query) || s.name.toLowerCase().includes(query));
+              const staffMember = allStaff.find(s => (s.nationalId || "").includes(query) || (s.employeeNo || "").includes(query) || s.id.toLowerCase().includes(query) || s.name.toLowerCase().includes(query));
+
+              if (student) {
+                setStudentMarks(prev => ({
+                  ...prev,
+                  [student.id]: { status: "present", notes: "تم التحضير عبر الباركود السريع" }
+                }));
+                toast.success(`✓ تم تحضير الطالب: ${student.name} بنجاح!`);
+                setQuickScanInput("");
+              } else if (staffMember) {
+                handleUpdateStaffStatus(staffMember.id, "present");
+                toast.success(`✓ تم تحضير الموظف: ${staffMember.name} (${staffMember.role}) بنجاح!`);
+                setQuickScanInput("");
+              } else {
+                toast.error("لم يتم العثور على طالب أو موظف بهذا الرقم التعريفي");
+              }
+            }}
+            className="space-y-4 text-xs font-bold"
           >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black">
-                  <QrCode className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-sm text-foreground">التحضير السريع بالباركود / الرقم التعريفي</h3>
-                  <p className="text-[11px] text-muted-foreground">مسح فوري لبطاقة الطالب أو الموظف لتسجيل الحضور</p>
-                </div>
+            <div>
+              <label className="block font-bold text-foreground mb-1.5">امسح الباركود أو أدخل الرقم الوطني / الوظيفي:</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={quickScanInput}
+                  onChange={e => setQuickScanInput(e.target.value)}
+                  placeholder="امسح بالماسح الضوئي أو اكتب الرقم..."
+                  autoFocus
+                  className="w-full h-11 rounded-xl border border-input bg-background pr-10 pl-3 text-xs font-bold text-foreground outline-none focus:border-primary transition-all font-mono"
+                />
+                <QrCode className="w-5 h-5 text-primary absolute right-3 top-3 pointer-events-none" />
               </div>
-              <button onClick={() => setIsQuickScanModalOpen(false)} className="h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
             </div>
 
-            <form
-              onSubmit={e => {
-                e.preventDefault();
-                if (!quickScanInput.trim()) return;
-                const query = quickScanInput.trim().toLowerCase();
-                // Match student or staff
-                const student = allStudents.find(s => (s.nationalId || "").includes(query) || s.id.toLowerCase().includes(query) || s.name.toLowerCase().includes(query));
-                const staffMember = allStaff.find(s => (s.nationalId || "").includes(query) || (s.employeeNo || "").includes(query) || s.id.toLowerCase().includes(query) || s.name.toLowerCase().includes(query));
+            <div className="p-3 rounded-2xl bg-muted/40 border border-border/60 text-[11px] text-muted-foreground leading-relaxed font-medium">
+              💡 النظام يدعم قارئات الباركود والـ RFID تلقائياً بمجرد مسح البطاقة المدرسية أو كود الطالب/الموظف.
+            </div>
 
-                if (student) {
-                  setStudentMarks(prev => ({
-                    ...prev,
-                    [student.id]: { status: "present", notes: "تم التحضير عبر الباركود السريع" }
-                  }));
-                  toast.success(`✓ تم تحضير الطالب: ${student.name} بنجاح!`);
-                  setQuickScanInput("");
-                } else if (staffMember) {
-                  handleUpdateStaffStatus(staffMember.id, "present");
-                  toast.success(`✓ تم تحضير الموظف: ${staffMember.name} (${staffMember.role}) بنجاح!`);
-                  setQuickScanInput("");
-                } else {
-                  toast.error("لم يتم العثور على طالب أو موظف بهذا الرقم التعريفي");
-                }
-              }}
-              className="space-y-3.5 text-xs"
-            >
-              <div>
-                <label className="block font-bold text-foreground mb-1.5">امسح الباركود أو أدخل الرقم الوطني / الوظيفي:</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={quickScanInput}
-                    onChange={e => setQuickScanInput(e.target.value)}
-                    placeholder="امسح بالماسح الضوئي أو اكتب الرقم..."
-                    autoFocus
-                    className="w-full h-11 rounded-xl border border-input bg-background pr-10 pl-3 text-sm font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono"
-                  />
-                  <QrCode className="w-5 h-5 text-primary absolute right-3 top-3 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-muted/40 border border-border/60 text-[11px] text-muted-foreground leading-relaxed">
-                💡 النظام يدعم قارئات الباركود والـ RFID تلقائياً بمجرد مسح البطاقة المدرسية أو كود الطالب/الموظف.
-              </div>
-
-              <div className="pt-3 border-t border-border/60 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsQuickScanModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-input bg-background text-xs font-bold text-foreground hover:bg-muted"
-                >
-                  إغلاق
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all active:scale-95 glow-primary"
-                >
-                  تسجيل الحضور
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="pt-3 border-t border-border/60 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsQuickScanModalOpen(false)}
+                className="h-9 px-4 rounded-xl border border-input bg-background text-xs font-bold text-foreground hover:bg-muted transition-all cursor-pointer"
+              >
+                إغلاق
+              </button>
+              <button
+                type="submit"
+                className="h-9 px-5 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all active:scale-95 cursor-pointer glow-primary"
+              >
+                تسجيل الحضور
+              </button>
+            </div>
+          </form>
+        </AdminModal>
       )}
 
       {/* Advanced Print Engine */}

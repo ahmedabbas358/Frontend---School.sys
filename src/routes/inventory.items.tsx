@@ -28,6 +28,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { AdminModal } from "@/components/admin/admin-modal";
+import { FacilitiesNavTabs } from "@/components/facilities/facilities-nav";
 
 export const Route = createFileRoute("/inventory/items")({
   head: () => ({ meta: [{ title: "إدارة المستودعات والأصناف | منصة مدارس" }] }),
@@ -291,6 +293,8 @@ function InventoryItems() {
       }
     >
       <div className="space-y-6">
+        <FacilitiesNavTabs activeTab="inventory" />
+
         {/* KPI Banner Grid */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-border bg-card p-4.5 shadow-2xs">
@@ -587,299 +591,274 @@ function InventoryItems() {
       </div>
 
       {/* MODAL 1: Consume Stock Modal */}
-      {consumeItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-amber-500/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-amber-500/15 text-amber-600 flex items-center justify-center shadow-inner border border-amber-500/20">
-                  <ArrowDownLeft className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">إذن صرف من المستودع</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{consumeItem.name} • الرصيد الحالي: {consumeItem.quantity}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setConsumeItem(null); setConsumeQuantity(1); setConsumeTo(""); }}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      <AdminModal
+        isOpen={!!consumeItem}
+        onClose={() => {
+          setConsumeItem(null);
+          setConsumeQuantity(1);
+          setConsumeTo("");
+        }}
+        title="إذن صرف من المستودع"
+        description={consumeItem ? `${consumeItem.name} • الرصيد الحالي بالمستودع: ${consumeItem.quantity} وحدة` : undefined}
+        icon={ArrowDownLeft}
+        tone="amber"
+        maxWidth="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setConsumeItem(null);
+                setConsumeQuantity(1);
+                setConsumeTo("");
+              }}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              onClick={handleConsume}
+              disabled={!consumeItem || consumeQuantity <= 0 || consumeQuantity > consumeItem.quantity || !consumeTo.trim()}
+              className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-40 active:scale-[0.98]"
+            >
+              تأكيد إذن الصرف
+            </button>
+          </>
+        }
+      >
+        {consumeItem && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">الكمية المراد صرفها (بحد أقصى {consumeItem.quantity})</label>
+              <input
+                type="number"
+                min="1"
+                max={consumeItem.quantity}
+                value={consumeQuantity}
+                onChange={(e) => setConsumeQuantity(Number(e.target.value))}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-base font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              />
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">الكمية المراد صرفها (بحد أقصى {consumeItem.quantity})</label>
-                <input
-                  type="number"
-                  min="1"
-                  max={consumeItem.quantity}
-                  value={consumeQuantity}
-                  onChange={(e) => setConsumeQuantity(Number(e.target.value))}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-base font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">الجهة أو الشخص المستلم <span className="text-destructive">*</span></label>
-                <input
-                  type="text"
-                  value={consumeTo}
-                  onChange={(e) => setConsumeTo(e.target.value)}
-                  placeholder="مثال: قسم الصيانة، أ. عبد الله، العيادة المدرسية، الصف الأول..."
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => { setConsumeItem(null); setConsumeQuantity(1); setConsumeTo(""); }}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConsume}
-                  disabled={consumeQuantity <= 0 || consumeQuantity > consumeItem.quantity || !consumeTo.trim()}
-                  className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-40 active:scale-[0.98]"
-                >
-                  تأكيد إذن الصرف
-                </button>
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">الجهة أو الشخص المستلم <span className="text-destructive">*</span></label>
+              <input
+                type="text"
+                value={consumeTo}
+                onChange={(e) => setConsumeTo(e.target.value)}
+                placeholder="مثال: قسم الصيانة، أ. عبد الله، العيادة المدرسية، الصف الأول..."
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminModal>
 
       {/* MODAL 2: Restock Item Modal */}
-      {restockItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-emerald-500/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shadow-inner border border-emerald-500/20">
-                  <ArrowUpRight className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">توريد وزيادة رصيد المستودع</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{restockItem.name} • الرصيد الحالي: {restockItem.quantity}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setRestockItem(null); setRestockQuantity(10); setRestockSupplier(""); }}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      <AdminModal
+        isOpen={!!restockItem}
+        onClose={() => {
+          setRestockItem(null);
+          setRestockQuantity(10);
+          setRestockSupplier("");
+        }}
+        title="توريد وزيادة رصيد المستودع"
+        description={restockItem ? `${restockItem.name} • الرصيد الحالي بالمستودع: ${restockItem.quantity} وحدة` : undefined}
+        icon={ArrowUpRight}
+        tone="success"
+        maxWidth="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setRestockItem(null);
+                setRestockQuantity(10);
+                setRestockSupplier("");
+              }}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              onClick={handleRestock}
+              disabled={restockQuantity <= 0}
+              className="rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-black text-white hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-40 active:scale-[0.98]"
+            >
+              تأكيد التوريد والإيداع
+            </button>
+          </>
+        }
+      >
+        {restockItem && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">الكمية الموردة الجديدة</label>
+              <input
+                type="number"
+                min="1"
+                value={restockQuantity}
+                onChange={(e) => setRestockQuantity(Number(e.target.value))}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-base font-black text-emerald-600 shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              />
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">الكمية الموردة الجديدة</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={restockQuantity}
-                  onChange={(e) => setRestockQuantity(Number(e.target.value))}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-base font-black text-emerald-600 shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">اسم المورد / رقم فاتورة الشراء</label>
+              <input
+                type="text"
+                value={restockSupplier}
+                onChange={(e) => setRestockSupplier(e.target.value)}
+                placeholder="مثال: شركة النور للقرطاسية، فاتورة توريد 104..."
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              />
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">اسم المورد / رقم فاتورة الشراء</label>
-                <input
-                  type="text"
-                  value={restockSupplier}
-                  onChange={(e) => setRestockSupplier(e.target.value)}
-                  placeholder="مثال: شركة النور للقرطاسية، فاتورة توريد 104..."
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                />
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                الرصيد بعد التوريد سيصبح: <strong>{restockItem.quantity + restockQuantity}</strong> وحدة
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => { setRestockItem(null); setRestockQuantity(10); setRestockSupplier(""); }}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRestock}
-                  disabled={restockQuantity <= 0}
-                  className="rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-black text-white hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-40 active:scale-[0.98]"
-                >
-                  تأكيد التوريد والإيداع
-                </button>
-              </div>
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+              الرصيد بعد التوريد سيصبح: <strong>{restockItem.quantity + restockQuantity}</strong> وحدة
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminModal>
 
       {/* MODAL 3: Add / Edit Item Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shadow-inner border border-primary/20">
-                  <PackageOpen className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">{editItem ? 'تعديل بيانات الصنف' : 'تعريف صنف مخزني جديد'}</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">تسجيل الأصناف والمعدات بالمستودع المدرسي</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setIsModalOpen(false); reset(); setEditItem(null); }}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      <AdminModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          reset();
+          setEditItem(null);
+        }}
+        title={editItem ? 'تعديل بيانات الصنف' : 'تعريف صنف مخزني جديد'}
+        description="تسجيل وتوصيف الأصناف والمعدات بالمستودع المدرسي"
+        icon={PackageOpen}
+        tone="primary"
+        maxWidth="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                reset();
+                setEditItem(null);
+              }}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit(onSubmit)}
+              className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
+            >
+              {editItem ? "حفظ التعديلات" : "إضافة الصنف للمستودع"}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">اسم الصنف <span className="text-destructive">*</span></label>
+            <input
+              {...register("name")}
+              className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              placeholder="مثال: زي مدرسي، مقاعد دراسية، حبر طابعة..."
+            />
+            {errors.name && <p className="text-xs font-bold text-destructive">{errors.name.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground">التصنيف المخزني <span className="text-destructive">*</span></label>
+            <input
+              {...register("category")}
+              className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              placeholder="قرطاسية، تجهيزات فصول، أجهزة تقنية، ملابس..."
+              list="categories-list"
+            />
+            <datalist id="categories-list">
+              {categories.map(c => <option key={c} value={c} />)}
+            </datalist>
+            {errors.category && <p className="text-xs font-bold text-destructive">{errors.category.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">السعر التقديري <span className="text-destructive">*</span></label>
+              <input
+                {...register("price")}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+                placeholder={`مثال: 50 ${currency}`}
+              />
+              {errors.price && <p className="text-xs font-bold text-destructive">{errors.price.message}</p>}
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">اسم الصنف <span className="text-destructive">*</span></label>
-                <input
-                  {...register("name")}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                  placeholder="مثال: زي مدرسي، مقاعد دراسية، حبر طابعة..."
-                />
-                {errors.name && <p className="text-xs font-bold text-destructive">{errors.name.message}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground">التصنيف المخزني <span className="text-destructive">*</span></label>
-                <input
-                  {...register("category")}
-                  className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                  placeholder="قرطاسية، تجهيزات فصول، أجهزة تقنية، ملابس..."
-                  list="categories-list"
-                />
-                <datalist id="categories-list">
-                  {categories.map(c => <option key={c} value={c} />)}
-                </datalist>
-                {errors.category && <p className="text-xs font-bold text-destructive">{errors.category.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">السعر التقديري <span className="text-destructive">*</span></label>
-                  <input
-                    {...register("price")}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                    placeholder={`مثال: 50 ${currency}`}
-                  />
-                  {errors.price && <p className="text-xs font-bold text-destructive">{errors.price.message}</p>}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground">الكمية الافتتاحية <span className="text-destructive">*</span></label>
-                  <input
-                    type="number"
-                    {...register("quantity")}
-                    className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-                  />
-                  {errors.quantity && <p className="text-xs font-bold text-destructive">{errors.quantity.message}</p>}
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => { setIsModalOpen(false); reset(); setEditItem(null); }}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20 active:scale-[0.98]"
-                >
-                  {editItem ? "حفظ التعديلات" : "إضافة الصنف للمستودع"}
-                </button>
-              </div>
-            </form>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground">الكمية الافتتاحية <span className="text-destructive">*</span></label>
+              <input
+                type="number"
+                {...register("quantity")}
+                className="h-11 w-full rounded-xl border border-border/80 bg-background/80 px-3.5 text-sm font-black text-primary shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+              />
+              {errors.quantity && <p className="text-xs font-bold text-destructive">{errors.quantity.message}</p>}
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </AdminModal>
 
       {/* MODAL 4: Delete Confirmation Modal */}
-      {deleteConfirmItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-luxury overflow-y-auto">
-          <div className="w-full max-w-md rounded-3xl modal-card-luxury overflow-hidden shadow-2xl border border-border/80 my-8 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-border/50 bg-gradient-to-r from-card via-card/95 to-destructive/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center shadow-inner border border-destructive/20">
-                  <Trash2 className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-foreground">تأكيد حذف الصنف</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">حذف الصنف نهائياً من قيود المستودع</p>
-                </div>
+      <AdminModal
+        isOpen={!!deleteConfirmItem}
+        onClose={() => setDeleteConfirmItem(null)}
+        title="تأكيد حذف الصنف"
+        description="حذف الصنف نهائياً من قيود المستودع المركزي"
+        icon={Trash2}
+        tone="danger"
+        maxWidth="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmItem(null)}
+              className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
+            >
+              تراجع
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteItem}
+              className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
+            >
+              نعم، تأكيد الحذف
+            </button>
+          </>
+        }
+      >
+        {deleteConfirmItem && (
+          <div className="space-y-4">
+            <p className="text-sm font-bold text-foreground">
+              هل أنت متأكد من رغبتك في حذف هذا الصنف من المستودع؟
+            </p>
+
+            <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">اسم الصنف:</span>
+                <span className="font-bold text-foreground">{deleteConfirmItem.name}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmItem(null)}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <p className="text-sm font-bold text-foreground">
-                هل أنت متأكد من رغبتك في حذف هذا الصنف من المستودع؟
-              </p>
-
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">اسم الصنف:</span>
-                  <span className="font-bold text-foreground">{deleteConfirmItem.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">التصنيف:</span>
-                  <span className="font-bold text-foreground">{deleteConfirmItem.category}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">الكمية الحالية بالمستودع:</span>
-                  <span className="font-black text-primary">{deleteConfirmItem.quantity} وحدة</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">التصنيف:</span>
+                <span className="font-bold text-foreground">{deleteConfirmItem.category}</span>
               </div>
-
-              <div className="pt-4 border-t border-border/50 flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirmItem(null)}
-                  className="rounded-xl px-5 py-2.5 text-xs font-bold border border-border/80 hover:bg-accent transition-colors"
-                >
-                  تراجع
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteItem}
-                  className="rounded-xl bg-destructive px-6 py-2.5 text-xs font-black text-destructive-foreground hover:bg-destructive/90 transition-all shadow-md shadow-destructive/20 active:scale-[0.98]"
-                >
-                  نعم، تأكيد الحذف
-                </button>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">الكمية الحالية بالمستودع:</span>
+                <span className="font-black text-primary">{deleteConfirmItem.quantity} وحدة</span>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminModal>
     </AppShell>
   );
 }

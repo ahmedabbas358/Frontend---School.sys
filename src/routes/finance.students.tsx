@@ -695,6 +695,20 @@ function FinanceStudents() {
         icon={GraduationCap}
         tone="primary"
         maxWidth="4xl"
+        footer={
+          <div className="flex justify-between items-center w-full">
+            <span className="text-xs font-bold text-muted-foreground">
+              إجمالي الرصيد المتبقي: <strong className="text-rose-600 font-black tabular-nums">{statementModalData ? (statementModalData.totalDue || 0).toLocaleString() : 0} {currency}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => setStatementModalData(null)}
+              className="h-9 px-5 rounded-xl border border-border/80 bg-background hover:bg-accent text-xs font-bold transition-all cursor-pointer"
+            >
+              إغلاق الكشف
+            </button>
+          </div>
+        }
       >
         {statementModalData && (
           <div className="space-y-4">
@@ -796,13 +810,15 @@ function FinanceStudents() {
                   <table className="w-full text-start text-xs font-bold">
                     <thead className="bg-muted/50 border-b border-border/60 text-muted-foreground">
                       <tr>
-                        <th className="px-4 py-3 text-start">رقم الفاتورة</th>
-                        <th className="px-4 py-3 text-start">البيان والتفاصيل</th>
-                        <th className="px-4 py-3 text-start">تاريخ الاستحقاق</th>
-                        <th className="px-4 py-3 text-start">المبلغ الإجمالي</th>
-                        <th className="px-4 py-3 text-start">المسدد</th>
-                        <th className="px-4 py-3 text-start">المتبقي</th>
-                        <th className="px-4 py-3 text-start">الحالة</th>
+                        <th className="px-3.5 py-3 text-start">رقم وتاريخ المطالبة</th>
+                        <th className="px-3.5 py-3 text-start">البيان والتفاصيل</th>
+                        <th className="px-3.5 py-3 text-start">المبلغ الأصلي</th>
+                        <th className="px-3.5 py-3 text-start">الخصم</th>
+                        <th className="px-3.5 py-3 text-start">الصافي</th>
+                        <th className="px-3.5 py-3 text-start">المسدد</th>
+                        <th className="px-3.5 py-3 text-start">المتبقي المطلوب</th>
+                        <th className="px-3.5 py-3 text-start">الحالة</th>
+                        <th className="px-3.5 py-3 text-center">إجراء سريع</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
@@ -811,20 +827,34 @@ function FinanceStudents() {
                         const due = net - (inv.paid || 0);
                         return (
                           <tr key={inv.id} className="hover:bg-accent/20 transition-colors">
-                            <td className="px-4 py-3 font-mono text-xs">{inv.issueDate || inv.dueDate || "-"}</td>
-                            <td className="px-4 py-3 font-bold">{inv.title}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{inv.amount?.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-orange-500">{inv.discountAmount ? inv.discountAmount.toLocaleString() : "-"}</td>
-                            <td className="px-4 py-3 font-bold">{net?.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-emerald-600 font-bold">{inv.paid > 0 ? inv.paid.toLocaleString() : "-"}</td>
-                            <td className="px-4 py-3 text-rose-600 font-black">{due > 0 ? due.toLocaleString() : "-"}</td>
-                            <td className="px-4 py-3">
-                              {inv.status === "paid" ? (
+                            <td className="px-3.5 py-3">
+                              <span className="font-mono text-xs font-black text-primary block">#{inv.id}</span>
+                              <span className="text-[10px] text-muted-foreground block">{inv.issueDate || inv.dueDate || "-"}</span>
+                            </td>
+                            <td className="px-3.5 py-3 font-bold text-foreground">{inv.title}</td>
+                            <td className="px-3.5 py-3 text-muted-foreground tabular-nums">{inv.amount?.toLocaleString()}</td>
+                            <td className="px-3.5 py-3 text-orange-500 tabular-nums">{inv.discountAmount ? inv.discountAmount.toLocaleString() : "-"}</td>
+                            <td className="px-3.5 py-3 font-bold text-foreground tabular-nums">{net?.toLocaleString()}</td>
+                            <td className="px-3.5 py-3 text-emerald-600 font-bold tabular-nums">{inv.paid > 0 ? inv.paid.toLocaleString() : "-"}</td>
+                            <td className="px-3.5 py-3 text-rose-600 font-black tabular-nums">{due > 0 ? `${due.toLocaleString()} ${currency}` : "-"}</td>
+                            <td className="px-3.5 py-3">
+                              {due <= 0 ? (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">مسدد</span>
-                              ) : inv.status === "partial" ? (
+                              ) : inv.paid > 0 ? (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-600 border border-amber-500/20">جزئي</span>
                               ) : (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-600 border border-rose-500/20">مستحق</span>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-3 text-center">
+                              {due > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPaymentModalData({ studentId: statementModalData.id, studentName: statementModalData.name, totalDue: due })}
+                                  className="px-2.5 py-1 text-[11px] font-black rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-xs"
+                                >
+                                  سداد
+                                </button>
                               )}
                             </td>
                           </tr>

@@ -38,6 +38,8 @@ import {
   Sliders,
   Check,
   Trash2,
+  BookOpen,
+  UserCheck,
 } from "lucide-react";
 import {
   PieChart,
@@ -54,7 +56,9 @@ import {
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { AdminModal } from "@/components/admin/admin-modal";
-import { defaultFeatures } from "@/contexts/GlobalStoreContext";
+import { AdminNav } from "@/components/admin/admin-nav";
+import { Switch } from "@/components/ui/switch";
+import { defaultFeatures, SystemFeatures } from "@/contexts/GlobalStoreContext";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "مركز القيادة والتحكم الإداري | منصة مدارس" }] }),
@@ -183,6 +187,33 @@ function AdminDashboard() {
   const [diagnosticsModal, setDiagnosticsModal] = useState(false);
   const [quickBackupModal, setQuickBackupModal] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [quickFeaturesModal, setQuickFeaturesModal] = useState(false);
+
+  const FEATURE_DEFS: { key: keyof SystemFeatures; title: string; category: string; icon: any }[] = [
+    { key: "attendanceDiscipline", title: "الحضور والانضباط السلوكي", category: "تشغيلي", icon: UserCheck },
+    { key: "teachingFaculty", title: "الهيئة التعليمية والمعلمون", category: "تشغيلي", icon: Users },
+    { key: "academicCurriculum", title: "المواد والخطط الدراسية", category: "تشغيلي", icon: BookOpen },
+    { key: "transport", title: "النقل المدرسي والحافلات", category: "تشغيلي", icon: Bus },
+    { key: "library", title: "المكتبة وتوزيع المقررات", category: "تشغيلي", icon: FileText },
+    { key: "clinic", title: "العيادة والرعاية الصحية", category: "تشغيلي", icon: Stethoscope },
+    { key: "facilities", title: "المرافق والصيانة", category: "تشغيلي", icon: Settings },
+    { key: "inventory", title: "المستودعات والعهد", category: "تشغيلي", icon: Database },
+    { key: "hrPayroll", title: "الموارد البشرية والرواتب", category: "تشغيلي", icon: Users },
+    { key: "examsReports", title: "الاختبارات والشهادات", category: "تشغيلي", icon: GraduationCap },
+    { key: "financeInvoicing", title: "المركز المالي والرسوم", category: "تشغيلي", icon: Banknote },
+    { key: "admissionRegistration", title: "القبول والتسجيل", category: "تشغيلي", icon: Users },
+    { key: "parentPortal", title: "بوابة وتطبيق ولي الأمر", category: "تطبيقات", icon: Users },
+    { key: "teacherApp", title: "تطبيق المعلم ورصد الحضور", category: "تطبيقات", icon: CheckCircle2 },
+    { key: "smsAlerts", title: "تنبيهات رسائل SMS", category: "تطبيقات", icon: BellRing },
+    { key: "whatsappAlerts", title: "إشعارات وتنبيهات واتساب", category: "تطبيقات", icon: Zap },
+    { key: "onlinePayments", title: "بوابات الدفع الإلكتروني", category: "تقنية وأمان", icon: Banknote },
+    { key: "qrVerification", title: "التحقق الرقمي عبر QR", category: "تقنية وأمان", icon: Lock },
+    { key: "noorIntegration", title: "الربط مع نظام نور", category: "تقنية وأمان", icon: Wifi },
+    { key: "webhooksApi", title: "واجهات API والـ Webhooks", category: "تقنية وأمان", icon: Zap },
+    { key: "twoFactorAuth", title: "المصادقة الثنائية (2FA)", category: "تقنية وأمان", icon: ShieldCheck },
+    { key: "smartAnalyticsAi", title: "التحليلات الذكية بالـ AI", category: "تقنية وأمان", icon: Sparkles },
+    { key: "trashBin", title: "سلة المحذوفات واسترجاع السجلات", category: "تقنية وأمان", icon: Trash2 },
+  ];
 
   /* ─── Computed KPIs ─── */
   const activeStudents = allStudents.filter((s) => s.status === "نشط" && !s.isDeleted).length;
@@ -431,13 +462,14 @@ function AdminDashboard() {
       breadcrumb={[{ label: "الرئيسية", to: "/" }, { label: "الإدارة والنظام" }, { label: "مركز القيادة والتحكم" }]}
       actions={
         <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            to="/admin/features"
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3.5 text-xs font-black text-primary hover:bg-primary/20 transition-all shadow-xs"
+          <button
+            type="button"
+            onClick={() => setQuickFeaturesModal(true)}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3.5 text-xs font-black text-primary hover:bg-primary/20 transition-all shadow-xs cursor-pointer"
           >
             <Sliders className="h-3.5 w-3.5" />
             <span>التحكم بالميزات ({activeFeaturesCount}/20)</span>
-          </Link>
+          </button>
           <button
             onClick={() => setDiagnosticsModal(true)}
             className="inline-flex h-9 items-center gap-2 rounded-xl border border-border/80 bg-card px-3 text-xs font-bold text-foreground hover:bg-accent transition-colors shadow-sm"
@@ -468,6 +500,9 @@ function AdminDashboard() {
       }
     >
       <div className="space-y-6">
+        {/* Unified Admin Sub-Navigation */}
+        <AdminNav activeTab="/admin/dashboard" />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-5 flex-wrap gap-4">
           <div className="flex items-center gap-4">
@@ -996,6 +1031,115 @@ function AdminDashboard() {
             <span className="font-black text-foreground">
               {allStudents.length + allStaff.length + allInvoices.length + allUsers.length} سجل
             </span>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* ────── Modal: Quick Features Control Center ────── */}
+      <AdminModal
+        isOpen={quickFeaturesModal}
+        onClose={() => setQuickFeaturesModal(false)}
+        title="مركز التحكم الفوري بميزات المنظومة"
+        description={`التحكم اللحظي بحالة تفعيل الميزات الـ 20 (${activeFeaturesCount} مفعلة حالياً)`}
+        icon={Sliders}
+        tone="primary"
+        maxWidth="2xl"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <Link
+              to="/admin/features"
+              onClick={() => setQuickFeaturesModal(false)}
+              className="text-xs font-black text-primary hover:underline flex items-center gap-1.5"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> الانتقال لمركز الميزات المتقدم
+            </Link>
+            <button
+              type="button"
+              onClick={() => setQuickFeaturesModal(false)}
+              className="rounded-xl bg-primary px-6 py-2.5 text-xs font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
+            >
+              تم الحفظ والإغلاق
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/70 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center font-bold">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="font-black text-xs text-foreground block">
+                  مستوى جاهزية وتكامل المنظومة: {featuresPercentage}%
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {activeFeaturesCount} وحدة نشطة • {totalFeaturesCount - activeFeaturesCount} وحدة معطلة
+                </span>
+              </div>
+            </div>
+            <Link
+              to="/admin/features"
+              onClick={() => setQuickFeaturesModal(false)}
+              className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold hover:bg-accent transition-colors"
+            >
+              تطبيق القوالب الشاملة
+            </Link>
+          </div>
+
+          <div className="divide-y divide-border/60 max-h-96 overflow-y-auto custom-scrollbar rounded-2xl border border-border/70">
+            {FEATURE_DEFS.map((f) => {
+              const Icon = f.icon;
+              const isEnabled = currentFeatures[f.key];
+              return (
+                <div
+                  key={f.key}
+                  className="p-3 flex items-center justify-between gap-3 hover:bg-muted/20 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-8 w-8 rounded-xl grid place-items-center shrink-0 ${
+                        isEnabled
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground/60"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-foreground block">{f.title}</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {f.category} • كود: {f.key}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                        isEnabled
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {isEnabled ? "نشط" : "معطل"}
+                    </span>
+                    <Switch
+                      checked={isEnabled}
+                      onCheckedChange={(checked) => {
+                        toggleFeature(f.key, checked);
+                        addActivityLog({
+                          user: "مدير النظام",
+                          action: checked ? "تفعيل ميزة" : "تعطيل ميزة",
+                          entity: "لوحة التحكم",
+                          details: `تم ${checked ? "تفعيل" : "تعطيل"} ميزة "${f.title}" من مركز القيادة`,
+                        });
+                        toast.success(`تم ${checked ? "تفعيل" : "تعطيل"} "${f.title}"`);
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </AdminModal>

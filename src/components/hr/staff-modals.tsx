@@ -7,7 +7,7 @@ import {
   Copy, ExternalLink, RefreshCw, Building2, Award, Clock, ArrowRight,
   CreditCard, Check, AlertTriangle, UserCog, FileText, Send, Download,
   Coins, FileCheck, Shield, HelpCircle, UserCheck, UserX, MessageSquare,
-  GraduationCap, Smartphone
+  GraduationCap, Smartphone, ChevronRight, Lock, CheckSquare, Square
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ export interface StaffAddEditModalProps {
   activeStageStaff: any[];
   allStaff: any[];
   currentAcademicYearId?: string;
+  allUsers?: any[];
 }
 
 export function StaffAddEditModal({
@@ -44,7 +45,8 @@ export function StaffAddEditModal({
   departments,
   activeStageStaff,
   allStaff,
-  currentAcademicYearId
+  currentAcademicYearId,
+  allUsers = []
 }: StaffAddEditModalProps) {
   if (!isOpen) return null;
 
@@ -65,28 +67,62 @@ export function StaffAddEditModal({
   const [status, setStatus] = useState<"active" | "on_leave" | "terminated">(initialData?.status || "active");
   const [stage, setStage] = useState<string>(initialData?.stage || "all");
   const [qualification, setQualification] = useState(initialData?.qualification || "بكالوريوس");
+  const [specialization, setSpecialization] = useState(initialData?.specialization || "");
   const [hireDate, setHireDate] = useState(initialData?.hireDate || new Date().toISOString().split("T")[0]);
 
   // Financial Info
   const [paymentType, setPaymentType] = useState<"Monthly" | "Weekly" | "PerLesson" | "Hourly" | "Daily">(initialData?.paymentType || "Monthly");
   const [basicSalary, setBasicSalary] = useState<number>(initialData?.basicSalary ?? 6000);
-  const [allowance, setAllowance] = useState<number>(initialData?.allowance ?? 1000);
+  const [housingAllowance, setHousingAllowance] = useState<number>(initialData?.housingAllowance ?? 0);
+  const [transportAllowance, setTransportAllowance] = useState<number>(initialData?.transportAllowance ?? 0);
+  const [otherAllowance, setOtherAllowance] = useState<number>(initialData?.allowance ?? 1000);
   const [deduction, setDeduction] = useState<number>(initialData?.deduction ?? 0);
   const [bankName, setBankName] = useState(initialData?.bankName || "مصرف الراجحي");
   const [iban, setIban] = useState(initialData?.iban || "");
   const [accountNumber, setAccountNumber] = useState(initialData?.accountNumber || "");
 
+  // Find if already linked to user
+  const existingUser = useMemo(() => {
+    if (!initialData) return null;
+    return allUsers.find(
+      (u) =>
+        (u.staffId && (u.staffId === initialData.id || u.staffId === initialData.employeeNo)) ||
+        (u.email && initialData.email && u.email.trim().toLowerCase() === initialData.email.trim().toLowerCase()) ||
+        (u.fullName && initialData.name && u.fullName.trim() === initialData.name.trim())
+    ) || null;
+  }, [initialData, allUsers]);
+
   // System User Account State
-  const [createAccount, setCreateAccount] = useState(!isEditing);
+  const [createAccount, setCreateAccount] = useState(!isEditing || !existingUser);
   const [accountUsername, setAccountUsername] = useState(
-    initialData?.employeeNo 
-      ? `emp_${initialData.employeeNo.toLowerCase().replace(/[^a-z0-9]/g, "")}` 
-      : ""
+    existingUser?.username ||
+    (initialData?.employeeNo
+      ? `emp_${initialData.employeeNo.toLowerCase().replace(/[^a-z0-9]/g, "")}`
+      : "")
   );
   const [accountRole, setAccountRole] = useState(
-    initialData?.role?.includes("معلم") ? "معلم" : initialData?.role?.includes("محاسب") ? "محاسب مالي" : "إداري"
+    existingUser?.role ||
+    (initialData?.role?.includes("معلم") ? "معلم" : initialData?.role?.includes("محاسب") ? "محاسب مالي" : "إداري")
   );
   const [accountPassword, setAccountPassword] = useState("Staff@2026");
+
+  // Auto-generate employeeNo suggestion if empty
+  const handleSuggestEmployeeNo = () => {
+    const nextNumber = Math.floor(1000 + Math.random() * 9000);
+    const suggested = `EMP-${nextNumber}`;
+    setEmployeeNo(suggested);
+    if (!accountUsername) {
+      setAccountUsername(`emp_${nextNumber}`);
+    }
+    toast.success(`تم اقتراح الرقم الوظيفي: ${suggested}`);
+  };
+
+  // Quick Role Pills
+  const commonRoles = [
+    "معلم لغة عربية", "معلم رياضيات", "معلم علوم", "معلم لغة إنجليزية",
+    "وكيل شؤون تعليمية", "وكيل شؤون طلاب", "محاسب مالي", "مشرف صحي",
+    "مشرف نقل وحافلات", "أمين مكتبة", "حارس أمن", "سائق حافلة"
+  ];
 
   // Auto-generate username when employeeNo changes
   const handleEmployeeNoChange = (val: string) => {
@@ -97,9 +133,11 @@ export function StaffAddEditModal({
     }
   };
 
+  const totalAllowances = (Number(otherAllowance) || 0) + (Number(housingAllowance) || 0) + (Number(transportAllowance) || 0);
+
   const netSalary = useMemo(() => {
-    return Math.max(0, (Number(basicSalary) || 0) + (Number(allowance) || 0) - (Number(deduction) || 0));
-  }, [basicSalary, allowance, deduction]);
+    return Math.max(0, (Number(basicSalary) || 0) + totalAllowances - (Number(deduction) || 0));
+  }, [basicSalary, totalAllowances, deduction]);
 
   const handleGeneratePassword = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
@@ -142,15 +180,18 @@ export function StaffAddEditModal({
       department: department.trim(),
       status,
       stage: stage as any,
+      qualification,
+      specialization: specialization.trim() || undefined,
+      hireDate,
       phone: phone.trim() || undefined,
       emergencyPhone: emergencyPhone.trim() || undefined,
       email: email.trim() || undefined,
       address: address.trim() || undefined,
-      qualification,
-      hireDate,
       paymentType,
       basicSalary: Number(basicSalary) || 0,
-      allowance: Number(allowance) || 0,
+      allowance: totalAllowances,
+      housingAllowance: Number(housingAllowance) || 0,
+      transportAllowance: Number(transportAllowance) || 0,
       deduction: Number(deduction) || 0,
       bankName,
       iban: iban.trim(),
@@ -159,7 +200,7 @@ export function StaffAddEditModal({
     };
 
     onSave(payload, {
-      shouldCreate: !isEditing && createAccount,
+      shouldCreate: createAccount && !existingUser,
       username: accountUsername.trim() || (employeeNo ? `emp_${employeeNo}` : `user_${Date.now().toString().slice(-4)}`),
       role: accountRole,
       password: accountPassword,
@@ -172,14 +213,14 @@ export function StaffAddEditModal({
     <AdminModal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? `تعديل بيانات: ${initialData?.name}` : "تسجيل موظف أو كادر جديد"}
-      description={isEditing ? "تحديث السجل الإداري والمالي ونظام الدخول" : "إضافة موظف مع الربط المباشر بنظام الأجور والصلاحيات"}
+      title={isEditing ? `تعديل ملف الموظف: ${initialData?.name}` : "تسجيل موظف أو كادر مدرسي جديد"}
+      description={isEditing ? "تحديث السجل الإداري والمالي ونظام الدخول المتكامل" : "إضافة موظف مع الربط اللحظي بمسير الأجور والصلاحيات"}
       icon={Users}
       tone="primary"
-      maxWidth="2xl"
+      maxWidth="3xl"
       footer={
-        <div className="flex items-center justify-between w-full">
-          <div className="text-[11px] text-muted-foreground font-bold">
+        <div className="flex items-center justify-between w-full flex-wrap gap-2">
+          <div className="text-xs text-muted-foreground font-bold">
             صافي الراتب المتوقع: <span className="font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{netSalary.toLocaleString()} {currency}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -207,9 +248,9 @@ export function StaffAddEditModal({
           <button
             type="button"
             onClick={() => setActiveTab("info")}
-            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 ${
-              activeTab === "info" 
-                ? "border-primary text-primary" 
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === "info"
+                ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -219,9 +260,9 @@ export function StaffAddEditModal({
           <button
             type="button"
             onClick={() => setActiveTab("sector")}
-            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 ${
-              activeTab === "sector" 
-                ? "border-primary text-primary" 
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === "sector"
+                ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -231,29 +272,27 @@ export function StaffAddEditModal({
           <button
             type="button"
             onClick={() => setActiveTab("finance")}
-            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 ${
-              activeTab === "finance" 
-                ? "border-primary text-primary" 
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === "finance"
+                ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <CreditCard className="h-3.5 w-3.5" />
             <span>الأجور والبدلات</span>
           </button>
-          {!isEditing && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("account")}
-              className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 ${
-                activeTab === "account" 
-                  ? "border-primary text-primary" 
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <KeyRound className="h-3.5 w-3.5" />
-              <span>حساب الدخول للنظام</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab("account")}
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === "account"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            <span>حساب الدخول للنظام</span>
+          </button>
         </div>
 
         {/* TAB 1: PERSONAL & EMPLOYMENT INFO */}
@@ -272,7 +311,18 @@ export function StaffAddEditModal({
               </div>
 
               <div>
-                <label className="mb-1 block font-bold text-foreground">الرقم الوظيفي (كود الموظف)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-foreground">الرقم الوظيفي</label>
+                  {!isEditing && (
+                    <button
+                      type="button"
+                      onClick={handleSuggestEmployeeNo}
+                      className="text-[10px] text-primary hover:underline font-bold"
+                    >
+                      اقتراح تلقائي
+                    </button>
+                  )}
+                </div>
                 <input
                   value={employeeNo}
                   onChange={(e) => handleEmployeeNoChange(e.target.value)}
@@ -283,7 +333,7 @@ export function StaffAddEditModal({
               </div>
 
               <div>
-                <label className="mb-1 block font-bold text-foreground">رقم الهوية الوطنية / الإقامة</label>
+                <label className="mb-1 block font-bold text-foreground">الهوية الوطنية / الإقامة</label>
                 <input
                   value={nationalId}
                   onChange={(e) => setNationalId(e.target.value)}
@@ -294,18 +344,31 @@ export function StaffAddEditModal({
               </div>
             </div>
 
-            <div className="grid gap-3.5 sm:grid-cols-3">
-              <div>
-                <label className="mb-1 block font-bold text-foreground">المسمى الوظيفي <span className="text-destructive">*</span></label>
-                <input
-                  required
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
-                  placeholder="معلم رياضيات، مشرف، محاسب..."
-                />
+            <div>
+              <label className="mb-1 block font-bold text-foreground">المسمى الوظيفي <span className="text-destructive">*</span></label>
+              <input
+                required
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
+                placeholder="معلم رياضيات، مشرف، محاسب..."
+              />
+              {/* Quick Role Suggestions */}
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {commonRoles.slice(0, 6).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    + {r}
+                  </button>
+                ))}
               </div>
+            </div>
 
+            <div className="grid gap-3.5 sm:grid-cols-3">
               <div>
                 <label className="mb-1 block font-bold text-foreground">القسم / الإدارة</label>
                 <select
@@ -321,6 +384,7 @@ export function StaffAddEditModal({
                   <option value="الخدمات المساندة">الخدمات المساندة</option>
                   <option value="النقل والحركة">النقل والحركة</option>
                   <option value="المالية والحسابات">المالية والحسابات</option>
+                  <option value="العيادة المدرسية">العيادة المدرسية</option>
                 </select>
               </div>
 
@@ -333,6 +397,19 @@ export function StaffAddEditModal({
                 >
                   <option value="ذكر">ذكر</option>
                   <option value="أنثى">أنثى</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block font-bold text-foreground">حالة الموظف</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="active">على رأس العمل (نشط)</option>
+                  <option value="on_leave">في إجازة</option>
+                  <option value="terminated">منتهي الخدمة / مؤرشف</option>
                 </select>
               </div>
             </div>
@@ -393,26 +470,23 @@ export function StaffAddEditModal({
               </div>
 
               <div>
-                <label className="mb-1 block font-bold text-foreground">تاريخ المباشرة / التعيين</label>
+                <label className="mb-1 block font-bold text-foreground">التخصص الدقيق</label>
+                <input
+                  value={specialization}
+                  onChange={(e) => setSpecialization(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
+                  placeholder="لغة عربية، فيزياء، إدارة..."
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block font-bold text-foreground">تاريخ المباشرة</label>
                 <input
                   type="date"
                   value={hireDate}
                   onChange={(e) => setHireDate(e.target.value)}
                   className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
                 />
-              </div>
-
-              <div>
-                <label className="mb-1 block font-bold text-foreground">حالة الموظف</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
-                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="active">على رأس العمل (نشط)</option>
-                  <option value="on_leave">في إجازة</option>
-                  <option value="terminated">منتهي الخدمة / مؤرشف</option>
-                </select>
               </div>
             </div>
 
@@ -500,35 +574,57 @@ export function StaffAddEditModal({
               </div>
             </div>
 
-            <div className="grid gap-3.5 sm:grid-cols-2">
+            <div className="grid gap-3.5 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block font-bold text-foreground">البدلات الشهرية (سكن، نقل، طبيعة عمل) ({currency})</label>
+                <label className="mb-1 block font-bold text-foreground">بدل السكن ({currency})</label>
                 <input
                   type="number"
                   min={0}
-                  value={allowance}
-                  onChange={(e) => setAllowance(Number(e.target.value) || 0)}
-                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-black outline-none focus:border-primary tabular-nums text-emerald-600"
+                  value={housingAllowance}
+                  onChange={(e) => setHousingAllowance(Number(e.target.value) || 0)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block font-bold text-foreground">الاستقطاعات الدورية (تأمينات، قروض) ({currency})</label>
+                <label className="mb-1 block font-bold text-foreground">بدل النقل / المواصلات ({currency})</label>
                 <input
                   type="number"
                   min={0}
-                  value={deduction}
-                  onChange={(e) => setDeduction(Number(e.target.value) || 0)}
-                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-black outline-none focus:border-primary tabular-nums text-destructive"
+                  value={transportAllowance}
+                  onChange={(e) => setTransportAllowance(Number(e.target.value) || 0)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
                 />
               </div>
+
+              <div>
+                <label className="mb-1 block font-bold text-foreground">بدلات أخرى ({currency})</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={otherAllowance}
+                  onChange={(e) => setOtherAllowance(Number(e.target.value) || 0)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary tabular-nums"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block font-bold text-foreground">الاستقطاعات الدورية (تأمينات، قروض) ({currency})</label>
+              <input
+                type="number"
+                min={0}
+                value={deduction}
+                onChange={(e) => setDeduction(Number(e.target.value) || 0)}
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-black outline-none focus:border-primary tabular-nums text-destructive"
+              />
             </div>
 
             {/* Net Salary Preview KPI */}
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
               <div>
                 <span className="font-bold text-emerald-800 dark:text-emerald-300 block text-xs">صافي الراتب المستحق للصرف:</span>
-                <span className="text-[11px] text-muted-foreground">الأساسي + البدلات - الاستقطاعات</span>
+                <span className="text-[11px] text-muted-foreground">الأساسي + البدلات ({totalAllowances.toLocaleString()}) - الاستقطاعات</span>
               </div>
               <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {netSalary.toLocaleString()} {currency}
@@ -543,7 +639,7 @@ export function StaffAddEditModal({
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
                   className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
-                  placeholder="مصرف الراجحي، بنك الرياض، الخرطوم..."
+                  placeholder="مصرف الراجحي، بنك الرياض، بنكك..."
                 />
               </div>
               <div>
@@ -561,77 +657,97 @@ export function StaffAddEditModal({
         )}
 
         {/* TAB 4: SYSTEM USER ACCOUNT */}
-        {!isEditing && activeTab === "account" && (
+        {activeTab === "account" && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="p-4 rounded-2xl border border-border/80 bg-muted/20">
-              <label className="flex items-center gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={createAccount}
-                  onChange={(e) => setCreateAccount(e.target.checked)}
-                  className="h-5 w-5 rounded border-border text-primary focus:ring-primary"
-                />
-                <div>
-                  <span className="font-black text-sm text-foreground block">
-                    إنشاء حساب مستخدم للنظام تلقائياً لهذا الموظف
-                  </span>
-                  <span className="text-[11px] text-muted-foreground font-bold">
-                    تمكين الموظف من تسجيل الدخول إلى منصة المدرسة بصلاحيات مخصصة بحسب دوره الوظيفي.
+            {existingUser ? (
+              <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-black">
+                  <ShieldCheck className="h-5 w-5" />
+                  <span>الموظف مرتبط بالفعل بحساب مستخدم مسجل:</span>
+                </div>
+                <div className="flex items-center justify-between pt-1 font-mono text-xs">
+                  <span className="font-bold text-foreground">@{existingUser.username}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 font-bold">
+                    الدور: {existingUser.role}
                   </span>
                 </div>
-              </label>
-            </div>
-
-            {createAccount && (
-              <div className="space-y-3.5 p-4 rounded-2xl border border-primary/20 bg-primary/5">
-                <div className="grid gap-3.5 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block font-bold text-foreground">اسم المستخدم للدخول <span className="text-destructive">*</span></label>
-                    <input
-                      value={accountUsername}
-                      onChange={(e) => setAccountUsername(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
-                      dir="ltr"
-                      placeholder="emp_user"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block font-bold text-foreground">الدور والصلاحيات في المنظومة <span className="text-destructive">*</span></label>
-                    <select
-                      value={accountRole}
-                      onChange={(e) => setAccountRole(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
-                    >
-                      <option value="معلم">معلم (تسجيل حضور، درجات، جداول)</option>
-                      <option value="إداري">إداري (شؤون موظفين وطلاب)</option>
-                      <option value="مشرف أكاديمي">مشرف أكاديمي (إشراف ومراقبة)</option>
-                      <option value="محاسب مالي">محاسب مالي (مالية ورسوم ومصاريف)</option>
-                      <option value="أمين تسجيل">أمين تسجيل وقبول</option>
-                      <option value="مدير مدرسة">مدير مدرسة (صلاحيات كاملة للمرحلة)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block font-bold text-foreground">كلمة المرور الابتدائية</label>
-                    <button
-                      type="button"
-                      onClick={handleGeneratePassword}
-                      className="text-[11px] text-primary hover:underline font-bold flex items-center gap-1"
-                    >
-                      <RefreshCw className="h-3 w-3" /> توليد عشوائي
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={accountPassword}
-                    onChange={(e) => setAccountPassword(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
-                    dir="ltr"
-                  />
-                </div>
+                <p className="text-[11px] text-muted-foreground pt-1">
+                  يمكنك إدارة وتعديل كلمة المرور أو صلاحيات الحساب من نافذة "إدارة حساب الدخول" أو من قسم إدارة المستخدمين.
+                </p>
               </div>
+            ) : (
+              <>
+                <div className="p-4 rounded-2xl border border-border/80 bg-muted/20">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={createAccount}
+                      onChange={(e) => setCreateAccount(e.target.checked)}
+                      className="h-5 w-5 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <div>
+                      <span className="font-black text-sm text-foreground block">
+                        إنشاء حساب مستخدم للنظام لهذا الموظف
+                      </span>
+                      <span className="text-[11px] text-muted-foreground font-bold">
+                        تمكين الموظف من تسجيل الدخول إلى منصة المدرسة بصلاحيات مخصصة بحسب دوره الوظيفي.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {createAccount && (
+                  <div className="space-y-3.5 p-4 rounded-2xl border border-primary/20 bg-primary/5">
+                    <div className="grid gap-3.5 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block font-bold text-foreground">اسم المستخدم للدخول <span className="text-destructive">*</span></label>
+                        <input
+                          value={accountUsername}
+                          onChange={(e) => setAccountUsername(e.target.value)}
+                          className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
+                          dir="ltr"
+                          placeholder="emp_user"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block font-bold text-foreground">الدور والصلاحيات في المنظومة <span className="text-destructive">*</span></label>
+                        <select
+                          value={accountRole}
+                          onChange={(e) => setAccountRole(e.target.value)}
+                          className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                        >
+                          <option value="معلم">معلم (تسجيل حضور، درجات، جداول)</option>
+                          <option value="إداري">إداري (شؤون موظفين وطلاب)</option>
+                          <option value="مشرف أكاديمي">مشرف أكاديمي (إشراف ومراقبة)</option>
+                          <option value="محاسب مالي">محاسب مالي (مالية ورسوم ومصاريف)</option>
+                          <option value="أمين تسجيل">أمين تسجيل وقبول</option>
+                          <option value="مدير مدرسة">مدير مدرسة (صلاحيات كاملة للمرحلة)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block font-bold text-foreground">كلمة المرور الابتدائية</label>
+                        <button
+                          type="button"
+                          onClick={handleGeneratePassword}
+                          className="text-[11px] text-primary hover:underline font-bold flex items-center gap-1"
+                        >
+                          <RefreshCw className="h-3 w-3" /> توليد عشوائي
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={accountPassword}
+                        onChange={(e) => setAccountPassword(e.target.value)}
+                        className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -641,7 +757,7 @@ export function StaffAddEditModal({
 }
 
 // =========================================================================
-// 2. STAFF USER ACCOUNT MODAL (LINK OR MANAGE SYSTEM USER)
+// 2. STAFF USER ACCOUNT MODAL (FULL CONTROL CENTER)
 // =========================================================================
 export interface StaffUserAccountModalProps {
   isOpen: boolean;
@@ -651,6 +767,7 @@ export interface StaffUserAccountModalProps {
   onLinkOrCreate: (userData: any) => void;
   onResetPassword?: (userId: string, newPassword: string) => void;
   onToggleUserStatus?: (userId: string, newStatus: "active" | "disabled") => void;
+  onUpdateUserRole?: (userId: string, newRole: string) => void;
 }
 
 export function StaffUserAccountModal({
@@ -661,6 +778,7 @@ export function StaffUserAccountModal({
   onLinkOrCreate,
   onResetPassword,
   onToggleUserStatus,
+  onUpdateUserRole
 }: StaffUserAccountModalProps) {
   if (!isOpen || !staff) return null;
 
@@ -668,16 +786,18 @@ export function StaffUserAccountModal({
     linkedUser?.username || `emp_${(staff.employeeNo || staff.id).toString().toLowerCase().replace(/[^a-z0-9]/g, "")}`
   );
   const [role, setAccountRole] = useState(
-    linkedUser?.role || (staff.role.includes("معلم") ? "معلم" : staff.role.includes("محاسب") ? "محاسب مالي" : "إداري")
+    linkedUser?.role || (staff.role?.includes("معلم") ? "معلم" : staff.role?.includes("محاسب") ? "محاسب مالي" : "إداري")
   );
   const [generatedPassword, setGeneratedPassword] = useState("Staff@2026");
   const [isCopied, setIsCopied] = useState(false);
+  const [stageScope, setStageScope] = useState(linkedUser?.stageScope || staff.stage || "all");
+  const [twoFactor, setTwoFactor] = useState(linkedUser?.twoFactorEnabled ?? false);
 
   const handleCopyCredentials = () => {
     const text = `بيانات الدخول إلى منصة المدرسة:\nالاسم: ${staff.name}\nاسم المستخدم: ${username}\nكلمة المرور: ${generatedPassword}\nالرابط: ${window.location.origin}`;
     navigator.clipboard.writeText(text);
     setIsCopied(true);
-    toast.success("تم نسخ بيانات الدخول إلى الحافظة للإرسال عبر واتساب أو الرسائل");
+    toast.success("تم نسخ بيانات الدخول إلى الحافظة");
     setTimeout(() => setIsCopied(false), 2000);
   };
 
@@ -700,9 +820,9 @@ export function StaffUserAccountModal({
     setGeneratedPassword(pwd);
     if (linkedUser && onResetPassword) {
       onResetPassword(linkedUser.id, pwd);
-      toast.success("تم تحديث كلمة المرور وتعيينها فورياً في النظام!");
+      toast.success("تم تحديث وحفظ كلمة المرور الجديدة فوراً!");
     } else {
-      toast.success("تم توليد كلمة مرور جديدة");
+      toast.success("تم توليد كلمة مرور عشوائية");
     }
   };
 
@@ -723,8 +843,9 @@ export function StaffUserAccountModal({
       phone: staff.phone || "",
       notes: `حساب مرتبط بالموظف ${staff.name} (كود: ${staff.employeeNo || staff.id})`,
       lastLogin: "لم يسجل دخول بعد",
-      stageScope: staff.stage || "all",
-      twoFactorEnabled: false,
+      stageScope: stageScope || "all",
+      twoFactorEnabled: twoFactor,
+      password: generatedPassword,
       createdAt: new Date().toISOString().split("T")[0]
     });
 
@@ -737,16 +858,22 @@ export function StaffUserAccountModal({
       isOpen={isOpen}
       onClose={onClose}
       title={linkedUser ? `إدارة حساب الدخول: @${linkedUser.username}` : `إنشاء حساب دخول للموظف: ${staff.name}`}
-      description={linkedUser ? "التحكم في كلمة المرور وحالة التفعيل والصلاحيات" : "ربط الموظف بحساب مستخدم في النظام بصلاحيات مخصصة"}
+      description={linkedUser ? "التحكم في الصلاحيات وحالة التفعيل وإعادة تعيين كلمة المرور" : "ربط الموظف بحساب مستخدم في النظام بصلاحيات مخصصة"}
       icon={KeyRound}
       tone="primary"
-      maxWidth="md"
+      maxWidth="lg"
       footer={
-        <div className="flex items-center justify-end gap-2 w-full">
+        <div className="flex items-center justify-between w-full">
+          <Link
+            to="/admin/users"
+            className="text-xs font-black text-primary hover:underline flex items-center gap-1"
+          >
+            الانتقال لمركز المستخدمين <ExternalLink className="h-3 w-3" />
+          </Link>
           <button
             type="button"
             onClick={onClose}
-            className="h-10 px-5 rounded-xl border border-input font-bold hover:bg-accent text-xs"
+            className="h-10 px-6 rounded-xl border border-input font-bold hover:bg-accent text-xs"
           >
             إغلاق
           </button>
@@ -756,7 +883,7 @@ export function StaffUserAccountModal({
       <div className="space-y-4">
         {linkedUser ? (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Status & User Info */}
+            {/* Status & User Info Header */}
             <div className="p-4 rounded-2xl bg-muted/30 border border-border/80 space-y-3">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -766,6 +893,11 @@ export function StaffUserAccountModal({
                   }`}>
                     {linkedUser.status === "active" ? "حساب نشط" : "حساب معطل"}
                   </span>
+                  {linkedUser.twoFactorEnabled && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-primary/10 text-primary">
+                      2FA مفعل
+                    </span>
+                  )}
                 </div>
                 {onToggleUserStatus && (
                   <button
@@ -774,10 +906,10 @@ export function StaffUserAccountModal({
                       const next = linkedUser.status === "active" ? "disabled" : "active";
                       onToggleUserStatus(linkedUser.id, next);
                     }}
-                    className={`text-xs font-bold px-3 py-1 rounded-xl transition-all ${
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${
                       linkedUser.status === "active"
-                        ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                        : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                        ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20"
+                        : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20"
                     }`}
                   >
                     {linkedUser.status === "active" ? "تعطيل الحساب" : "تفعيل الحساب"}
@@ -785,17 +917,49 @@ export function StaffUserAccountModal({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-border/70">
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-border/70">
                 <div>
-                  <span className="text-muted-foreground font-bold">الدور المعتمد: </span>
+                  <span className="text-muted-foreground font-bold">الدور الحالي: </span>
                   <span className="font-black text-primary">{linkedUser.role}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground font-bold">نطاق المرحلة: </span>
                   <span className="font-bold">{linkedUser.stageScope === "all" ? "كافة المراحل" : linkedUser.stageScope || "عام"}</span>
                 </div>
+                <div>
+                  <span className="text-muted-foreground font-bold">آخر تسجيل دخول: </span>
+                  <span className="font-mono">{linkedUser.lastLogin || "لم يسجل بعد"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground font-bold">تاريخ الإنشاء: </span>
+                  <span className="font-mono">{linkedUser.createdAt || "غير محدد"}</span>
+                </div>
               </div>
             </div>
+
+            {/* Change Role Section */}
+            {onUpdateUserRole && (
+              <div className="p-3.5 rounded-2xl bg-card border border-border/70 flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-foreground">تعديل الدور والصلاحيات:</span>
+                <select
+                  value={role}
+                  onChange={(e) => {
+                    const nextRole = e.target.value;
+                    setAccountRole(nextRole);
+                    onUpdateUserRole(linkedUser.id, nextRole);
+                    toast.success(`تم تغيير دور المستخدم إلى: ${nextRole}`);
+                  }}
+                  className="h-9 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="معلم">معلم</option>
+                  <option value="إداري">إداري</option>
+                  <option value="مشرف أكاديمي">مشرف أكاديمي</option>
+                  <option value="محاسب مالي">محاسب مالي</option>
+                  <option value="أمين تسجيل">أمين تسجيل</option>
+                  <option value="مدير مدرسة">مدير مدرسة</option>
+                </select>
+              </div>
+            )}
 
             {/* Reset Password & Share Credentials Suite */}
             <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-3">
@@ -816,7 +980,7 @@ export function StaffUserAccountModal({
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(generatedPassword);
-                    toast.success("تم نسخ كلمة المرور فقط");
+                    toast.success("تم نسخ كلمة المرور");
                   }}
                   className="text-primary hover:text-primary/80"
                   title="نسخ كلمة المرور"
@@ -848,66 +1012,92 @@ export function StaffUserAccountModal({
           </div>
         ) : (
           <form onSubmit={handleCreateSubmit} className="space-y-4 animate-in fade-in duration-200">
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-bold">
-              لا يوجد حساب نظام مرتبط بهذا الموظف حالياً. يمكنك إنشاء حساب دخول فوري وتحديد الدور المناسب له.
-            </div>
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block font-bold text-foreground">اسم المستخدم <span className="text-destructive">*</span></label>
+                <input
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
+                  dir="ltr"
+                  placeholder="emp_user"
+                />
+              </div>
 
-            <div>
-              <label className="mb-1 block font-bold text-foreground text-xs">اسم المستخدم للدخول *</label>
-              <input
-                required
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
-                dir="ltr"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block font-bold text-foreground text-xs">الدور والصلاحيات في المنظومة *</label>
-              <select
-                value={role}
-                onChange={(e) => setAccountRole(e.target.value)}
-                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="معلم">معلم (تسجيل حضور، درجات، جداول)</option>
-                <option value="إداري">إداري (شؤون موظفين وطلاب)</option>
-                <option value="مشرف أكاديمي">مشرف أكاديمي (إشراف ومراقبة)</option>
-                <option value="محاسب مالي">محاسب مالي (مالية ورسوم ومصاريف)</option>
-                <option value="أمين تسجيل">أمين تسجيل وقبول</option>
-                <option value="مدير مدرسة">مدير مدرسة (صلاحيات كاملة للمرحلة)</option>
-              </select>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block font-bold text-foreground text-xs">كلمة المرور الابتدائية</label>
-                <button
-                  type="button"
-                  onClick={handleGeneratePassword}
-                  className="text-[11px] text-primary hover:underline font-bold flex items-center gap-1"
+              <div>
+                <label className="mb-1 block font-bold text-foreground">الدور والصلاحيات <span className="text-destructive">*</span></label>
+                <select
+                  value={role}
+                  onChange={(e) => setAccountRole(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
                 >
-                  <RefreshCw className="h-3 w-3" /> توليد عشوائي
-                </button>
+                  <option value="معلم">معلم</option>
+                  <option value="إداري">إداري</option>
+                  <option value="مشرف أكاديمي">مشرف أكاديمي</option>
+                  <option value="محاسب مالي">محاسب مالي</option>
+                  <option value="أمين تسجيل">أمين تسجيل</option>
+                  <option value="مدير مدرسة">مدير مدرسة</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block font-bold text-foreground">المرحلة الدراسية المخصصة</label>
+                <select
+                  value={stageScope}
+                  onChange={(e) => setStageScope(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="all">كافة المراحل</option>
+                  <option value="primary">المرحلة الابتدائية</option>
+                  <option value="middle">المرحلة المتوسطة</option>
+                  <option value="secondary">المرحلة الثانوية</option>
+                  <option value="kindergarten">مرحلة رياض الأطفال</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-foreground">كلمة المرور الابتدائية</label>
+                  <button
+                    type="button"
+                    onClick={handleGeneratePassword}
+                    className="text-[10px] text-primary hover:underline font-bold"
+                  >
+                    توليد عشوائي
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={generatedPassword}
+                  onChange={(e) => setGeneratedPassword(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/70 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-xs text-foreground block">تفعيل التحقق الثنائي (2FA)</span>
+                <span className="text-[11px] text-muted-foreground">مطالبة الموظف برمز تأكيد عند تسجيل الدخول</span>
               </div>
               <input
-                type="text"
-                value={generatedPassword}
-                onChange={(e) => setGeneratedPassword(e.target.value)}
-                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold font-mono outline-none focus:border-primary text-left"
-                dir="ltr"
+                type="checkbox"
+                checked={twoFactor}
+                onChange={(e) => setTwoFactor(e.target.checked)}
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
               />
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <button
-                type="submit"
-                className="h-10 px-6 rounded-xl bg-primary text-primary-foreground font-black text-xs shadow-md hover:bg-primary/90 glow-primary transition-all"
-              >
-                إنشاء وتفعيل الحساب
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-md hover:bg-primary/90 transition-all glow-primary"
+            >
+              إنشاء واعتماد حساب المستخدم
+            </button>
           </form>
         )}
       </div>
@@ -916,7 +1106,7 @@ export function StaffUserAccountModal({
 }
 
 // =========================================================================
-// 3. STAFF QUICK LEAVE MODAL (INSTANT LEAVE REGISTRATION)
+// 3. STAFF QUICK LEAVE REGISTRATION MODAL
 // =========================================================================
 export interface StaffQuickLeaveModalProps {
   isOpen: boolean;
@@ -936,7 +1126,7 @@ export function StaffQuickLeaveModal({
   if (!isOpen || !staff) return null;
 
   const todayStr = new Date().toISOString().split("T")[0];
-  const [type, setType] = useState<"annual" | "sick" | "emergency" | "issued">("annual");
+  const [type, setType] = useState<"annual" | "sick" | "emergency" | "unpaid" | "maternity" | "study" | "issued">("annual");
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [replacementId, setReplacementId] = useState("");
@@ -1013,6 +1203,15 @@ export function StaffQuickLeaveModal({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        {/* Leave Balance Banner */}
+        <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold">
+            <Clock className="h-4 w-4" />
+            <span>رصيد الإجازات السنوية المستحق:</span>
+          </div>
+          <span className="font-black text-sm text-amber-700 dark:text-amber-400">21 يوم سنوياً</span>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block font-bold text-foreground">نوع الإجازة</label>
@@ -1021,31 +1220,38 @@ export function StaffQuickLeaveModal({
               onChange={(e) => setType(e.target.value as any)}
               className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
             >
-              <option value="annual">إجازة سنوية اعتيادية</option>
+              <option value="annual">إجازة اعتيادية سنوية</option>
               <option value="sick">إجازة مرضية (بتقرير طبي)</option>
-              <option value="emergency">إجازة اضطرارية / عاجلة</option>
-              <option value="issued">إجازة استثنائية (بدون راتب)</option>
+              <option value="emergency">إجازة اضطرارية طارئة</option>
+              <option value="unpaid">إجازة استثنائية بدون راتب</option>
+              <option value="maternity">إجازة أمومة / رعاية مولود</option>
+              <option value="study">إجازة دراسية واختبارات</option>
+              <option value="issued">إذن خروج واستئذان جزئي</option>
             </select>
           </div>
 
           <div>
-            <label className="mb-1 block font-bold text-foreground">الموظف البديل لتغطية المهام</label>
+            <label className="mb-1 block font-bold text-foreground">الموظف البديل المكلف</label>
             <select
               value={replacementId}
               onChange={(e) => setReplacementId(e.target.value)}
               className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
             >
-              <option value="">-- اختياري --</option>
-              {allStaff.filter(s => s.id !== staff.id && s.department === staff.department).map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
-              ))}
+              <option value="">-- اختياري: بدون بديل محدد --</option>
+              {allStaff
+                .filter((s) => s.id !== staff.id && s.status === "active")
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.role})
+                  </option>
+                ))}
             </select>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block font-bold text-foreground">تاريخ بداية الإجازة *</label>
+            <label className="mb-1 block font-bold text-foreground">تاريخ بداية الإجازة</label>
             <input
               type="date"
               required
@@ -1054,11 +1260,13 @@ export function StaffQuickLeaveModal({
               className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
             />
           </div>
+
           <div>
-            <label className="mb-1 block font-bold text-foreground">تاريخ نهاية الإجازة *</label>
+            <label className="mb-1 block font-bold text-foreground">تاريخ نهاية الإجازة</label>
             <input
               type="date"
               required
+              min={startDate}
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
@@ -1066,34 +1274,28 @@ export function StaffQuickLeaveModal({
           </div>
         </div>
 
-        <div className="p-3 bg-muted/30 border border-border/70 rounded-xl flex items-center justify-between">
-          <span className="font-bold text-muted-foreground">المدة الإجمالية المحتسبة:</span>
-          <span className="text-sm font-black text-primary tabular-nums">{daysCount} يوم</span>
-        </div>
-
         <div>
-          <label className="mb-1 block font-bold text-foreground">مسوغات الغياب أو ملاحظات الإدارة</label>
+          <label className="mb-1 block font-bold text-foreground">سبب الإجازة وملاحظات</label>
           <textarea
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="بيان سبب الإجازة أو رقم المرجع الطبي..."
             className="w-full rounded-xl border border-input bg-background p-2.5 text-xs font-bold outline-none focus:border-primary resize-none"
+            placeholder="ملاحظات توثيقية إضافية..."
           />
         </div>
 
-        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={syncStatus}
-              onChange={(e) => setSyncStatus(e.target.checked)}
-              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-            />
-            <span className="font-bold text-foreground text-xs">
-              تحديث حالة الموظف فورياً في سجل الدوام العام إلى (في إجازة)
-            </span>
-          </label>
+        <div className="p-3 rounded-2xl bg-muted/30 border border-border/70 flex items-center justify-between">
+          <div>
+            <span className="font-bold text-xs text-foreground block">تحديث حالة الموظف التلقائي</span>
+            <span className="text-[11px] text-muted-foreground">تحويل حالة الموظف في النظام إلى "في إجازة" طوال فترة الإجازة</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={syncStatus}
+            onChange={(e) => setSyncStatus(e.target.checked)}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+          />
         </div>
       </form>
     </AdminModal>
@@ -1101,7 +1303,7 @@ export function StaffQuickLeaveModal({
 }
 
 // =========================================================================
-// 4. STAFF TEACHING ASSIGNMENTS MODAL (CLASSES & SUBJECTS MANAGEMENT)
+// 4. STAFF TEACHING ASSIGNMENTS MODAL
 // =========================================================================
 export interface StaffTeachingAssignmentsModalProps {
   isOpen: boolean;
@@ -1195,11 +1397,11 @@ export function StaffTeachingAssignmentsModal({
         <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/80 space-y-2">
           <div className="flex justify-between items-center text-xs font-bold">
             <span className="text-muted-foreground">عبء التدريس الأسبوعي (الحد الأقصى المعتاد: 24 حصة):</span>
-            <span className={`font-black tabular-nums ${totalPeriods > 24 ? "text-destructive" : "text-primary"}`}>
+            <span className={`font-black tabular-nums ${totalPeriods > 24 ? "text-destructive" : totalPeriods >= 20 ? "text-amber-600" : "text-primary"}`}>
               {totalPeriods} / 24 حصة
             </span>
           </div>
-          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+          <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
                 totalPeriods > 24 ? "bg-destructive" : totalPeriods >= 20 ? "bg-amber-500" : "bg-primary"
@@ -1207,6 +1409,12 @@ export function StaffTeachingAssignmentsModal({
               style={{ width: `${Math.min(100, (totalPeriods / 24) * 100)}%` }}
             />
           </div>
+          {totalPeriods > 24 && (
+            <div className="flex items-center gap-1.5 text-[11px] text-destructive font-bold">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>تنبيه: المعلم يتجاوز النصاب الأقصى المعتمد للحصص الدراسية.</span>
+            </div>
+          )}
         </div>
 
         {/* Current Assignments List */}
@@ -1229,22 +1437,17 @@ export function StaffTeachingAssignmentsModal({
                     key={a.id}
                     className="p-3 rounded-xl border border-border/70 bg-card flex items-center justify-between shadow-xs"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary grid place-items-center font-bold">
-                        {sub?.name?.charAt(0) || "م"}
-                      </div>
-                      <div>
-                        <div className="font-black text-foreground">{sub?.name || "مادة دراسية"}</div>
-                        <div className="text-[11px] text-muted-foreground font-bold">
-                          الشعبة: {sec ? `${sec.grade} - ${sec.name}` : "شعبة عامة"} • {a.periodsPerWeek || 4} حصص/أسبوع
-                        </div>
-                      </div>
+                    <div>
+                      <span className="font-black text-foreground block">{sub?.name || "مادة غير محددة"}</span>
+                      <span className="text-[11px] text-muted-foreground font-bold">
+                        {sec ? `${sec.grade} - ${sec.name}` : "شعبة غير محددة"} • {a.periodsPerWeek || 4} حصص أسبوعياً
+                      </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => onDeleteAssignment(a.id)}
                       className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-                      title="إلغاء التكليف"
+                      title="حذف هذا الإسناد"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -1255,33 +1458,30 @@ export function StaffTeachingAssignmentsModal({
           )}
         </div>
 
-        {/* Add New Assignment Form */}
-        <form onSubmit={handleAdd} className="p-4 rounded-2xl border border-primary/20 bg-primary/5 space-y-3">
-          <span className="font-black text-primary block">إسناد مادة وفصل دراسي جديد</span>
-
+        {/* Add Assignment Form */}
+        <form onSubmit={handleAdd} className="p-4 rounded-2xl bg-muted/20 border border-border/80 space-y-3">
+          <span className="font-black text-foreground block">إسناد مادة وفصل جديد</span>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block font-bold text-foreground">المادة الدراسية *</label>
+              <label className="mb-1 block font-bold text-foreground">المادة الدراسية</label>
               <select
-                required
                 value={subjectId}
                 onChange={(e) => setSubjectId(e.target.value)}
-                className="h-9 w-full rounded-xl border border-input bg-background px-2.5 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
               >
                 <option value="">-- اختر المادة --</option>
-                {subjects.map((sub) => (
-                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="mb-1 block font-bold text-foreground">الشعبة والفصل *</label>
+              <label className="mb-1 block font-bold text-foreground">الشعبة / الصف</label>
               <select
-                required
                 value={sectionId}
                 onChange={(e) => setSectionId(e.target.value)}
-                className="h-9 w-full rounded-xl border border-input bg-background px-2.5 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
               >
                 <option value="">-- اختر الشعبة --</option>
                 {sections.map((sec) => (
@@ -1295,20 +1495,20 @@ export function StaffTeachingAssignmentsModal({
               <input
                 type="number"
                 min={1}
-                max={30}
+                max={10}
                 value={periodsPerWeek}
-                onChange={(e) => setPeriodsPerWeek(Number(e.target.value) || 1)}
-                className="h-9 w-full rounded-xl border border-input bg-background px-2.5 text-xs font-black outline-none focus:border-primary tabular-nums"
+                onChange={(e) => setPeriodsPerWeek(Number(e.target.value) || 4)}
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-black outline-none focus:border-primary tabular-nums"
               />
             </div>
           </div>
 
-          <div className="flex justify-end pt-1">
+          <div className="flex justify-end">
             <button
               type="submit"
-              className="h-9 px-5 rounded-xl bg-primary text-primary-foreground font-black text-xs shadow-xs hover:bg-primary/90 flex items-center gap-1.5 glow-primary"
+              className="h-9 px-5 rounded-xl bg-primary text-primary-foreground font-black text-xs shadow-xs hover:bg-primary/90 flex items-center gap-1.5"
             >
-              <Plus className="h-3.5 w-3.5" /> إضافة التكليف
+              <Plus className="h-3.5 w-3.5" /> إضافة الإسناد
             </button>
           </div>
         </form>
@@ -1318,7 +1518,7 @@ export function StaffTeachingAssignmentsModal({
 }
 
 // =========================================================================
-// 5. STAFF QUICK PREVIEW MODAL (EXECUTIVE SUMMARY CARD)
+// 5. STAFF QUICK PREVIEW MODAL
 // =========================================================================
 export interface StaffQuickPreviewModalProps {
   isOpen: boolean;
@@ -1333,6 +1533,7 @@ export interface StaffQuickPreviewModalProps {
   onOpenAssignments?: () => void;
   onOpenDocument?: () => void;
   onOpenAdvance?: () => void;
+  onToggleStatus?: () => void;
 }
 
 export function StaffQuickPreviewModal({
@@ -1348,6 +1549,7 @@ export function StaffQuickPreviewModal({
   onOpenAssignments,
   onOpenDocument,
   onOpenAdvance,
+  onToggleStatus,
 }: StaffQuickPreviewModalProps) {
   if (!isOpen || !staff) return null;
 
@@ -1403,7 +1605,7 @@ export function StaffQuickPreviewModal({
             <span>{staff.department}</span>
           </div>
 
-          <div className="flex items-center justify-center gap-2 mt-2.5">
+          <div className="flex items-center justify-center gap-2 mt-2.5 flex-wrap">
             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
               staff.status === "active" ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"
             }`}>
@@ -1418,6 +1620,16 @@ export function StaffQuickPreviewModal({
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-muted text-muted-foreground">
                 بدون حساب دخول
               </span>
+            )}
+
+            {onToggleStatus && (
+              <button
+                type="button"
+                onClick={onToggleStatus}
+                className="text-[10px] font-bold text-primary hover:underline ms-2"
+              >
+                تبديل الحالة
+              </button>
             )}
           </div>
         </div>
@@ -1448,15 +1660,26 @@ export function StaffQuickPreviewModal({
         <div className="space-y-2 p-3.5 rounded-2xl border border-border/60 bg-muted/20">
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground font-bold">الهاتف:</span>
-            <span className="font-bold font-mono" dir="ltr">{staff.phone || "غير مسجل"}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold font-mono" dir="ltr">{staff.phone || "غير مسجل"}</span>
+              {staff.phone && (
+                <a
+                  href={`tel:${staff.phone}`}
+                  className="text-primary hover:text-primary/80"
+                  title="اتصال"
+                >
+                  <Phone className="h-3 w-3" />
+                </a>
+              )}
+            </div>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground font-bold">البريد الإلكتروني:</span>
-            <span className="font-bold" dir="ltr">{staff.email || "غير مسجل"}</span>
+            <span className="font-bold font-mono" dir="ltr">{staff.email || "غير مسجل"}</span>
           </div>
           {staff.iban && (
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground font-bold">الحساب البنكي:</span>
+              <span className="text-muted-foreground font-bold">الحساب البنكي (IBAN):</span>
               <span className="font-mono text-[11px]" dir="ltr">{staff.iban}</span>
             </div>
           )}
@@ -1652,32 +1875,29 @@ export function StaffSmartBadgeModal({
             </div>
           ) : (
             /* BACK OF BADGE */
-            <div className="w-full max-w-[320px] mx-auto rounded-3xl border-2 border-primary/30 bg-card p-5 shadow-xl text-center relative overflow-hidden print:border-none print:shadow-none text-xs space-y-3">
-              {/* Magnetic Stripe Simulator */}
-              <div className="h-8 bg-slate-900 -mx-5 -mt-5 mb-3" />
+            <div className="w-full max-w-[320px] mx-auto rounded-3xl border-2 border-primary/30 bg-card p-5 shadow-xl text-center space-y-3 relative overflow-hidden print:border-none print:shadow-none">
+              <div className="absolute top-0 left-0 right-0 h-2 bg-primary" />
 
-              <div className="text-[11px] font-black text-foreground">تعليمات وضوابط استخدام البطاقة</div>
-              <p className="text-[10px] text-muted-foreground font-bold leading-relaxed text-right">
-                • هذه البطاقة وثيقة رسمية صادرة عن إدارة المدرسة ويجب إبرازها عند الطلب.
-                <br />• يرجى إعادة البطاقة فوراً لإدارة الموارد البشرية عند انتهاء فترة العمل.
-                <br />• في حال العثور على هذه البطاقة يرجى الاتصال بإدارة المدرسة فوراً.
-              </p>
+              <span className="font-black text-xs text-foreground block pt-1">تعليمات وتعريف الهوية المدرسية</span>
 
-              <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-right space-y-1 text-[10px]">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground font-bold">هاتف الطوارئ:</span>
-                  <span className="font-mono font-bold" dir="ltr">{staff.phone || "0500000000"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground font-bold">تاريخ الإصدار:</span>
-                  <span className="font-mono font-bold tabular-nums">2026/2027</span>
-                </div>
+              <div className="text-[10px] text-muted-foreground font-bold leading-relaxed space-y-1.5 text-right bg-muted/30 p-3 rounded-xl border border-border/60">
+                <p>• هذه البطاقة وثيقة رسمية صادرة عن إدارة المدرسة ويجب إبرازها أثناء الدوام الرسمي.</p>
+                <p>• يُرجى إبلاغ قسم شؤون الموظفين فور فقدان هذه البطاقة.</p>
+                <p>• في حال العثور على البطاقة، يُرجى تسليمها لإدارة المدرسة أو التواصل مع إدارة الأمن والسلامة.</p>
               </div>
 
-              {/* Barcode Simulator */}
-              <div className="pt-2 border-t border-border flex flex-col items-center">
-                <div className="h-7 w-48 bg-[repeating-linear-gradient(90deg,#000,#000_2px,transparent_2px,transparent_4px,#000_4px,#000_7px,transparent_7px,transparent_9px)]" />
-                <span className="text-[9px] font-mono text-muted-foreground mt-1" dir="ltr">*{empCode}*</span>
+              {staff.emergencyPhone && (
+                <div className="text-[10px] font-bold text-foreground bg-muted/40 p-2 rounded-xl">
+                  هاتف الطوارئ: <span className="font-mono font-bold" dir="ltr">{staff.emergencyPhone}</span>
+                </div>
+              )}
+
+              {/* Barcode Mock */}
+              <div className="pt-2">
+                <div className="h-8 bg-foreground/15 rounded flex items-center justify-around px-2 font-mono text-[9px] tracking-widest text-muted-foreground">
+                  ||| | | |||| | ||| |||| | | ||
+                </div>
+                <span className="text-[9px] font-mono text-muted-foreground block mt-1">SN: {empCode}-SEC-2026</span>
               </div>
             </div>
           )}
@@ -1751,7 +1971,7 @@ export function StaffDeleteConfirmModal({
 }
 
 // =========================================================================
-// 8. STAFF OFFICIAL DOCUMENTS MODAL (SALARY CERTIFICATE & CLEARANCE)
+// 8. STAFF OFFICIAL DOCUMENTS MODAL (5 OFFICIAL DOCUMENTS)
 // =========================================================================
 export interface StaffDocumentModalProps {
   isOpen: boolean;
@@ -1772,7 +1992,8 @@ export function StaffDocumentModal({
 }: StaffDocumentModalProps) {
   if (!isOpen || !staff) return null;
 
-  const [docType, setDocType] = useState<"salary_cert" | "experience_cert" | "clearance">("salary_cert");
+  const [docType, setDocType] = useState<"salary_cert" | "experience_cert" | "clearance" | "mission_letter" | "contract_renewal">("salary_cert");
+  const [recipient, setRecipient] = useState("إلى من يهمه الأمر");
   const netSalary = Math.max(0, (staff.basicSalary || 0) + (staff.allowance || 0) - (staff.deduction || 0));
 
   const handlePrint = () => {
@@ -1809,11 +2030,11 @@ export function StaffDocumentModal({
     >
       <div className="space-y-4">
         {/* Doc Type Selector */}
-        <div className="border-b border-border/70 flex gap-2 pb-1 print:hidden">
+        <div className="border-b border-border/70 flex gap-2 pb-1 overflow-x-auto custom-scrollbar print:hidden">
           <button
             type="button"
             onClick={() => setDocType("salary_cert")}
-            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 ${
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
               docType === "salary_cert" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -1823,7 +2044,7 @@ export function StaffDocumentModal({
           <button
             type="button"
             onClick={() => setDocType("experience_cert")}
-            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 ${
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
               docType === "experience_cert" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -1833,13 +2054,44 @@ export function StaffDocumentModal({
           <button
             type="button"
             onClick={() => setDocType("clearance")}
-            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 ${
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
               docType === "clearance" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>إخلاء طرف وتسليم عهدة</span>
+            <span>إخلاء طرف وتسليم عهد</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setDocType("mission_letter")}
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              docType === "mission_letter" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            <span>خطاب تكليف بمهمة</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDocType("contract_renewal")}
+            className={`pb-2 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              docType === "contract_renewal" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <FileCheck className="h-3.5 w-3.5" />
+            <span>إشعار تجديد عقد</span>
+          </button>
+        </div>
+
+        {/* Recipient Input (print:hidden) */}
+        <div className="flex items-center gap-3 print:hidden">
+          <label className="text-xs font-bold text-foreground shrink-0">الجهة الموجه إليها الخطاب:</label>
+          <input
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            className="h-9 flex-1 rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
+            placeholder="إلى من يهمه الأمر، مصرف الراجحي، السفارة..."
+          />
         </div>
 
         {/* Printable Document Paper */}
@@ -1857,12 +2109,20 @@ export function StaffDocumentModal({
               </div>
             </div>
 
+            {/* Recipient Salutation */}
+            <div className="text-slate-800 font-bold text-xs">
+              السادة / {recipient} <span className="font-normal me-2">المحترمين</span>
+              <div className="text-slate-600 font-normal mt-0.5">السلام عليكم ورحمة الله وبركاته،، وبعد:</div>
+            </div>
+
             {/* Document Title */}
             <div className="text-center py-2">
               <span className="inline-block border-b-2 border-primary pb-1 text-sm font-black text-slate-900">
                 {docType === "salary_cert" && "شهادة تعريف وتفصيل الراتب الرسمي"}
                 {docType === "experience_cert" && "شهادة خبرة وبيان مدة الخدمة"}
                 {docType === "clearance" && "نموذج إخلاء طرف وتسليم العهد"}
+                {docType === "mission_letter" && "خطاب تكليف بمهمة رسمية"}
+                {docType === "contract_renewal" && "إشعار رسمي بتجديد العقد الوظيفي"}
               </span>
             </div>
 
@@ -1942,6 +2202,28 @@ export function StaffDocumentModal({
               </div>
             )}
 
+            {docType === "mission_letter" && (
+              <div className="space-y-4 text-xs font-medium leading-relaxed text-slate-800">
+                <p>تفيد إدارة المدرسة بتكليف الموظف المذكور أعلاه بأداء مهمة إدارية وميدانية رسمية لصالح المدرسة، نرجو من كافة الجهات المعنية تقديم التسهيلات اللازمة لإنجاح مهمته.</p>
+                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-1">
+                  <div><strong>الموظف المكلف:</strong> {staff.name} ({staff.role})</div>
+                  <div><strong>القسم:</strong> {staff.department}</div>
+                  <div><strong>الفترة المحددة:</strong> أسبوع من تاريخ إصدار الخطاب</div>
+                </div>
+              </div>
+            )}
+
+            {docType === "contract_renewal" && (
+              <div className="space-y-4 text-xs font-medium leading-relaxed text-slate-800">
+                <p>يسر إدارة المدرسة إشعاركم بقرار تجديد عقد العمل الخاص بكم للعام الدراسي القادم بنفس المزايا والشروط المعتمدة، تقديراً لجهودكم المتميزة في خدمة رسالتنا التعليمية.</p>
+                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-1">
+                  <div><strong>الموظف:</strong> {staff.name}</div>
+                  <div><strong>الوظيفة:</strong> {staff.role}</div>
+                  <div><strong>الراتب الصافي المعتمد:</strong> {netSalary.toLocaleString()} {currency}</div>
+                </div>
+              </div>
+            )}
+
             {/* Official Signatures & Seal */}
             <div className="flex justify-between items-end pt-8 border-t border-slate-200 text-xs">
               <div className="text-center space-y-2">
@@ -1968,7 +2250,7 @@ export function StaffDocumentModal({
 }
 
 // =========================================================================
-// 9. STAFF ADVANCE / LOAN MODAL (REQUEST SALARY ADVANCE)
+// 9. STAFF ADVANCE / LOAN REQUEST MODAL
 // =========================================================================
 export interface StaffAdvanceModalProps {
   isOpen: boolean;
@@ -1993,6 +2275,7 @@ export function StaffAdvanceModal({
     d.setMonth(d.getMonth() + 1);
     return d.toISOString().slice(0, 7);
   });
+  const [installmentsCount, setInstallmentsCount] = useState<1 | 2 | 3>(1);
   const [notes, setNotes] = useState("");
 
   const maxAllowed = Math.round((staff.basicSalary || 6000) * 0.7);
@@ -2004,7 +2287,7 @@ export function StaffAdvanceModal({
       return;
     }
     if (amount > maxAllowed) {
-      toast.error(`المبلغ المطلوب يتجاوز الحد الأقصى المسموح به لهذا الموظف (${maxAllowed} ${currency})`);
+      toast.error(`المبلغ المطلوب يتجاوز الحد الأقصى المسموح به لهذا الموظف (${maxAllowed.toLocaleString()} ${currency})`);
       return;
     }
 
@@ -2016,6 +2299,7 @@ export function StaffAdvanceModal({
       deductionMonth,
       deductFromPayrollDate: `${deductionMonth}-25`,
       status: "approved",
+      installments: installmentsCount,
       notes: notes.trim() || undefined,
     });
 
@@ -2058,7 +2342,12 @@ export function StaffAdvanceModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         <div>
-          <label className="mb-1 block font-bold text-foreground">مبلغ السلفة المطلوب ({currency}) *</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block font-bold text-foreground">مبلغ السلفة المطلوب ({currency}) *</label>
+            <span className="text-[10px] text-muted-foreground font-bold">
+              الحد الأقصى المسموح (70%): <span className="font-black text-primary">{maxAllowed.toLocaleString()} {currency}</span>
+            </span>
+          </div>
           <input
             type="number"
             required
@@ -2068,36 +2357,43 @@ export function StaffAdvanceModal({
             onChange={(e) => setAmount(Number(e.target.value) || 0)}
             className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-black outline-none focus:border-primary tabular-nums"
           />
-          <p className="mt-1 text-[10px] text-muted-foreground font-bold">
-            الحد الأقصى المسموح به: {maxAllowed.toLocaleString()} {currency} (70% من الراتب الأساسي)
-          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block font-bold text-foreground">شهر بداية الخصم من الراتب</label>
+            <input
+              type="month"
+              required
+              value={deductionMonth}
+              onChange={(e) => setDeductionMonth(e.target.value)}
+              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block font-bold text-foreground">تقسيط السلفة</label>
+            <select
+              value={installmentsCount}
+              onChange={(e) => setInstallmentsCount(Number(e.target.value) as any)}
+              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary cursor-pointer"
+            >
+              <option value={1}>دفعة واحدة (كامل المبلغ)</option>
+              <option value={2}>قسطين شهريين ({(amount / 2).toLocaleString()} شهرياً)</option>
+              <option value={3}>3 أقساط شهرية ({(amount / 3).toLocaleString()} شهرياً)</option>
+            </select>
+          </div>
         </div>
 
         <div>
-          <label className="mb-1 block font-bold text-foreground">شهر الاستقطاع من الراتب *</label>
-          <input
-            type="month"
-            required
-            value={deductionMonth}
-            onChange={(e) => setDeductionMonth(e.target.value)}
-            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold outline-none focus:border-primary"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block font-bold text-foreground">سبب أو ملاحظات طلب السلفة</label>
+          <label className="mb-1 block font-bold text-foreground">السبب / ملاحظات الصرف</label>
           <textarea
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="ظروف عائلية، علاج، طارئ..."
             className="w-full rounded-xl border border-input bg-background p-2.5 text-xs font-bold outline-none focus:border-primary resize-none"
+            placeholder="سلفة طارئة، ظرف عائلي، مصاريف علاج..."
           />
-        </div>
-
-        <div className="p-3 bg-muted/30 border border-border/70 rounded-xl flex items-center justify-between">
-          <span className="font-bold text-muted-foreground">طريقة الصرف:</span>
-          <span className="font-black text-foreground">تحويل بنكي / نقداً من الصندوق</span>
         </div>
       </form>
     </AdminModal>

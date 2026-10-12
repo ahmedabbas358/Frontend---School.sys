@@ -41,6 +41,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { loadRbacRoles } from "@/lib/rbac-service";
 import { AdminModal } from "@/components/admin/admin-modal";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "إدارة المستخدمين وحسابات النظام | منصة مدارس" }] }),
@@ -516,6 +517,9 @@ function AdminUsersPage() {
       }
     >
       <div className="space-y-5" dir="rtl">
+        {/* Unified Admin Sub-Navigation */}
+        <AdminNav activeTab="/admin/users" />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-4 flex-wrap gap-4">
           <div className="flex items-center gap-4">

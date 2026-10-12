@@ -7,9 +7,11 @@ import { getGradesForStage, isItemAllowedForGrade, isGradeMatch } from "@/lib/sc
 import { SearchableSelect } from "@/components/searchable-select";
 import { LuxurySelect } from "@/components/ui/luxury-select";
 import { TeacherPicker } from "@/components/teacher-picker";
-import { Plus, Trash2, Users, Printer, Search, Filter, BookOpen, GraduationCap } from "lucide-react";
+import { Plus, Trash2, Users, Printer, Search, Filter, BookOpen, GraduationCap, AlertTriangle, CalendarRange, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { AdvancedPrintEngine, PrintTemplate } from "@/components/print-engine";
+import { AdminModal } from "@/components/admin/admin-modal";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/academic/assignments")({
   head: () => ({ meta: [{ title: "الإسناد التدريسي" }] }),
@@ -33,6 +35,12 @@ function AssignmentsPage() {
   const [filterGrade, setFilterGrade] = useState("");
   const [filterSection, setFilterSection] = useState("");
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [deleteConfirmAssignment, setDeleteConfirmAssignment] = useState<{
+    id: string;
+    teacherName: string;
+    subjectName: string;
+    sectionName: string;
+  } | null>(null);
 
   const currentYear = allAcademicYears.find(y => y.isCurrent) || allAcademicYears[0];
 
@@ -149,7 +157,31 @@ function AssignmentsPage() {
       }
     >
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        
+        {/* Unified Subnavigation Ribbon */}
+        <div className="flex items-center gap-2 border-b border-border/70 pb-3 overflow-x-auto custom-scrollbar">
+          <Link 
+            to="/teachers" 
+            className="px-4 py-2 rounded-xl bg-card border border-border/80 hover:bg-accent text-foreground text-xs font-bold transition-colors flex items-center gap-2 shrink-0"
+          >
+            <Users className="h-4 w-4 text-primary" />
+            <span>قائمة المعلمين والأساتذة</span>
+          </Link>
+          <Link 
+            to="/academic/assignments" 
+            className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-black shadow-xs flex items-center gap-2 shrink-0"
+          >
+            <UserCog className="h-4 w-4" />
+            <span>الإسناد التدريسي للكوادر</span>
+          </Link>
+          <Link 
+            to="/schedule" 
+            className="px-4 py-2 rounded-xl bg-card border border-border/80 hover:bg-accent text-foreground text-xs font-bold transition-colors flex items-center gap-2 shrink-0"
+          >
+            <CalendarRange className="h-4 w-4 text-primary" />
+            <span>الجدول الأسبوعي للحصص</span>
+          </Link>
+        </div>
+
         {/* Header Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm glass flex items-center gap-4">
@@ -343,9 +375,13 @@ function AssignmentsPage() {
                         <td className="px-5 py-4 text-muted-foreground font-medium">{y?.name || "غير محدد"}</td>
                         <td className="px-5 py-4">
                           <button 
-                            onClick={() => { 
-                              deleteTeachingAssignment(r.id); 
-                              toast.success("تم حذف الإسناد بنجاح"); 
+                            onClick={() => {
+                              setDeleteConfirmAssignment({
+                                id: r.id,
+                                teacherName: t?.name || "معلم",
+                                subjectName: sub?.name || "مادة",
+                                sectionName: sec ? `${sec.grade} - ${sec.name}` : "شعبة",
+                              });
                             }} 
                             className="rounded-xl p-2.5 text-danger hover:bg-danger/10 transition-colors"
                             title="إلغاء الإسناد"
@@ -362,6 +398,54 @@ function AssignmentsPage() {
           </div>
         </PageCard>
       </div>
+
+      {/* Delete Confirmation AdminModal */}
+      {deleteConfirmAssignment && (
+        <AdminModal
+          isOpen={true}
+          onClose={() => setDeleteConfirmAssignment(null)}
+          title="تأكيد إلغاء الإسناد التدريسي"
+          subtitle="سيتم فك ارتباط المعلم بهذه المادة والشعبة"
+          icon={Trash2}
+          tone="danger"
+          size="medium"
+        >
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-foreground leading-relaxed">
+              هل أنت متأكد من إلغاء إسناد مادة{" "}
+              <strong className="text-danger font-black">"{deleteConfirmAssignment.subjectName}"</strong>{" "}
+              لشعبة <strong className="font-bold">"{deleteConfirmAssignment.sectionName}"</strong>{" "}
+              عن المعلم <strong className="text-primary font-black">"{deleteConfirmAssignment.teacherName}"</strong>؟
+            </p>
+
+            <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs font-bold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>قد يتأثر الجدول المدرسي إذا كانت هناك حصص مجدولة لهذا الإسناد.</span>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmAssignment(null)}
+                className="flex-1 rounded-xl border border-border py-2.5 text-xs font-bold hover:bg-accent transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteTeachingAssignment(deleteConfirmAssignment.id);
+                  toast.success("تم إلغاء الإسناد التدريسي بنجاح");
+                  setDeleteConfirmAssignment(null);
+                }}
+                className="flex-1 rounded-xl bg-danger py-2.5 text-xs font-bold text-white hover:bg-danger/90 transition-all shadow-md shadow-danger/20"
+              >
+                تأكيد الإلغاء
+              </button>
+            </div>
+          </div>
+        </AdminModal>
+      )}
 
       <AdvancedPrintEngine 
         isOpen={isPrintOpen} 

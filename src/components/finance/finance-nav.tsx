@@ -87,6 +87,14 @@ export function FinanceNavTabs({ activeTab }: FinanceNavTabsProps) {
       badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
     },
     {
+      id: "dashboard" as FinanceTabKey,
+      label: "لوحة المؤشرات البيانية",
+      href: "/finance/dashboard",
+      icon: PieChart,
+      badge: "تحليلي",
+      badgeColor: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+    },
+    {
       id: "students" as FinanceTabKey,
       label: "الرسوم والطلاب",
       href: "/finance/students",
